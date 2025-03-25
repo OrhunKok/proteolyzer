@@ -92,7 +92,11 @@ class DataProcessor(metaclass=MetaLogging):
 
     def rename_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Renames columns based on given alias mapping."""
-        return df.rename(columns = Constants.COLS_RENAME_MAPPING[self.INPUT_TYPE])
+        rename_mapping = Constants.COLS_RENAME_MAPPING.get(self.INPUT_TYPE)
+        if rename_mapping:
+            return df.rename(columns = rename_mapping)
+        else:
+            return df
 
     def extra_info(self, df: pd.DataFrame) -> pd.DataFrame:
         """Adds extra information columns."""
