@@ -1,8 +1,0 @@
-pyproject.toml
-setup.cfg
-src/proteoboost/__init__.py
-src/proteoboost.egg-info/PKG-INFO
-src/proteoboost.egg-info/SOURCES.txt
-src/proteoboost.egg-info/dependency_links.txt
-src/proteoboost.egg-info/requires.txt
-src/proteoboost.egg-info/top_level.txt
