@@ -1,3 +1,5 @@
+[![Pylint](https://github.com/OrhunKok/proteoboost/actions/workflows/pylint.yml/badge.svg)](https://github.com/OrhunKok/proteoboost/actions/workflows/pylint.yml)
+
 # ProteoBoost
 
 ProteoBoost is a Python package designed for processing, analyzing, and visualizing proteomics data. It provides utilities for data loading, processing, transformation, and visualization, making it easier to work with complex proteomics datasets.
