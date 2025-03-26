@@ -20,9 +20,6 @@ class RelPlot(PlotBase):
 
     def label_points(
         self,
-        ax,
-        data: pd.DataFrame,
-        label: str,
         signif_filter: bool = True,
         size: float = 4,
         max_label: int = 50,
@@ -31,30 +28,35 @@ class RelPlot(PlotBase):
         **kwargs,
     ) -> None:
         # Ensure labels are within current axis limits
-        ax_ylim = ax.get_ylim()
-        ax_xlim = ax.get_xlim()
+        ax_ylim = self.ax.get_ylim()
+        ax_xlim = self.ax.get_xlim()
+        
+        data = self.data.copy()
         data = data[(data[self.y] <= ax_ylim[1]) & (data[self.y] >= ax_ylim[0])]
         data = data[(data[self.x] <= ax_xlim[1]) & (data[self.x] >= ax_xlim[0])]
 
         # Filter for significance
         if signif_filter:
-            data = data[data["Significance"] == True] # noqa: E712
+            data = data[data["Significance"] == True]
 
         data_length = len(data)
         if data_length > max_label:
             self.logger.warning(
-                f"Too many points to label ({data_length}). Labelling 50 most extreme points..."
+                f"Too many points to label ({data_length}). Labelling {max_label} most extreme points..."
             )
+            # Ensure max_label is even
+            label_count = max_label // 2
+
             sorted_vals = data[self.x].sort_values()
-            bottom_25 = sorted_vals[:25].index
-            top_25 = sorted_vals[-25:].index
-            label_idx = bottom_25.union(top_25)
+            bottom = sorted_vals[:label_count].index
+            top = sorted_vals[-label_count:].index
+            label_idx = bottom.union(top)
             data = data.loc[label_idx]
         texts = [
-            ax.text(
+            self.ax.text(
                 x=row[self.x],
                 y=row[self.y],
-                s=row[label],
+                s=row[self.label],
                 size=size,
                 ha=ha,
                 va=va,
@@ -65,7 +67,7 @@ class RelPlot(PlotBase):
         adjust_text(
             texts,
             arrowprops=dict(arrowstyle="-", color="k", lw=0.5),
-            ax=ax,
+            ax=self.ax,
             min_arrow_len=0,
         )
 
@@ -106,7 +108,7 @@ class VolcanoPlot(RelPlot):
         self._default_xaxis()
         self._add_threshold_lines()
         self._add_delta_count_box()
-        self.ax.set_ylabel("-Log10 (FDR)")
+        self.ax.set_ylim(bottom = 0)
 
     def _prepare_data(self) -> pd.DataFrame:
         data = self.orig_data.copy()
