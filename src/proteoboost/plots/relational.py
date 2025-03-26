@@ -99,7 +99,6 @@ class VolcanoPlot(RelPlot):
             self.hue_order = ["notsig", "up", "down"]
 
         self.data = self._prepare_data()
-
         plot_kws = locals()
         plot_kws["data"] = self.data
         plot_kws["hue_order"] = self.hue_order
