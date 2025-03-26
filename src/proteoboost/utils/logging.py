@@ -10,7 +10,6 @@ logging.basicConfig(
 
 class MetaLogging(type):
     def __new__(cls, name, bases, dct):
-
         def _memory_check(self, data: pd.DataFrame) -> None:
             """
             Calculates and logs the memory usage of the provided data.

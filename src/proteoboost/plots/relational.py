@@ -30,7 +30,6 @@ class RelPlot(PlotBase):
         va="center",
         **kwargs,
     ) -> None:
-
         # Ensure labels are within current axis limits
         ax_ylim = ax.get_ylim()
         ax_xlim = ax.get_xlim()
@@ -39,7 +38,7 @@ class RelPlot(PlotBase):
 
         # Filter for significance
         if signif_filter:
-            data = data[data["Significance"] == True]
+            data = data[data["Significance"] == True] # noqa: E712
 
         data_length = len(data)
         if data_length > max_label:

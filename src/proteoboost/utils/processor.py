@@ -210,7 +210,7 @@ class _LabelGenerator(metaclass=MetaLogging):
         sorted_matches = self._generate_sorted_matches()
         labelled_data = self._add_label_info(self.data, sorted_matches)
         self.data = self._generate_run_channels(labelled_data)
-        self.logger.info(f"Data overwritten to include labelling information.")
+        self.logger.info("Data overwritten to include labelling information.")
 
     @property
     def label_checked_data(self):
@@ -221,7 +221,7 @@ class _LabelGenerator(metaclass=MetaLogging):
         """Validates the shape of the label matrix."""
         if matrix is None or not matrix.index.is_unique:
             self.logger.error(
-                f"Label matrix is not the expected shape, requires custom manipulation! Skipping labelling info generation..."
+                "Label matrix is not the expected shape, requires custom manipulation! Skipping labelling info generation..."
             )
             return None
         return matrix.astype("category")
@@ -288,12 +288,12 @@ class _LabelGenerator(metaclass=MetaLogging):
                 offsets = rounded_offsets.astype("Int8").astype(str)
             else:
                 self.logger.error(
-                    f"Channel offsets not uniform on peptide, cannot assign channel!"
+                    "Channel offsets not uniform on peptide, cannot assign channel!"
                 )
                 return None
         else:
             self.logger.error(
-                f"Label count and Label offset dfs do not have the same column order, cannot assign channel!"
+                "Label count and Label offset dfs do not have the same column order, cannot assign channel!"
             )
             return None
 

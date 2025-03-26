@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import inspect
 import contextlib
-import scienceplots  # type: ignore
+import scienceplots # noqa: F401
 from ..utils.logging import MetaLogging
 
 

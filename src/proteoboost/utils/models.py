@@ -37,7 +37,7 @@ class Data(BaseModel):
         if value.exists():
             return value
         else:
-            raise ValueError(f"Path does not exist!")
+            raise ValueError("Path does not exist!")
 
     @computed_field
     @cached_property
@@ -52,7 +52,6 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def input_type(self) -> str:
-
         is_diann = (
             self.file_name in Constants.DIANN_FILES
             and self.file_extension in Constants.DIANN_EXTENSIONS
@@ -82,7 +81,6 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def cols_subset(self) -> dict:
-
         if self.input_type != "Unknown":
             if not self.load_all_columns:
                 cols = Constants.SUPPORTED_FILES_COLS_SUBSET[self.input_type][
@@ -128,8 +126,7 @@ class ProcessedData(BaseModel):
     class Config:
         arbitrary_types_allowed = True  # Allow Pandas DataFrames
 
-    def __init__(self, processor: "DataProcessor", **kwargs):
-
+    def __init__(self, processor: "DataProcessor", **kwargs): # noqa: F821
         processor_attrs = {
             k: getattr(processor, k)
             for k in processor.__slots__

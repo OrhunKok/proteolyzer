@@ -5,7 +5,6 @@ from proteoboost.utils.models import ProcessedData
 
 
 class MatrixBuilder(metaclass=MetaLogging):
-
     __slots__ = ("processed_data", "data", "logger")
 
     def __init__(self, processed_data: ProcessedData):
@@ -23,7 +22,7 @@ class MatrixBuilder(metaclass=MetaLogging):
 
         if not 0 <= warning_threshold <= 1:
             self.logger.error(
-                f"warning_threshold must be between 0 and 1. Ignoring further missingness checks..."
+                "warning_threshold must be between 0 and 1. Ignoring further missingness checks..."
             )
         else:
             replaced_mnar = matrix.replace(0, np.nan)
@@ -31,14 +30,13 @@ class MatrixBuilder(metaclass=MetaLogging):
                 replaced_mnar.apply(lambda x: x.isna().sum() / len(x))
                 > warning_threshold
             )
-            recommend_drop = list(recommend_drop[recommend_drop == True].index)
+            recommend_drop = list(recommend_drop[recommend_drop is True].index)
             if len(recommend_drop) > 0:
                 self.logger.warning(
                     f"Missingness over {round(warning_threshold * 100)}% for {recommend_drop}, recommend dropping these."
                 )
 
     def matrix_generation(self, values: str, index: str, columns: str) -> pd.DataFrame:
-
         duplicate_count = self.data.duplicated(
             subset=[index, columns], keep=False
         ).sum()

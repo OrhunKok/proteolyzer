@@ -1,2 +1,3 @@
-from .relational import RelPlot, VolcanoPlot
-from .base import PlotBase
+from .relational import VolcanoPlot
+
+__all__ = ["VolcanoPlot"]
