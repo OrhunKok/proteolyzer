@@ -39,11 +39,6 @@ ProteoBoost requires the following Python packages:
 - `scienceplots` (for plot theming)
 - `seaborn` (for advanced visualizations)
 
-You can install all dependencies using the `requirements.txt` file:
-```bash
-pip install -r requirements.txt
-```
-
 ## Contributing
 
 Contributions are welcome! If you'd like to contribute, please fork the repository, make your changes, and submit a pull request. Ensure that your code passes all tests and follows the project's coding standards.
