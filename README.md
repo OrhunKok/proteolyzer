@@ -34,12 +34,12 @@ ProteoBoost is a Python package designed for processing, analyzing, and visualiz
 
 ProteoBoost requires the following Python packages:
 
-- `pandas` (for data manipulation)
-- `numpy` (for numerical operations)
-- `pyarrow` (for handling Parquet files)
-- `matplotlib` (for plotting)
-- `scienceplots` (for plot theming)
-- `seaborn` (for advanced visualizations)
+- `pandas`
+- `numpy`
+- `pyarrow`
+- `matplotlib`
+- `scienceplots`
+- `seaborn`
 
 ## Contributing
 
