@@ -17,7 +17,6 @@ parts/
 sdist/
 var/
 *.egg-info/
-.installed.cfg
 *.egg
 
 # Installer logs
@@ -35,7 +34,6 @@ coverage.xml
 *.mo
 
 # Mr Developer
-.mr.developer.cfg
 .project
 .pydevproject
 
