@@ -16,7 +16,7 @@ Proteolyzer is a Python package designed for processing, analyzing, and visualiz
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd proteoboost
+   cd proteolyzer
    ```
 
 2. Install the package and its dependencies:
