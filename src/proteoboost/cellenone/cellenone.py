@@ -155,7 +155,7 @@ class CoordinatesMapping(metaclass = MetaLogging):
             metadata['Well.Clash'] = metadata.set_index(['Plate.Pickup', 'Well.Pickup']).index.map(well_clash).fillna(False)
 
             if well_clash.sum() > 0:
-                self.logger.warning(f'Well clashes detected! Check Well.Clash column to view clashes.')
+                self.logger.warning('Well clashes detected! Check Well.Clash column to view clashes.')
 
 
         if all(col in metadata.columns for col in ['Plate.Pickup', 'Well.Pickup', 'Plex.Label']):
@@ -165,7 +165,7 @@ class CoordinatesMapping(metaclass = MetaLogging):
             metadata['Label.Clash'] = metadata.set_index(['Plate.Pickup', 'Well.Pickup']).index.map(labels_clash).fillna(False)
 
             if labels_clash.sum() > 0:
-                self.logger.warning(f'Label clashes detected! Check Label.Clash column to view clashes.')
+                self.logger.warning('Label clashes detected! Check Label.Clash column to view clashes.')
 
         return metadata
     
@@ -209,7 +209,7 @@ class CoordinatesMapping(metaclass = MetaLogging):
             self._metadata_validate(metadata)
             return metadata
         else:
-            self.logger.warning(f'Missing required files to do metadata mapping. Ensure all required inputs are present.')
+            self.logger.warning('Missing required files to do metadata mapping. Ensure all required inputs are present.')
 
         
 

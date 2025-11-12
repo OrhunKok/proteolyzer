@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Union, Callable
+from typing import Callable
 from proteoboost.utils.logging import MetaLogging
 from proteoboost.utils.models import ProcessedData
 
