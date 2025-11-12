@@ -5,7 +5,7 @@
  width="1537.000000pt" height="512.000000pt" viewBox="0 0 1537.000000 512.000000"
  preserveAspectRatio="xMidYMid meet">
 
-<g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#FFFFFF" stroke="none">
+<g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#66EAC2" stroke="none">
   <path d="M1025 5015 l-25 -24 0 -619 c0 -587 1 -621 18 -643 23 -28 73 -30
   102 -4 20 18 20 30 20 597 l0 578 575 0 576 0 24 25 c32 31 32 59 0 90 l-24
   25 -621 0 -621 0 -24 -25z"/>
@@ -74,13 +74,13 @@
 <!-- Text for Proteolyzer with media query to change color based on mode -->
 <style>
   text {
-    fill: white;
+    fill: #66EAC2;
   }
 
   /* Light mode */
   @media (prefers-color-scheme: light) {
     text {
-      fill: black;
+      fill: #66EAC2;
     }
   }
 </style>
