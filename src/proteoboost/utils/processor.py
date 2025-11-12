@@ -18,6 +18,7 @@ class DataProcessor(metaclass=MetaLogging):
         "ID_COL",
         "LABEL_GROUP_CAPTURE",
         "LABEL_FREE",
+        "PROTEASE"
     )
 
     def __init__(
@@ -25,12 +26,14 @@ class DataProcessor(metaclass=MetaLogging):
         data_loader: DataLoader,
         ID_COL: str = "Precursor.Id",
         LABEL_GROUP_CAPTURE: str = r"\((?!.*\bUniMod\b)(.*?)\)",
+        PROTEASE: str = 'Trypsin'
     ):
         """Initializes the DataProcessor."""
         self.data = data_loader.data
         self.INPUT_TYPE = data_loader.INPUT_TYPE
         self.ID_COL = ID_COL
         self.LABEL_GROUP_CAPTURE = LABEL_GROUP_CAPTURE
+        self.PROTEASE = PROTEASE
         self._check_labelfree()
 
     def process(self) -> ProcessedData:
@@ -46,8 +49,8 @@ class DataProcessor(metaclass=MetaLogging):
 
         if not self.LABEL_FREE and self.INPUT_TYPE == "DIANN":
             self.data = _LabelGenerator(self).data
-
-        self.data = self.miscleavages(self.data)
+        
+        self.data = self.miscleavages(self.data, protease = self.PROTEASE)
 
         self._memory_check(self.data)
 

@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
+from typing import Union, Callable
 from proteoboost.utils.logging import MetaLogging
 from proteoboost.utils.models import ProcessedData
 
 
 class MatrixBuilder(metaclass=MetaLogging):
-    __slots__ = ("processed_data", "data", "logger")
+    __slots__ = ("processed_data", "data", "matrix", "logger")
 
     def __init__(self, processed_data: ProcessedData):
         self.data = processed_data.data
@@ -30,15 +31,16 @@ class MatrixBuilder(metaclass=MetaLogging):
                 replaced_mnar.apply(lambda x: x.isna().sum() / len(x))
                 > warning_threshold
             )
-            recommend_drop = list(recommend_drop[recommend_drop is True].index)
+            recommend_drop = list(recommend_drop[recommend_drop == True].index)
             if len(recommend_drop) > 0:
                 self.logger.warning(
                     f"Missingness over {round(warning_threshold * 100)}% for {recommend_drop}, recommend dropping these."
                 )
 
-    def matrix_generation(self, values: str, index: str, columns: str) -> pd.DataFrame:
+    def matrix_generation(self, values: str, index: list[str], columns: list[str]) -> pd.DataFrame:
+
         duplicate_count = self.data.duplicated(
-            subset=[index, columns], keep=False
+            subset=[*index, *columns], keep=False
         ).sum()
 
         if duplicate_count > 0:
@@ -46,8 +48,28 @@ class MatrixBuilder(metaclass=MetaLogging):
                 f"{duplicate_count} Duplicate combinations of '{index}' and '{columns}' found. Matrix cannot be created."
             )
         else:
-            matrix = self.data.pivot(index=index, columns=columns, values=values)
+            self.matrix = self.data.pivot(index=index, columns=columns, values=values)
 
-        self._missingness_check(matrix)
+        self._missingness_check(self.matrix)
 
-        return matrix
+        return self
+    
+
+    def normalize_matrix(self, within_groups : list[str], agg_func: Callable, replace_zeros : bool = True) -> pd.DataFrame:
+        
+        matrix_norm = self.matrix.replace(0, np.nan) if replace_zeros else self.matrix.copy()
+
+        norm_data = matrix_norm.values.copy()
+        
+        cols_df = matrix_norm.columns.to_frame(index=False)
+        grouped = cols_df.groupby(within_groups, sort = False).indices
+
+        for _, group in grouped.items():
+
+            sub_data = norm_data[:, group]
+            row_sums = agg_func(sub_data, axis = 1)
+            row_sums[row_sums == 0] = np.nan
+            norm_data[:, group] = sub_data / row_sums[:, None]
+
+        self.matrix = pd.DataFrame(norm_data, index = self.matrix.index, columns = self.matrix.columns)
+        return self

@@ -5,6 +5,7 @@ import datetime
 import logging
 import re
 from pydantic import BaseModel, Field, field_validator, computed_field
+from typing import Optional
 from functools import cached_property
 from proteoboost.utils import constants as Constants
 
@@ -33,7 +34,7 @@ class Data(BaseModel):
 
     @field_validator("file_path", mode="after")
     @classmethod
-    def _validate_file_path(cls, value: Path) -> Path:
+    def _validate_path(cls, value: Path) -> Path:
         if value.exists():
             return value
         else:
@@ -119,9 +120,8 @@ class ProcessedData(BaseModel):
     data: pd.DataFrame = Field(..., description="The processed DataFrame.")
     ID_COL: str = Field(..., description="Reference used for unique IDs")
     LABEL_FREE: bool = Field(..., description="Data is label-free.")
-    LABEL_GROUP_CAPTURE: re.Pattern = Field(
-        ..., description="Regex pattern used to determine labelling."
-    )
+    LABEL_GROUP_CAPTURE: re.Pattern = Field(..., description="Regex pattern used to determine labelling.")
+    PROTEASE: Optional[str] = Field(None, description="Protease used for digestion")
 
     class Config:
         arbitrary_types_allowed = True  # Allow Pandas DataFrames

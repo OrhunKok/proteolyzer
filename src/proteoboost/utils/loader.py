@@ -1,6 +1,8 @@
 import pandas as pd
 from functools import partial
 import csv
+import magic
+import chardet
 import pyarrow.parquet as pq
 from proteoboost.utils.models import Data
 from proteoboost.utils.logging import MetaLogging
@@ -29,13 +31,13 @@ class DataLoader(metaclass=MetaLogging):
         load_methods = {
             ".csv": partial(self._load_csv, delimiter=","),
             ".tsv": partial(self._load_csv, delimiter="\t"),
-            ".txt": self._load_csv,
+            ".txt": self._load_txt,
             ".xls": self._load_excel,
             ".xlsx": self._load_excel,
             ".parquet": self._load_parquet,
         }
 
-        loader = load_methods.get(self.file.file_extension)
+        loader = load_methods.get(self.file.file_extension, self._load_txt)
         if not loader:
             self.logger.error(
                 f"Unsupported file format: {self.file.file_extension} for file: {self.file.file_name}"
@@ -51,7 +53,7 @@ class DataLoader(metaclass=MetaLogging):
         return self.data.rename(columns=self.cols_rename_mapping)
 
     def _get_delimiter(
-        self, default_delimiter="\t", min_sample_size=524288, sample_percent=0.01
+        self, default_delimiter :str = "\t", encoding : str = "utf-8", min_sample_size : int = 524288, sample_percent : float = 0.01
     ) -> str:
         """Detects the delimiter of a CSV-like file."""
         sample_size = max(
@@ -60,7 +62,7 @@ class DataLoader(metaclass=MetaLogging):
 
         try:
             with open(
-                self.file.file_path, "r", newline="", encoding="utf-8"
+                self.file.file_path, "r", newline="", encoding=encoding
             ) as csvfile:
                 sample = csvfile.read(sample_size)
             delimiter = csv.Sniffer().sniff(sample).delimiter
@@ -131,3 +133,70 @@ class DataLoader(metaclass=MetaLogging):
             self.logger.error(
                 f"An unexpected error occured when loading {self.file.file_path}: {e}"
             )
+
+
+    def _load_txt(self) -> pd.DataFrame:
+        """Loads a plaintext file with detected MIME type and encoding."""
+
+        try:
+            mime_type, encoding = self._detect_file_type_and_encoding()
+        except Exception as e:
+            self.logger.error(f"Failed to detect MIME type or encoding: {e}")
+            raise
+
+        if mime_type != "text/plain":
+            self.logger.error(
+                f"Unsupported MIME type {mime_type} for .txt file. Only 'text/plain' is supported."
+            )
+            raise
+
+        if self.INPUT_TYPE == "MaxQuant":
+            self.logger.info("Detected MaxQuant format, treating .txt as structured CSV.")
+            return self._load_csv()
+
+        try:
+            with open(self.file.file_path, encoding=encoding) as file:
+                lines = [line for line in file]
+            df = pd.DataFrame({"line": lines})
+            self.logger.info(f"Loaded plaintext file as DataFrame with {len(df)} lines.")
+            return df
+        except FileNotFoundError:
+            self.logger.error(f"File not found: {self.file.file_path}")
+            raise
+        except Exception as e:
+            self.logger.error(
+                f"An unexpected error occurred while loading {self.file.file_path}: {e}"
+            )
+            raise
+
+
+    def _detect_file_type_and_encoding(self):
+        """Strictly detects MIME type and text encoding for the file. Raises if undetectable."""
+        
+        file_path = str(self.file.file_path)
+
+        mime_type = magic.from_file(file_path, mime=True)
+
+        if mime_type:
+
+            with open(file_path, 'rb') as f:
+                raw_data = f.read(100_000)
+                encoding_result = chardet.detect(raw_data)
+                encoding = encoding_result.get("encoding")
+                confidence = encoding_result.get("confidence", 0.0)
+            
+            if encoding: 
+                self.logger.info(
+                    f"Detected MIME type: {mime_type}, Encoding: {encoding}, Encoding detection reliability {confidence:.2f}, for file: {file_path}"
+                )
+            else:
+                self.logger.error(
+                    f"Detected MIME type: {mime_type}, but unable to detect encoding for file: {file_path}"
+                )
+                raise
+
+        else:
+            self.logger.error(f"Failed to detect MIME type and encoding for file: {file_path}")
+            raise
+
+        return mime_type, encoding

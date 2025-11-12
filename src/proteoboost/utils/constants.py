@@ -1,14 +1,46 @@
-# DIA-NN related constants
+# Processing constants
+COL_MEDIAN_THRESHOLD = 100
+CARDINALITY_THRESHOLD = 0.1
+
+# Protease rules
+PROTEASE_RULES = {
+    "Trypsin": {"K": 1, "R": 1},
+    "LysC": {"K": 1},
+    "ArgC": {"R": 1},
+}
+
+### DIA-NN ###
 DIANN_FILES = [
     "report",
+    "report-first-pass",
     "report.stats",
+    "report.stats-first-pass"
     "report.log",
 ]
-DIANN_FILES += [f"{file}-first-pass" for file in DIANN_FILES]
 
 DIANN_COLS = {
     "report.stats": None,  # Load all columns
     "report": {
+        "Run",
+        "Precursor.Id",
+        "Stripped.Sequence",
+        "Precursor.Charge",
+        "Genes",
+        "Protein.Group",
+        "Proteotypic",
+        "RT",
+        "RT.Start",
+        "RT.Stop",
+        "FWHM",
+        "IM",
+        "PEP",
+        "Ms1.Area",
+        "Ms1.Apex.Area",
+        "Ms1.Normalised",
+        "Precursor.Quantity",
+        "Precursor.Normalised",
+    },
+    "report-first-pass": {
         "Run",
         "Precursor.Id",
         "Stripped.Sequence",
@@ -33,12 +65,14 @@ DIANN_COLS = {
 
 DIANN_EXTENSIONS = [".parquet", ".tsv"]
 
-# MaxQuant related constants
+### DIA-NN ###
+### MaxQuant ###
+
 MAXQUANT_FILES = [
     "allPeptides",
     "evidence",
     "matchedFeatures",
-    "modificationSpecificPeptides.txt",
+    "modificationSpecificPeptides",
     "ms3Scans",
     "msms",
     "msmsScans",
@@ -74,6 +108,8 @@ MAXQUANT_COLS = {
 
 MAXQUANT_EXTENSIONS = [".txt"]
 
+### MaxQuant ###
+
 # Supported files and columns
 SUPPORTED_FILES = {"DIANN": DIANN_FILES, "MaxQuant": MAXQUANT_FILES}
 SUPPORTED_FILES_COLS_SUBSET = {"DIANN": DIANN_COLS, "MaxQuant": MAXQUANT_COLS}
@@ -93,15 +129,4 @@ COLS_RENAME_MAPPING = {
         "Retention time": "RT",
         "Retention length": "RT.Width",
     },
-}
-
-# Processing constants
-COL_MEDIAN_THRESHOLD = 100
-CARDINALITY_THRESHOLD = 0.1
-
-# Protease rules
-PROTEASE_RULES = {
-    "Trypsin": {"K": 1, "R": 1},
-    "LysC": {"K": 1},
-    "ArgC": {"R": 1},
 }

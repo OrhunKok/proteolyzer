@@ -9,7 +9,6 @@ ProteoBoost is a Python package designed for processing, analyzing, and visualiz
 - **Data Loading**: Load data from various formats, including Parquet and Excel.
 - **Data Processing**: Clean and structure raw proteomics data for downstream analysis.
 - **Matrix Transformation**: Build matrices for statistical and machine learning workflows.
-- **Visualization**: Generate publication-quality plots for data exploration and presentation.
 - **Custom Logging**: Integrated logging for better traceability and debugging.
 
 ## Installation
@@ -44,7 +43,3 @@ ProteoBoost requires the following Python packages:
 ## Contributing
 
 Contributions are welcome! If you'd like to contribute, please fork the repository, make your changes, and submit a pull request. Ensure that your code passes all tests and follows the project's coding standards.
-
-## License
-
-This project is licensed under the MIT License.
