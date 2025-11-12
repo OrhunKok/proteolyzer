@@ -1,3 +1,7 @@
+![Alt text](./proteolyzer_logo_with_name.svg)
+
+---------
+
 [![CI](https://github.com/OrhunKok/proteolyzer/actions/workflows/ruff.yml/badge.svg)](https://github.com/OrhunKok/proteolyzer/actions/workflows/ruff.yml)
 
 # Proteolyzer
