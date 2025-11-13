@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "items": [
+        {
+          "items": [
+            "docs/proteolyzer/cellenone/__init__",
+            "docs/proteolyzer/cellenone/cellenone"
+          ],
+          "label": "proteolyzer.cellenone",
+          "type": "category"
+        },
+        {
+          "items": [
+            "docs/proteolyzer/plots/__init__",
+            "docs/proteolyzer/plots/base",
+            "docs/proteolyzer/plots/relational"
+          ],
+          "label": "proteolyzer.plots",
+          "type": "category"
+        },
+        {
+          "items": [
+            "docs/proteolyzer/transformers/__init__",
+            "docs/proteolyzer/transformers/matrix"
+          ],
+          "label": "proteolyzer.transformers",
+          "type": "category"
+        },
+        {
+          "items": [
+            "docs/proteolyzer/utils/__init__",
+            "docs/proteolyzer/utils/constants",
+            "docs/proteolyzer/utils/loader",
+            "docs/proteolyzer/utils/logging",
+            "docs/proteolyzer/utils/models",
+            "docs/proteolyzer/utils/operations",
+            "docs/proteolyzer/utils/processor"
+          ],
+          "label": "proteolyzer.utils",
+          "type": "category"
+        },
+        "docs/proteolyzer/__init__"
+      ],
+      "label": "proteolyzer",
+      "type": "category"
+    }
+  ],
+  "label": "docs",
+  "type": "category"
+}
