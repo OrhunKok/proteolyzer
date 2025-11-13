@@ -22,13 +22,13 @@ class MatrixBuilder(metaclass=MetaLogging):
     def __init__(self, processed_data: ProcessedData):
         self.data = processed_data.data
 
-    def _missingness_check(
+    def missingness_check(
         self, matrix: pd.DataFrame, warning_threshold: float = 0.75
     ) -> None:
         total_vals = matrix.shape[0] * matrix.shape[1]
 
-        MAR = round((matrix.isna().sum().sum() / total_vals) * 100)
-        MNAR = round((1 - (matrix[matrix == 0].isna().sum().sum() / total_vals)) * 100)
+        MAR = round((matrix.isna().sum().sum() / total_vals) * 100, 2)
+        MNAR = round((matrix[matrix == 0].notna().sum().sum() / total_vals) * 100, 2)
         self.logger.info(f"Data has {MAR}% Missing At Random (MAR)")
         self.logger.info(f"Data has {MNAR}% Missing Not At Random (MNAR)")
 
@@ -62,7 +62,7 @@ class MatrixBuilder(metaclass=MetaLogging):
         else:
             self.matrix = self.data.pivot(index=index, columns=columns, values=values)
 
-        self._missingness_check(self.matrix)
+        self.missingness_check(self.matrix)
 
         return self
 

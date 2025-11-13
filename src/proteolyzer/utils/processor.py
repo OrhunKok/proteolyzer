@@ -124,6 +124,9 @@ class DataProcessor(metaclass=MetaLogging):
         cat_cols = list(
             cardinality[cardinality < Constants.CARDINALITY_THRESHOLD].index
         )
+        
+        exclude_from_conversion = Constants.EXCLUDE_CAT_CONVERSION.get(self.INPUT_TYPE, [])
+        cat_cols = [col for col in cat_cols if col not in exclude_from_conversion]
 
         for col in cat_cols:
             df[col] = df[col].astype("category")

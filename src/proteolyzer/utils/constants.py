@@ -135,3 +135,9 @@ COLS_RENAME_MAPPING = {
         "Retention length": "RT.Width",
     },
 }
+
+# Exlude columns from Categorical conversion
+EXCLUDE_CAT_CONVERSION = {
+    "DIANN": {'Precursor.Quantity', 'Ms1.Apex.Area', 'Ms1.Normalised', 'Ms1.Area', 'Precursor.Normalised'},
+    "MaxQuant": {'Intensity'},
+}
