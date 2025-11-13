@@ -1,0 +1,2 @@
+MAXQUANT_FILES = []
+DIANN_FILES = []
