@@ -4,7 +4,7 @@ import os
 from typing import Literal, Optional
 import re
 from proteolyzer.utils.logging import MetaLogging
-from Config import *
+from Config import CELLEONE_MAPPING, NOZZLE_WELL_MAPPING, PICKUP_NOZZLE_ID, PICKUP_NOZZLE_XPOS_OFFSET, DROPLET_COLS, TEMP_STATS_COLS, MERGE_COLS
 
 
 class CoordinatesMapping(metaclass=MetaLogging):

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import pickle
 from pathlib import Path
-from Config import *
+from Config import FILES_NEEDED, COLSTOKEEP, PEP_THRESHOLD, AA_MW, TMT_MASS_SHIFT
 
 
 class NullQueue:
