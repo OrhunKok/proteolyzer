@@ -4,53 +4,7 @@ import os
 from typing import Literal, Optional
 import re
 from proteolyzer.utils.logging import MetaLogging
-
-CELLEONE_MAPPING = {
-    "mTRAQ": {
-        2: {
-            "G1": "0",
-            "G2": "8",
-            "G3": "0",
-            "G4": "8",
-            "G5": "0",
-            "G6": "8",
-            "G7": "0",
-            "G8": "8",
-        },
-        3: {
-            "G1": "0",
-            "G2": "4",
-            "G3": "8",
-            "G4": "0",
-            "G5": "4",
-            "G6": "8",
-            "G7": "0",
-            "G8": "4",
-            "G9": "8",
-            "G10": "0",
-            "G11": "4",
-            "G12": "8",
-        },
-    },
-    "TMT": {
-        14: {
-            "G1": "TMTpro-128C",
-            "G2": "TMTpro-129N",
-            "G3": "TMTpro-129C",
-            "G4": "TMTpro-130N",
-            "G5": "TMTpro-130C",
-            "G6": "TMTpro-131N",
-            "G7": "TMTpro-131C",
-            "G8": "TMTpro-132N",
-            "G9": "TMTpro-132C",
-            "G10": "TMTpro-133N",
-            "G11": "TMTpro-133C",
-            "G12": "TMTpro-134N",
-            "G13": "TMTpro-134C",
-            "G14": "TMTpro-135N",
-        }
-    },
-}
+from Config import *
 
 
 class CoordinatesMapping(metaclass=MetaLogging):
@@ -159,22 +113,11 @@ class CoordinatesMapping(metaclass=MetaLogging):
                 df["YPos"] = df["YPos"].astype(int) + 1
 
             if key == "Pickup":
-                # cellenOne only records the information for one nozzle. Other nozzles have to manually added as such.
-                nozzle_well_mapping = {
-                    "A": "C",
-                    "B": "D",
-                    "E": "G",
-                    "F": "H",
-                    "I": "K",
-                    "J": "L",
-                    "M": "O",
-                    "N": "P",
-                }
                 other_nozzle = df.copy()
-                other_nozzle["Nozzle"] = 3
-                other_nozzle["XPos"] = other_nozzle["XPos"] + 36
+                other_nozzle["Nozzle"] = PICKUP_NOZZLE_ID
+                other_nozzle["XPos"] = other_nozzle["XPos"] + PICKUP_NOZZLE_XPOS_OFFSET
                 other_nozzle["Well"] = other_nozzle["Well"].apply(
-                    lambda x: nozzle_well_mapping.get(x[0]) + x[1:]
+                    lambda x: NOZZLE_WELL_MAPPING.get(x[0]) + x[1:]
                 )
 
                 df = pd.concat([df, other_nozzle], axis=0)
@@ -204,7 +147,6 @@ class CoordinatesMapping(metaclass=MetaLogging):
             col in metadata.columns
             for col in ["Plate.Pickup", "Well.Pickup", "Plex.Label"]
         ):
-            # metadata.groupby(['Plate.Pickup', 'Well.Pickup'])['Plex.Label'].apply(lambda x: x.duplicated(keep = False))
             labels_clash = (
                 metadata.groupby(["Plate.Pickup", "Well.Pickup"])[
                     "Plex.Label"
@@ -252,28 +194,21 @@ class CoordinatesMapping(metaclass=MetaLogging):
                     col: f"{col}.Geoprops"
                     for col in geoprop_df.columns
                     if col
-                    not in [
-                        "XPos",
-                        "YPos",
-                        "Target",
-                        "Field",
-                        "Well.Pickup",
-                        "Plate.Pickup",
-                    ]
+                    not in MERGE_COLS + ["Well.Pickup","Plate.Pickup"]
                 }
             )
             label_df = label_df.rename(
                 columns={
                     col: f"{col}.Label"
                     for col in label_df.columns
-                    if col not in ["XPos", "YPos", "Target", "Field"]
+                    if col not in MERGE_COLS
                 }
             )
 
             metadata = pd.merge(
                 geoprop_df,
                 label_df,
-                on=["XPos", "YPos", "Target", "Field"],
+                on=MERGE_COLS,
                 how="inner",
             )
 
@@ -329,8 +264,6 @@ class CoordinatesMapping(metaclass=MetaLogging):
             with open(file, encoding="latin1") as file:
                 df = file.readlines()
                 df = [re.sub("\n", "", ele) for ele in df]
-
-                # Organize log file into dataframe
                 df = pd.DataFrame(df)
                 df = df[0].str.split("\t", expand=True)
                 df = df.replace("", np.nan)
@@ -356,14 +289,7 @@ class CoordinatesMapping(metaclass=MetaLogging):
                 temp_stats = pd.concat([time_col, val_cols], axis=1).reset_index(
                     drop=True
                 )
-                temp_stats.columns = [
-                    "Timestamp",
-                    "Humidity",
-                    "Temperature",
-                    "Dew Point",
-                    "Adj. Temp",
-                    "Bath Temp",
-                ]
+                temp_stats.columns = TEMP_STATS_COLS
                 temp_stats["Timestamp"] = temp_stats["Timestamp"].dt.floor("s")
                 stats_dfs.append(temp_stats)
 
@@ -382,19 +308,7 @@ class CoordinatesMapping(metaclass=MetaLogging):
                         )
 
                 else:
-                    df.columns = [
-                        "Timestamp",
-                        "Plate",
-                        "PlatePos",
-                        "Nozzle",
-                        "Well",
-                        "Target",
-                        "Level",
-                        "Field",
-                        "Drops",
-                        "XPos",
-                        "YPos",
-                    ]
+                    df.columns = DROPLET_COLS
                     df = df.reset_index(drop=True)
 
                     if key == "Label":

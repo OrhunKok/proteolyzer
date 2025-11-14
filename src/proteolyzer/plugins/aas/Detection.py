@@ -7,12 +7,12 @@ import ahocorasick
 import pickle
 from multiprocessing import Queue
 from . import Utils
-
+from Utils import NullQueue
 
 class Detection:
     def __init__(self, params: dict, queue : Queue = None):
         self.params = params
-        self.queue = queue
+        self.queue = queue if queue is not None else NullQueue()
 
         # General Params
         self.configuration = params.get('Configuration')
@@ -33,11 +33,11 @@ class Detection:
         self.ptm_ppm = float(params.get('PTM ppm'))
         self.pos_prob = float(params.get('Positional Probability Threshold'))
         self.cn_term_prob = float(params.get('C/n-term Modification Threshold'))
-        self.queue.put(('stdout', "Detection Initialized"))
 
         Utils.prepare_output_dir(self.output_dir)
         Utils.txt_to_parquet(self.data_dir, self.label_setup, self.detection_pep, self.label_plex)
-        self.queue.put(('stdout', "Detection Commencing"))
+        
+        self.queue.put(("stdout", f"{self.__class__.__name__} initialized."))
 
     def run(self):
         for sample in np.unique(self.metadata['sample_ID']):

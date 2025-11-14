@@ -5,12 +5,13 @@ import pickle
 from queue import Queue
 from pathlib import Path
 from . import Utils
+from Utils import NullQueue
 
 
 class Quantification:
     def __init__(self, params: dict, queue: Queue = None):
         self.params = params
-        self.queue = queue
+        self.queue = queue if queue is not None else NullQueue()
 
         self.label_setup = params.get('Labelling Setup')
         # self.label_plex = int(params.get('Label Plex'))
@@ -20,8 +21,7 @@ class Quantification:
         self.output_dir = params.get('Output Folder')
         # self.min_quant = params.get('Minimum Quantity')
 
-        if self.queue:
-            self.queue.put(("stdout", "Quantification Initialized"))
+        self.queue.put(("stdout", f"{self.__class__.__name__} initialized."))
 
     def run(self):
         for sample in np.unique(self.metadata['sample_ID']):
@@ -30,16 +30,14 @@ class Quantification:
     def process_sample(self, sample):
         sample_val_dir = self._locate_sample_dir(sample)
         if not sample_val_dir:
-            if self.queue:
-                self.queue.put(("stderr", f"{sample} validation directory not found"))
+            self.queue.put(("stderr", f"{sample} validation directory not found"))
             return
 
         val_evidence_path = self.output_dir / 'MTP' / f'{sample}_Val_Evidence_Filtered_Stage_2.p'
         mtp_path = self.output_dir / 'MTP' / f'{sample}_MTP_Filtered_Stage_2.p'
 
         if not (os.path.exists(val_evidence_path) and os.path.exists(mtp_path)):
-            if self.queue:
-                self.queue.put(("stderr", f"Missing files for sample {sample}"))
+            self.queue.put(("stderr", f"Missing files for sample {sample}"))
             return
 
         with open(val_evidence_path, 'rb') as f:
@@ -68,8 +66,7 @@ class Quantification:
         with open(output_path, 'wb') as f:
             pickle.dump(quant, f)
 
-        if self.queue:
-            self.queue.put(("stdout", f"Quantification complete for sample: {sample}"))
+        self.queue.put(("stdout", f"Quantification complete for sample: {sample}"))
 
     def _locate_sample_dir(self, sample):
         data_dir = Path(self.data_dir)

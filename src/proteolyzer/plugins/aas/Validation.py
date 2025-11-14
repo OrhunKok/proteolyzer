@@ -5,14 +5,12 @@ import pickle
 from multiprocessing import Queue
 from pathlib import Path
 from . import Utils
+from Utils import NullQueue
 
 class Validation:
     def __init__(self, params: dict, queue: Queue = None):
         self.params = params
-        self.queue = queue
-
-        if self.queue:
-            self.queue.put(('stdout', "Validation Initialized"))
+        self.queue = queue if queue is not None else NullQueue()
 
         # Input Parameters
         # self.configuration = params.get('Configuration')
@@ -30,8 +28,8 @@ class Validation:
 
         Utils.txt_to_parquet(self.data_dir, self.label_setup, self.validation_pep, self.label_plex)
         
-        if self.queue:
-            self.queue.put(('stdout', "Validation Commencing"))
+        self.queue.put(('stdout', f"{self.__class__.__name__} initialized."))
+
 
     def run(self):
         for sample in np.unique(self.metadata['sample_ID']):
