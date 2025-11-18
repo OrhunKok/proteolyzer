@@ -14,8 +14,9 @@ import re
 from pydantic import BaseModel, Field, field_validator, computed_field
 from typing import Optional
 from functools import cached_property
-from proteolyzer.utils import constants as Constants
+from .config import Config
 
+CONFIG = Config()
 
 class Data(BaseModel):
     file_path: Path = Field(..., description="The path to the file to be loaded.")
@@ -61,12 +62,12 @@ class Data(BaseModel):
     @cached_property
     def input_type(self) -> str:
         is_diann = (
-            self.file_name in Constants.DIANN_FILES
-            and self.file_extension in Constants.DIANN_EXTENSIONS
+            self.file_name in CONFIG.DIANN.FILES
+            and self.file_extension in CONFIG.DIANN.FILE_EXTENSIONS
         )
         is_maxquant = (
-            self.file_name in Constants.MAXQUANT_FILES
-            and self.file_extension in Constants.MAXQUANT_EXTENSIONS
+            self.file_name in CONFIG.MaxQuant.FILES
+            and self.file_extension in CONFIG.MaxQuant.FILE_EXTENSIONS
         )
 
         if is_diann and is_maxquant:
@@ -91,7 +92,7 @@ class Data(BaseModel):
     def cols_subset(self) -> dict:
         if self.input_type != "Unknown":
             if not self.load_all_columns:
-                cols = Constants.SUPPORTED_FILES_COLS_SUBSET[self.input_type][
+                cols = CONFIG.SUPPORTED_FILES_COLS_SUBSET[self.input_type][
                     self.file_name
                 ]
                 if self.extra_cols_to_load:
@@ -101,8 +102,15 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def cols_rename_mapping(self) -> dict:
-        if self.input_type in list(Constants.COLS_RENAME_MAPPING.keys()):
-            return Constants.COLS_RENAME_MAPPING[self.input_type]
+        """
+        Dynamically retrieves the column rename mapping specific to the detected input type
+        (ex. 'DIANN') using getattr().
+        """
+        try:
+            config_block = getattr(CONFIG, self.input_type)
+            return config_block.COLS_RENAME_MAPPING
+        except AttributeError:
+            return {}
 
     @computed_field
     @cached_property
@@ -131,6 +139,15 @@ class ProcessedData(BaseModel):
         ..., description="Regex pattern used to determine labelling."
     )
     PROTEASE: Optional[str] = Field(None, description="Protease used for digestion")
+
+    def __getattr__(self, name):
+        if hasattr(self.data, name):
+            return getattr(self.data, name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+    
+    def __getitem__(self, key):
+        """Allows direct column access: report['Run']"""
+        return self.data[key]
 
     class Config:
         arbitrary_types_allowed = True  # Allow Pandas DataFrames

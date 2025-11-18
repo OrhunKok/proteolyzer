@@ -9,8 +9,11 @@ Package contents
     - utils: constants, helpers, and core processors
 """
 
+from . import config
 from . import utils
 from . import plots
 from . import transformers
+from . import plugins
 
-__all__ = ["utils", "plots", "transformers"]
+
+__all__ = ["config", "utils", "plots", "transformers", "plugins"]

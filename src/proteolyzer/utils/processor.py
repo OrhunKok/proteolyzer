@@ -7,11 +7,12 @@ reusable processing functions and light-weight pipelines.
 import pandas as pd
 import numpy as np
 import warnings
-from ..utils.logging import MetaLogging
-from proteolyzer.utils.models import ProcessedData
-import proteolyzer.utils.constants as Constants
-from proteolyzer.utils.loader import DataLoader
+from .logging import MetaLogging
+from .models import ProcessedData
+from .loader import DataLoader
+from .config import Config
 
+CONFIG = Config()
 
 class DataProcessor(metaclass=MetaLogging):
     """Processes raw data into a structured DataFrame."""
@@ -106,7 +107,7 @@ class DataProcessor(metaclass=MetaLogging):
             ).astype("Int64")
             if (
                 np.allclose(columns_vals, rounded_column_vals, equal_nan=True)
-                or col_median > Constants.COL_MEDIAN_THRESHOLD
+                or col_median > CONFIG.COL_MEDIAN_THRESHOLD
             ):
                 converted_cols += [col]
                 df[col] = np.round(pd.to_numeric(df[col], errors="coerce")).astype(
@@ -122,12 +123,16 @@ class DataProcessor(metaclass=MetaLogging):
         """Converts eligible columns to categorical type."""
         cardinality = df.apply(lambda x: x.nunique(), axis=0) / len(df)
         cat_cols = list(
-            cardinality[cardinality < Constants.CARDINALITY_THRESHOLD].index
+            cardinality[cardinality < CONFIG.CARDINALITY_THRESHOLD].index
         )
-        
-        exclude_from_conversion = Constants.EXCLUDE_CAT_CONVERSION.get(self.INPUT_TYPE, [])
-        cat_cols = [col for col in cat_cols if col not in exclude_from_conversion]
 
+        try:
+            config_block = getattr(CONFIG, self.INPUT_TYPE)
+            exclude_from_conversion = config_block.EXCLUDE_CAT_CONVERSION
+        except AttributeError:
+            exclude_from_conversion = set()
+        
+        cat_cols = [col for col in cat_cols if col not in exclude_from_conversion]
         for col in cat_cols:
             df[col] = df[col].astype("category")
 
@@ -137,7 +142,12 @@ class DataProcessor(metaclass=MetaLogging):
 
     def rename_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Renames columns based on given alias mapping."""
-        rename_mapping = Constants.COLS_RENAME_MAPPING.get(self.INPUT_TYPE)
+        try:
+            config_block = getattr(CONFIG, self.INPUT_TYPE)
+            rename_mapping = config_block.COLS_RENAME_MAPPING
+        except AttributeError:
+            rename_mapping = {}
+
         if rename_mapping:
             return df.rename(columns=rename_mapping)
         else:
@@ -153,7 +163,7 @@ class DataProcessor(metaclass=MetaLogging):
             "Peptide.Length": (["Stripped.Sequence"], lambda x: x.str.len()),
             "Label.Free": (
                 ["Stripped.Sequence", "Precursor.Charge"],
-                lambda x, y: x + y.astype(str),
+                lambda x, y: x.astype(str) + y.astype(str),
             ),
             "RT.Width": (["RT.Stop", "RT.Start"], lambda x, y: x - y),
         }
@@ -170,13 +180,18 @@ class DataProcessor(metaclass=MetaLogging):
         seq_col: str = "Stripped.Sequence",
         protease: str = "Trypsin",
     ) -> pd.DataFrame:
-        """Calculates miscleavages and adds a boolean column."""
-        if protease not in Constants.PROTEASE_RULES:
-            raise ValueError(
-                f"Invalid protease: '{protease}'. Must be one of: {list(Constants.PROTEASE_RULES.keys())}"
-            )
+        
 
-        rules = Constants.PROTEASE_RULES[protease]
+        try:
+            rules = getattr(CONFIG.Protease, protease)
+        except AttributeError:
+            available_proteases = [
+                f for f in dir(CONFIG.Protease) 
+                if not f.startswith('_') and isinstance(getattr(CONFIG.Protease, f), dict)
+            ]
+            raise ValueError(
+                f"Invalid protease: '{protease}'. Must be one of: {available_proteases}"
+            )
 
         seqs = np.array(df[seq_col].values, dtype=str)
         terminal_aa = np.array([x[-1] for x in seqs])
@@ -185,13 +200,9 @@ class DataProcessor(metaclass=MetaLogging):
         for aa, count in rules.items():
             bool_arrays ^= (terminal_aa == aa) & (np.char.count(seqs, aa) == count)
 
-        self.logger.info(
-            f"{round(sum(bool_arrays) / len(bool_arrays) * 100, 1)}% Miscleavage rate according to {protease} rules"
-        )
         df[f"{protease}.Miscleavages"] = bool_arrays
 
         return df
-
 
 class _LabelGenerator(metaclass=MetaLogging):
     """Generates label information for DIA-NN data."""

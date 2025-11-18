@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from typing import ClassVar
+
 
 CODON_MAP = {
             "UUU": "F", "UUC": "F", "UUA": "L", "UUG": "L",
@@ -27,3 +30,20 @@ MQ_TMT_MAP = {'126' : 1,'127N' : 2, '127C' : 3, '128N' : 4,
                '130C' : 9, '131' : 10}
 
 PROTEASE_CLEAVAGE_SITES = {'Trypsin' : ['K', 'R', '*'], 'Lys-C' : ['K', '*'], 'Arg-C' : ['R', '*']}
+
+
+@dataclass(frozen=True)
+class AAS:
+    
+    TMT_PLEX_MAP: ClassVar[dict[str, str]] = {
+        '126' : '1', '127N' : '2', '127C' : '3', '128N' : '4', '128C' : '5', 
+        '129N' : '6', '129C' : '7', '130N' : '8', '130C' : '9', '131N' : '10', 
+        '131C' : '11', '132N' : '12', '132C' : '13', '133N' : '14', '133C' : '15', 
+        '134N' : '16', '134C' : '17', '135N' : '18'
+    }
+
+    MQ_TMT_MAP: ClassVar[dict[str, int]] = {
+        '126' : 1, '127N' : 2, '127C' : 3, '128N' : 4, 
+        '128C' : 5, '129N' : 6, '129C' : 7, '130N' : 8, 
+        '130C' : 9, '131' : 10
+    }

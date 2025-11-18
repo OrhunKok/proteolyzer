@@ -11,17 +11,22 @@ import csv
 import magic
 import chardet
 import pyarrow.parquet as pq
-from proteolyzer.utils.models import Data
-from proteolyzer.utils.logging import MetaLogging
+from .models import Data
+from .logging import MetaLogging
+from .config import Config
 
+CONFIG = Config()
 
 class DataLoader(metaclass=MetaLogging):
     """Loads data from various file formats."""
 
     __slots__ = ("file", "data", "INPUT_TYPE", "cols_rename_mapping", "logger")
 
+
     def __init__(self, file: Data):
-        """Initializes the DataLoader."""
+        """
+        Initializes the DataLoader with the file to process and the configuration.
+        """
         self.file = file
         self.INPUT_TYPE = file.input_type
         self.cols_rename_mapping = file.cols_rename_mapping
