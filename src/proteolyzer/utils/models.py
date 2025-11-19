@@ -1,19 +1,11 @@
-"""Lightweight data models and type hints used across the project.
-
-Define small dataclasses or TypedDicts that represent the common data
-structures (for example, sample metadata, experiment descriptors, and
-loader return types).
-"""
-
 import pandas as pd
 from typing import List, Union, Set
 from pathlib import Path
 import datetime
 import logging
-import re
 from pydantic import BaseModel, Field, field_validator, computed_field
 from typing import Optional
-from functools import cached_property
+from functools import cached_property, cache
 from .config import Config
 
 CONFIG = Config()
@@ -26,13 +18,16 @@ class Data(BaseModel):
     extra_cols_to_load: Union[str, List[str], Set[str]] = Field(
         None, description="Additional columns to load."
     )
+    INPUT_TYPE: Optional[str] = Field(
+        None, description="Manually set the input data type (e.g., 'DIANN', 'MaxQuant')."
+    )
 
     @field_validator("extra_cols_to_load", mode="before")
     @classmethod
     def _validate_extra_cols_to_load(
         cls, value: Union[str, List[str], Set[str]]
     ) -> set:
-        if isinstance(value, (str)):
+        if isinstance(value, str):
             return set([value])
         elif isinstance(value, list) and all(isinstance(item, str) for item in value):
             return set(value) or set()
@@ -61,51 +56,59 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def input_type(self) -> str:
-        is_diann = (
-            self.file_name in CONFIG.DIANN.FILES
-            and self.file_extension in CONFIG.DIANN.FILE_EXTENSIONS
-        )
-        is_maxquant = (
-            self.file_name in CONFIG.MaxQuant.FILES
-            and self.file_extension in CONFIG.MaxQuant.FILE_EXTENSIONS
-        )
+        user_override = self.INPUT_TYPE
+        
+        is_diann = (self.file_name in CONFIG.DIANN.FILES and self.file_extension in CONFIG.DIANN.FILE_EXTENSIONS)
+        is_maxquant = (self.file_name in CONFIG.MaxQuant.FILES and self.file_extension in CONFIG.MaxQuant.FILE_EXTENSIONS)
 
         if is_diann and is_maxquant:
             raise ValueError(
                 f"File {self.file_name} with extension {self.file_extension} matches multiple categories."
             )
+        
+        if is_diann:
+            auto_type = "DIANN"
+        elif is_maxquant:
+            auto_type = "MaxQuant"
         else:
-            if is_diann:
-                logging.info(f"{self.file_name} determined to be DIA-NN output")
-                return "DIANN"
-            elif is_maxquant:
-                logging.info(f"{self.file_name} determined to be MaxQuant output")
-                return "MaxQuant"
-            else:
+            auto_type = "Unknown"
+        
+        if user_override not in (None, "Unknown"):
+            if auto_type != "Unknown" and user_override != auto_type:
                 logging.warning(
-                    f"{self.file_name} source program could not be determined, certain optimizations will not be performed."
+                    f"User input '{user_override}' conflicts with file type '{auto_type}'. Recommend using auto-detected type."
                 )
-                return "Unknown"
+            logging.info(f"Using manually set input type: {user_override}")
+            return user_override
+            
+        if auto_type == "Unknown":
+            logging.warning(
+                f"{self.file_name} source program could not be determined, certain optimizations will not be performed."
+            )
+        else:
+            logging.info(f"{self.file_name} determined to be {auto_type} output")
+            
+        return auto_type
 
     @computed_field
     @cached_property
-    def cols_subset(self) -> dict:
-        if self.input_type != "Unknown":
-            if not self.load_all_columns:
-                cols = CONFIG.SUPPORTED_FILES_COLS_SUBSET[self.input_type][
-                    self.file_name
-                ]
-                if self.extra_cols_to_load:
-                    cols = cols | self.extra_cols_to_load
-                return cols
+    def cols_subset(self) -> set:
+        if self.input_type == "Unknown" or self.load_all_columns:
+            return None
+            
+        cols = getattr(getattr(CONFIG, self.input_type, None), 'LOAD_COLS', {}).get(self.file_name)
+
+        if cols is None:
+            return None
+        
+        if self.extra_cols_to_load:
+            return set(cols) | set(self.extra_cols_to_load)
+        
+        return cols
 
     @computed_field
     @cached_property
     def cols_rename_mapping(self) -> dict:
-        """
-        Dynamically retrieves the column rename mapping specific to the detected input type
-        (ex. 'DIANN') using getattr().
-        """
         try:
             config_block = getattr(CONFIG, self.input_type)
             return config_block.COLS_RENAME_MAPPING
@@ -129,46 +132,58 @@ class Data(BaseModel):
             ).strftime("%Y-%m-%d %H:%M:%S"),
         }
         return file_stats
-
-
-class ProcessedData(BaseModel):
-    data: pd.DataFrame = Field(..., description="The processed DataFrame.")
-    ID_COL: str = Field(..., description="Reference used for unique IDs")
-    LABEL_FREE: bool = Field(..., description="Data is label-free.")
-    LABEL_GROUP_CAPTURE: re.Pattern = Field(
-        ..., description="Regex pattern used to determine labelling."
-    )
-    PROTEASE: Optional[str] = Field(None, description="Protease used for digestion")
-
-    def __getattr__(self, name):
-        if hasattr(self.data, name):
-            return getattr(self.data, name)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
     
-    def __getitem__(self, key):
-        """Allows direct column access: report['Run']"""
-        return self.data[key]
+    def load(self):
+        from .loader import DataLoader
+        return LoadedData(DataLoader(self))
 
-    class Config:
-        arbitrary_types_allowed = True  # Allow Pandas DataFrames
 
-    def __init__(self, processor: "DataProcessor", **kwargs):  # noqa: F821
-        processor_attrs = {
-            k: getattr(processor, k)
-            for k in processor.__slots__
-            if k in self.__fields__
-        }
-        super().__init__(**processor_attrs)
+class ProcessedData(pd.DataFrame): 
+    """
+    A specialized DataFrame to hold processed data and its metadata.
+    Inherits all pandas DataFrame methods and attributes.
+    """
+    _metadata = ['ID_COL', 'LABEL_FREE', 'LABEL_GROUP_CAPTURE', 'PROTEASE']
 
-    @computed_field
-    @cached_property
+    @property
+    def _constructor(self):
+        return ProcessedData
+
+    def __init__(self, data=None, ID_COL=None, LABEL_FREE=None, 
+                 LABEL_GROUP_CAPTURE=None, PROTEASE=None, **kwargs):
+    
+        super().__init__(data, **kwargs)
+        
+        self.ID_COL = ID_COL
+        self.LABEL_FREE = LABEL_FREE
+        self.LABEL_GROUP_CAPTURE = LABEL_GROUP_CAPTURE
+        self.PROTEASE = PROTEASE
+        
+    @property
+    @cache 
     def unique_runs(self) -> set:
-        if "Run" in self.data.columns:
-            return set(self.data["Run"].unique())
+        if "Run" in self.columns: 
+            return set(self["Run"].unique())
         else:
             return set()
 
-    @computed_field
-    @cached_property
+    @property
+    @cache
     def unique_ids(self) -> int:
-        return self.data[self.ID_COL].nunique()
+        return self[self.ID_COL].nunique()
+
+
+class LoadedData(pd.DataFrame):
+    def __init__(self, loader):
+        super().__init__(loader.data.copy())
+        self.loader = loader
+
+    def process(self, **kwargs) -> "ProcessedData":
+        """
+        Initiates processing. 
+        Any kwargs passed here are forwarded 
+        to the DataProcessor constructor.
+        """
+        from .processor import DataProcessor
+        processor = DataProcessor(self.loader, **kwargs)
+        return processor.process()

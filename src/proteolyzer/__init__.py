@@ -15,5 +15,7 @@ from . import plots
 from . import transformers
 from . import plugins
 
+from .utils import Data
 
-__all__ = ["config", "utils", "plots", "transformers", "plugins"]
+
+__all__ = ["config", "utils", "plots", "transformers", "plugins", 'Data']

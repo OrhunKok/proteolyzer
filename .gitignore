@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 
+# Jupyter notebooks
+*.ipynb
+
 # C extensions
 *.so
 

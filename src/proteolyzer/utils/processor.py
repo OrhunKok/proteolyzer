@@ -61,7 +61,7 @@ class DataProcessor(metaclass=MetaLogging):
 
         self._memory_check(self.data)
 
-        return ProcessedData(self)
+        return ProcessedData(data = self.data, **{key: getattr(self, key)for key in ProcessedData._metadata})
 
     def _check_labelfree(self) -> None:
         """Checks if the data is label-free."""
@@ -234,11 +234,6 @@ class _LabelGenerator(metaclass=MetaLogging):
         labelled_data = self._add_label_info(self.data, sorted_matches)
         self.data = self._generate_run_channels(labelled_data)
         self.logger.info("Data overwritten to include labelling information.")
-
-    @property
-    def label_checked_data(self):
-        """Returns the label-checked data."""
-        return self._label_checked_data
 
     def _validate_matrix_shape(self, matrix: pd.DataFrame) -> pd.DataFrame:
         """Validates the shape of the label matrix."""
