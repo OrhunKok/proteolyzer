@@ -2,9 +2,6 @@
 __pycache__/
 *.py[cod]
 
-# Jupyter notebooks
-*.ipynb
-
 # C extensions
 *.so
 
@@ -42,10 +39,6 @@ coverage.xml
 
 # Rope
 .ropeproject
-
-# Django stuff:
-*.log
-*.pot
 
 # Sphinx documentation
 docs/_build/

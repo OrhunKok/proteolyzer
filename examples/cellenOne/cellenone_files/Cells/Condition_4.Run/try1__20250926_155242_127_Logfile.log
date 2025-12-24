@@ -1,0 +1,864 @@
+cellenONE_v2.0_nPOP_josh	091803
+2.2.2.1113	11:24 AM - 11/15/2022
+
+Run ID: try1__20250926_155242_127
+
+Humidity: RH 68% /+1 /-1
+
+Start Time: 3:52 PM - 9/26/2025
+Pulse parameters:
+Current Nozzle: 2Voltage (V): 79.0
+Pulse length (µs): 0
+Frequency (Hz): 500
+LED Delay (µs): 200
+LDE Pulse (µs): 3
+
+
+cellenONE parameters:
+Ejection zone boundary: 243	Sedimentation zone boundary: 192
+Detection parameters:	Wait (ms) 30Min Diameter (µm) 10.5	Max Diameter (µm) 500.0	Circularity 10.000000 Max	Elongation 4.500000 Max	Remove Halo YES	SeparationNO
+Printing parameters:
+	Min Diameter (µm) 17.0	Max Diameter (µm) 30.0	Lower Grey Threshold 1	Upper Grey Threshold 255	Circularity 10.000000 Max	Elongation 3.000000 Max
+Plate	Plate Pos	Nozzle	Well	Target	Level	Field	Drops	X Pos	Y Pos
+
+Probe: 384_well_PCR_plate
+Target: nPOP_Slides: 1
+
+Pattern File (last loaded or saved): All_cells.fld
+
+Nozzle(s): 2
+Field(s):
+X = 2
+Y = 1
+Start Point
+Left: 3000
+Up: 1000
+X Field Gap:1000/1000/
+Y Field Gap:8000/
+Pattern Size: 
+X = 67
+Y = 72
+Dot Pitch: 
+X = 250
+Y = 310
+Field 1
+[0, 0, 0]
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+
+
+Field 2
+[0, 0, 0]
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1																										
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1																										
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1A1				1A1														1A1				1A1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+
+
+Drops/Field 1
+[0, 0, 0]
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+
+
+Drops/Field 2
+[0, 0, 0]
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1																										
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1																										
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																				1				1														1				1								
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+																																																																		
+
+
+
+Run Name: 2_Dispense_Cells
+Task Names: Humidity_68/DP3/Cells_message/BeginLoop/AutoCellDetection/SpotProbeRun/EndLoop/AutoDropDetection/Flush_PDC/MoveToCameraStation/HeadCameraLight_ON/ScanFieldsOnly/HeadCameraLight_OFF/Message_Isolation_completed
+Tasks:
+Humidity_68=
+13	Set Humidity	Keep 68% humidity	68/1/1																																																																																																																																																																																								
+DP3=
+27	Set Chiller	Temperature: Dew point	1/1/0.0
+Cells_message=
+4	Message		Ensure you have at taken cells in nozzle at an optimal concentration, that you have mapped your samples, and that droplet is stable before pressing continue.	OK
+BeginLoop=
+5	Function	Begin Loop	Begin Loop	1																																																																																																																																																																																							
+AutoCellDetection=
+5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+SpotProbeRun=
+0	Drives		1	Target	163581	106000	23407	25000	25000	15000																																																																																																																																																																																	
+2	Piezo		S_N	Run	0																																																																																																																																																																																						
+EndLoop=
+5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+AutoDropDetection=
+5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+Flush_PDC=
+0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
+1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
+7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
+3	Wait		5000																																																																																																																																																																																								
+0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
+3	Wait		6000																																																																																																																																																																																								
+2	Piezo		S_N	Stop	0																																																																																																																																																																																						
+3	Wait		3000																																																																																																																																																																																								
+2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
+3	Wait		5000																																																																																																																																																																																								
+2	Piezo		S_N	Stop	0																																																																																																																																																																																						
+7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
+0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
+MoveToCameraStation=
+0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+HeadCameraLight_ON=
+1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
+ScanFieldsOnly=
+1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
+5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0																																																																																																																																																																																			
+HeadCameraLight_OFF=
+1	I/O		2	DOutput2	Head Cam Light	OFF	0																																																																																																																																																																																				
+Message_Isolation_completed=
+4	Message		Isolation completed! If you are done dispesnsing cells, make sure to close the cell Monitor before continuing the preparation.	OK																																																																																																																																																																																							
+
+26.09.25-15:52:44.075	13	Set Humidity	Keep 68% humidity	68/1/1																																																																																																																																																																																								
+26.09.25-15:52:44.076	27	Set Chiller	Temperature: Dew point	1/1/0.0																																																																																																																																																																																								
+26.09.25-15:52:44.077	4	Message		Ensure you have at taken cells in nozzle at an optimal concentration, that you have mapped your samples, and that droplet is stable before pressing continue.	OK																																																																																																																																																																																							
+26.09.25-15:52:44.083	Comment: Ensure you have at taken cells in nozzle at an optimal concentration, that you have mapped your samples, and that droplet is stable before pressing continue.
+26.09.25-15:52:45.192	5	Function	Begin Loop	Begin Loop	1																																																																																																																																																																																							
+26.09.25-15:52:45.196	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:52:45.197	Moving to: X= 42435; Y=2497
+26.09.25-15:52:45.262	X=42435   42435__Y=2497   2497
+26.09.25-15:52:45.343	Z=25224   25224__1
+26.09.25-15:52:46.907	1	 0/ 0	1	A1	1	2	1	36	8
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:52:46.907	1	 0/ 0	1	A1	1	1	2	1	36	8
+26.09.25-15:52:46.908	Moving to: X= 100203; Y=3777
+26.09.25-15:52:47.444	X=100203   100189__Y=3777   3777
+26.09.25-15:52:47.467	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:52:47.469	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:52:47.469	Moving to: X= 42435; Y=2497
+26.09.25-15:52:48.136	X=42435   42438__Y=2497   2497
+26.09.25-15:53:02.147	1	 0/ 0	1	A1	1	2	1	36	14
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:53:02.147	1	 0/ 0	1	A1	1	1	2	1	36	14
+26.09.25-15:53:02.148	Moving to: X= 100203; Y=5637
+26.09.25-15:53:02.685	X=100203   100187__Y=5637   5637
+26.09.25-15:53:02.708	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:53:02.710	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:53:02.710	Moving to: X= 42435; Y=2497
+26.09.25-15:53:03.377	X=42435   42438__Y=2497   2497
+26.09.25-15:53:06.062	1	 0/ 0	1	A1	1	2	1	36	20
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:53:06.062	1	 0/ 0	1	A1	1	1	2	1	36	20
+26.09.25-15:53:06.063	Moving to: X= 100203; Y=7497
+26.09.25-15:53:06.599	X=100203   100189__Y=7497   7497
+26.09.25-15:53:06.621	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:53:06.623	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:53:06.623	Moving to: X= 42435; Y=2497
+26.09.25-15:53:07.287	X=42435   42438__Y=2497   2497
+26.09.25-15:53:16.142	1	 0/ 0	1	A1	1	2	1	36	26
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:53:16.142	1	 0/ 0	1	A1	1	1	2	1	36	26
+26.09.25-15:53:16.143	Moving to: X= 100203; Y=9357
+26.09.25-15:53:16.681	X=100203   100188__Y=9357   9357
+26.09.25-15:53:16.719	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:53:16.721	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:53:16.721	Moving to: X= 42435; Y=2497
+26.09.25-15:53:17.390	X=42435   42438__Y=2497   2497
+26.09.25-15:53:18.954	1	 0/ 0	1	A1	1	2	1	36	32
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:53:18.954	1	 0/ 0	1	A1	1	1	2	1	36	32
+26.09.25-15:53:18.954	Moving to: X= 100203; Y=11217
+26.09.25-15:53:19.492	X=100203   100189__Y=11217   11217
+26.09.25-15:53:19.528	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:53:19.530	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:53:19.530	Moving to: X= 42435; Y=2497
+26.09.25-15:53:20.196	X=42435   42438__Y=2497   2497
+26.09.25-15:53:21.781	Humidity=	62	  Temperature=	22	  Dew Point=	15.6	  Adj. Temp=	14.6	  Bath Temp=	15.3
+26.09.25-15:53:48.748	1	 0/ 0	1	A1	1	2	1	36	38
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:53:48.749	1	 0/ 0	1	A1	1	1	2	1	36	38
+26.09.25-15:53:48.749	Moving to: X= 100203; Y=13077
+26.09.25-15:53:49.287	X=100203   100189__Y=13077   13077
+26.09.25-15:53:49.323	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:53:49.361	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:53:49.362	Moving to: X= 42435; Y=2497
+26.09.25-15:53:50.029	X=42435   42438__Y=2497   2497
+26.09.25-15:53:57.854	1	 0/ 0	1	A1	1	2	1	36	44
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:53:57.854	1	 0/ 0	1	A1	1	1	2	1	36	44
+26.09.25-15:53:57.855	Moving to: X= 100203; Y=14937
+26.09.25-15:53:58.391	X=100203   100188__Y=14937   14937
+26.09.25-15:53:58.427	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:53:58.429	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:53:58.429	Moving to: X= 42435; Y=2497
+26.09.25-15:53:59.096	X=42435   42438__Y=2497   2497
+26.09.25-15:54:07.087	1	 0/ 0	1	A1	1	2	1	36	50
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:54:07.087	1	 0/ 0	1	A1	1	1	2	1	36	50
+26.09.25-15:54:07.087	Moving to: X= 100203; Y=16797
+26.09.25-15:54:07.621	X=100203   100187__Y=16797   16797
+26.09.25-15:54:07.647	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:54:07.649	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:54:07.649	Moving to: X= 42435; Y=2497
+26.09.25-15:54:08.313	X=42435   42438__Y=2497   2497
+26.09.25-15:54:11.799	1	 0/ 0	1	A1	1	2	1	36	56
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:54:11.799	1	 0/ 0	1	A1	1	1	2	1	36	56
+26.09.25-15:54:11.800	Moving to: X= 100203; Y=18657
+26.09.25-15:54:12.343	X=100203   100187__Y=18657   18657
+26.09.25-15:54:12.376	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:54:12.378	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:54:12.378	Moving to: X= 42435; Y=2497
+26.09.25-15:54:13.044	X=42435   42439__Y=2497   2497
+26.09.25-15:54:17.007	1	 0/ 0	1	A1	1	2	1	36	62
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:54:17.008	1	 0/ 0	1	A1	1	1	2	1	36	62
+26.09.25-15:54:17.008	Moving to: X= 100203; Y=20517
+26.09.25-15:54:17.545	X=100203   100188__Y=20517   20517
+26.09.25-15:54:17.583	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:54:17.585	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:54:17.585	Moving to: X= 42435; Y=2497
+26.09.25-15:54:18.251	X=42435   42439__Y=2497   2497
+26.09.25-15:54:21.835	Humidity=	72	  Temperature=	22	  Dew Point=	16.9	  Adj. Temp=	15.9	  Bath Temp=	16.5
+26.09.25-15:54:28.670	1	 0/ 0	1	A1	1	2	1	40	8
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:54:28.670	1	 0/ 0	1	A1	1	1	2	1	40	8
+26.09.25-15:54:28.671	Moving to: X= 101203; Y=3777
+26.09.25-15:54:29.211	X=101203   101189__Y=3777   3777
+26.09.25-15:54:29.245	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:54:29.247	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:54:29.247	Moving to: X= 42435; Y=2497
+26.09.25-15:54:29.920	X=42435   42438__Y=2497   2497
+26.09.25-15:54:37.552	1	 0/ 0	1	A1	1	2	1	40	14
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:54:37.553	1	 0/ 0	1	A1	1	1	2	1	40	14
+26.09.25-15:54:37.553	Moving to: X= 101203; Y=5637
+26.09.25-15:54:38.092	X=101203   101188__Y=5637   5637
+26.09.25-15:54:38.127	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:54:38.129	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:54:38.129	Moving to: X= 42435; Y=2497
+26.09.25-15:54:38.803	X=42435   42438__Y=2497   2497
+26.09.25-15:54:52.664	1	 0/ 0	1	A1	1	2	1	40	20
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:54:52.665	1	 0/ 0	1	A1	1	1	2	1	40	20
+26.09.25-15:54:52.665	Moving to: X= 101203; Y=7497
+26.09.25-15:54:53.206	X=101203   101189__Y=7497   7497
+26.09.25-15:54:53.240	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:54:53.242	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:54:53.242	Moving to: X= 42435; Y=2497
+26.09.25-15:54:53.914	X=42435   42438__Y=2497   2497
+26.09.25-15:55:06.659	1	 0/ 0	1	A1	1	2	1	40	26
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:55:06.659	1	 0/ 0	1	A1	1	1	2	1	40	26
+26.09.25-15:55:06.660	Moving to: X= 101203; Y=9357
+26.09.25-15:55:07.200	X=101203   101189__Y=9357   9357
+26.09.25-15:55:07.234	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:55:07.236	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:55:07.236	Moving to: X= 42435; Y=2497
+26.09.25-15:55:07.908	X=42435   42438__Y=2497   2497
+26.09.25-15:55:21.849	Humidity=	68	  Temperature=	22	  Dew Point=	15.8	  Adj. Temp=	14.8	  Bath Temp=	16.0
+26.09.25-15:55:28.176	1	 0/ 0	1	A1	1	2	1	40	32
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:55:28.176	1	 0/ 0	1	A1	1	1	2	1	40	32
+26.09.25-15:55:28.177	Moving to: X= 101203; Y=11217
+26.09.25-15:55:28.716	X=101203   101189__Y=11217   11217
+26.09.25-15:55:28.754	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:55:28.756	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:55:28.756	Moving to: X= 42435; Y=2497
+26.09.25-15:55:29.427	X=42435   42438__Y=2497   2497
+26.09.25-15:55:31.708	1	 0/ 0	1	A1	1	2	1	40	38
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:55:31.708	1	 0/ 0	1	A1	1	1	2	1	40	38
+26.09.25-15:55:31.709	Moving to: X= 101203; Y=13077
+26.09.25-15:55:32.250	X=101203   101189__Y=13077   13077
+26.09.25-15:55:32.283	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:55:32.285	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:55:32.285	Moving to: X= 42435; Y=2497
+26.09.25-15:55:32.955	X=42435   42438__Y=2497   2497
+26.09.25-15:55:56.932	1	 0/ 0	1	A1	1	2	1	40	44
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:55:56.932	1	 0/ 0	1	A1	1	1	2	1	40	44
+26.09.25-15:55:56.933	Moving to: X= 101203; Y=14937
+26.09.25-15:55:57.470	X=101203   101188__Y=14937   14937
+26.09.25-15:55:57.492	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:55:57.494	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:55:57.494	Moving to: X= 42435; Y=2497
+26.09.25-15:55:58.168	X=42435   42438__Y=2497   2497
+26.09.25-15:56:00.750	1	 0/ 0	1	A1	1	2	1	40	50
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:56:00.750	1	 0/ 0	1	A1	1	1	2	1	40	50
+26.09.25-15:56:00.751	Moving to: X= 101203; Y=16797
+26.09.25-15:56:01.292	X=101203   101188__Y=16797   16797
+26.09.25-15:56:01.326	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:56:01.328	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:56:01.328	Moving to: X= 42435; Y=2497
+26.09.25-15:56:01.999	X=42435   42438__Y=2497   2497
+26.09.25-15:56:16.246	1	 0/ 0	1	A1	1	2	1	40	56
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:56:16.246	1	 0/ 0	1	A1	1	1	2	1	40	56
+26.09.25-15:56:16.247	Moving to: X= 101203; Y=18657
+26.09.25-15:56:16.785	X=101203   101188__Y=18657   18657
+26.09.25-15:56:16.821	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:56:16.823	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:56:16.823	Moving to: X= 42435; Y=2497
+26.09.25-15:56:17.495	X=42435   42439__Y=2497   2497
+26.09.25-15:56:21.865	Humidity=	69	  Temperature=	22	  Dew Point=	16.1	  Adj. Temp=	15.1	  Bath Temp=	15.0
+26.09.25-15:56:32.859	1	 0/ 0	1	A1	1	2	1	40	62
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:56:32.859	1	 0/ 0	1	A1	1	1	2	1	40	62
+26.09.25-15:56:32.859	Moving to: X= 101203; Y=20517
+26.09.25-15:56:33.400	X=101203   101188__Y=20517   20517
+26.09.25-15:56:33.436	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:56:33.438	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:56:33.438	Moving to: X= 42435; Y=2497
+26.09.25-15:56:34.107	X=42435   42439__Y=2497   2497
+26.09.25-15:56:47.939	1	 0/ 0	1	A1	1	2	1	54	20
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:56:47.939	1	 0/ 0	1	A1	1	1	2	1	54	20
+26.09.25-15:56:47.940	Moving to: X= 104703; Y=7497
+26.09.25-15:56:48.495	X=104703   104689__Y=7497   7497
+26.09.25-15:56:48.531	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:56:48.533	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:56:48.533	Moving to: X= 42435; Y=2497
+26.09.25-15:56:49.227	X=42435   42438__Y=2497   2497
+26.09.25-15:56:56.264	1	 0/ 0	1	A1	1	2	1	54	26
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:56:56.264	1	 0/ 0	1	A1	1	1	2	1	54	26
+26.09.25-15:56:56.264	Moving to: X= 104703; Y=9357
+26.09.25-15:56:56.821	X=104703   104690__Y=9357   9357
+26.09.25-15:56:56.855	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:56:56.857	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:56:56.857	Moving to: X= 42435; Y=2497
+26.09.25-15:56:57.552	X=42435   42438__Y=2497   2497
+26.09.25-15:57:12.524	1	 0/ 0	1	A1	1	2	1	54	32
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:57:12.524	1	 0/ 0	1	A1	1	1	2	1	54	32
+26.09.25-15:57:12.525	Moving to: X= 104703; Y=11217
+26.09.25-15:57:13.080	X=104703   104691__Y=11217   11217
+26.09.25-15:57:13.116	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:57:13.118	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:57:13.118	Moving to: X= 42435; Y=2497
+26.09.25-15:57:13.813	X=42435   42438__Y=2497   2497
+26.09.25-15:57:21.891	Humidity=	70	  Temperature=	22	  Dew Point=	16.3	  Adj. Temp=	15.3	  Bath Temp=	16.9
+26.09.25-15:57:22.588	1	 0/ 0	1	A1	1	2	1	54	38
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:57:22.588	1	 0/ 0	1	A1	1	1	2	1	54	38
+26.09.25-15:57:22.588	Moving to: X= 104703; Y=13077
+26.09.25-15:57:23.141	X=104703   104690__Y=13077   13077
+26.09.25-15:57:23.165	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:57:23.167	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:57:23.167	Moving to: X= 42435; Y=2497
+26.09.25-15:57:23.862	X=42435   42438__Y=2497   2497
+26.09.25-15:57:40.625	1	 0/ 0	1	A1	1	2	1	54	44
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:57:40.625	1	 0/ 0	1	A1	1	1	2	1	54	44
+26.09.25-15:57:40.625	Moving to: X= 104703; Y=14937
+26.09.25-15:57:41.179	X=104703   104690__Y=14937   14937
+26.09.25-15:57:41.201	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:57:41.204	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:57:41.204	Moving to: X= 42435; Y=2497
+26.09.25-15:57:41.899	X=42435   42438__Y=2497   2497
+26.09.25-15:57:43.181	1	 0/ 0	1	A1	1	2	1	54	50
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:57:43.181	1	 0/ 0	1	A1	1	1	2	1	54	50
+26.09.25-15:57:43.182	Moving to: X= 104703; Y=16797
+26.09.25-15:57:43.737	X=104703   104691__Y=16797   16797
+26.09.25-15:57:43.773	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:57:43.775	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:57:43.776	Moving to: X= 42435; Y=2497
+26.09.25-15:57:44.470	X=42435   42437__Y=2497   2497
+26.09.25-15:58:08.036	1	 0/ 0	1	A1	1	2	1	54	56
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:58:08.036	1	 0/ 0	1	A1	1	1	2	1	54	56
+26.09.25-15:58:08.037	Moving to: X= 104703; Y=18657
+26.09.25-15:58:08.593	X=104703   104691__Y=18657   18657
+26.09.25-15:58:08.629	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:58:08.631	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:58:08.631	Moving to: X= 42435; Y=2497
+26.09.25-15:58:09.327	X=42435   42437__Y=2497   2497
+26.09.25-15:58:11.616	1	 0/ 0	1	A1	1	2	1	54	62
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:58:11.616	1	 0/ 0	1	A1	1	1	2	1	54	62
+26.09.25-15:58:11.617	Moving to: X= 104703; Y=20517
+26.09.25-15:58:12.169	X=104703   104689__Y=20517   20517
+26.09.25-15:58:12.191	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:58:12.193	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:58:12.193	Moving to: X= 42435; Y=2497
+26.09.25-15:58:12.887	X=42435   42438__Y=2497   2497
+26.09.25-15:58:19.971	1	 0/ 0	1	A1	1	2	1	58	20
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:58:19.971	1	 0/ 0	1	A1	1	1	2	1	58	20
+26.09.25-15:58:19.972	Moving to: X= 105703; Y=7497
+26.09.25-15:58:20.531	X=105703   105691__Y=7497   7497
+26.09.25-15:58:20.564	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:58:20.566	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:58:20.566	Moving to: X= 42435; Y=2497
+26.09.25-15:58:21.266	X=42435   42438__Y=2497   2497
+26.09.25-15:58:21.901	Humidity=	68	  Temperature=	23	  Dew Point=	16.8	  Adj. Temp=	15.8	  Bath Temp=	15.6
+26.09.25-15:58:29.316	1	 0/ 0	1	A1	1	2	1	58	26
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:58:29.316	1	 0/ 0	1	A1	1	1	2	1	58	26
+26.09.25-15:58:29.317	Moving to: X= 105703; Y=9357
+26.09.25-15:58:29.873	X=105703   105691__Y=9357   9357
+26.09.25-15:58:29.908	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:58:29.910	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:58:29.910	Moving to: X= 42435; Y=2497
+26.09.25-15:58:30.612	X=42435   42438__Y=2497   2497
+26.09.25-15:58:33.628	1	 0/ 0	1	A1	1	2	1	58	32
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:58:33.628	1	 0/ 0	1	A1	1	1	2	1	58	32
+26.09.25-15:58:33.629	Moving to: X= 105703; Y=11217
+26.09.25-15:58:34.188	X=105703   105691__Y=11217   11217
+26.09.25-15:58:34.222	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:58:34.224	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:58:34.224	Moving to: X= 42435; Y=2497
+26.09.25-15:58:34.925	X=42435   42438__Y=2497   2497
+26.09.25-15:58:57.239	1	 0/ 0	1	A1	1	2	1	58	38
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:58:57.240	1	 0/ 0	1	A1	1	1	2	1	58	38
+26.09.25-15:58:57.240	Moving to: X= 105703; Y=13077
+26.09.25-15:58:57.800	X=105703   105691__Y=13077   13077
+26.09.25-15:58:57.833	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:58:57.835	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:58:57.835	Moving to: X= 42435; Y=2497
+26.09.25-15:58:58.538	X=42435   42438__Y=2497   2497
+26.09.25-15:59:21.930	Humidity=	79	  Temperature=	22	  Dew Point=	18.2	  Adj. Temp=	17.2	  Bath Temp=	15.5
+26.09.25-15:59:42.226	1	 0/ 0	1	A1	1	2	1	58	44
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:59:42.226	1	 0/ 0	1	A1	1	1	2	1	58	44
+26.09.25-15:59:42.227	Moving to: X= 105703; Y=14937
+26.09.25-15:59:42.785	X=105703   105691__Y=14937   14937
+26.09.25-15:59:42.817	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:59:42.819	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:59:42.819	Moving to: X= 42435; Y=2497
+26.09.25-15:59:43.520	X=42435   42438__Y=2497   2497
+26.09.25-15:59:49.014	1	 0/ 0	1	A1	1	2	1	58	50
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:59:49.014	1	 0/ 0	1	A1	1	1	2	1	58	50
+26.09.25-15:59:49.015	Moving to: X= 105703; Y=16797
+26.09.25-15:59:49.573	X=105703   105692__Y=16797   16797
+26.09.25-15:59:49.606	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:59:49.608	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:59:49.608	Moving to: X= 42435; Y=2497
+26.09.25-15:59:50.310	X=42435   42438__Y=2497   2497
+26.09.25-15:59:53.008	1	 0/ 0	1	A1	1	2	1	58	56
+	TgtFound: True	Tgt4CTs: False
+26.09.25-15:59:53.008	1	 0/ 0	1	A1	1	1	2	1	58	56
+26.09.25-15:59:53.008	Moving to: X= 105703; Y=18657
+26.09.25-15:59:53.565	X=105703   105691__Y=18657   18657
+26.09.25-15:59:53.600	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-15:59:53.602	5	Function		AutoParticleDetection	30	C:\Users\Scienion AG		0/0/500/0/0/1	1																																																																																																																																																																																			
+26.09.25-15:59:53.602	Moving to: X= 42435; Y=2497
+26.09.25-15:59:54.305	X=42435   42438__Y=2497   2497
+26.09.25-16:00:21.977	Humidity=	69	  Temperature=	22	  Dew Point=	16.1	  Adj. Temp=	15.1	  Bath Temp=	16.8
+26.09.25-16:00:26.602	1	 0/ 0	1	A1	1	2	1	58	62
+	TgtFound: True	Tgt4CTs: False
+26.09.25-16:00:26.602	1	 0/ 0	1	A1	1	1	2	1	58	62
+26.09.25-16:00:26.603	Moving to: X= 105703; Y=20517
+26.09.25-16:00:27.159	X=105703   105690__Y=20517   20516
+26.09.25-16:00:27.194	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+26.09.25-16:00:27.196	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+26.09.25-16:00:28.259	Z=11550   11550__1
+26.09.25-16:00:28.259	Moving to: X= 42435; Y=2497
+26.09.25-16:00:28.888	X=42435   42445__Y=2497   2497
+26.09.25-16:00:29.959	Z=25224   25224__1
+26.09.25-16:00:30.005	Moving to: X= 42435; Y=2497
+26.09.25-16:00:30.077	X=42435   42435__Y=2497   2497
+26.09.25-16:00:30.155	Z=25224   25224__1
+26.09.25-16:00:31.453	Z=11550   11550__1
+26.09.25-16:00:31.454	Moving to: X= 33480; Y=2502
+26.09.25-16:00:31.727	X=33480   33486__Y=2502   2502
+26.09.25-16:00:32.788	Z=25269   25269__1
+26.09.25-16:00:34.074	Z=11550   11550__1
+26.09.25-16:00:34.074	Moving to: X= 42435; Y=2497
+26.09.25-16:00:34.348	X=42435   42428__Y=2497   2497
+26.09.25-16:00:35.414	Z=25224   25224__1
+26.09.25-16:00:36.485	Z=11550   11550__1
+26.09.25-16:00:36.486	Moving to: X= 42435; Y=2497
+26.09.25-16:00:36.553	X=42435   42435__Y=2497   2497
+26.09.25-16:00:37.624	Z=25224   25224__1
+26.09.25-16:00:37.625	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
+26.09.25-16:00:38.710	Z=11550   11550__1
+26.09.25-16:00:38.711	Moving to: X= 9800; Y=2300
+26.09.25-16:00:39.128	X=9800   9812__Y=2300   2300
+26.09.25-16:00:40.234	Z=25657   25657__1
+26.09.25-16:00:40.235	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
+26.09.25-16:00:40.239	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
+26.09.25-16:00:40.640	3	Wait		5000																																																																																																																																																																																								
+26.09.25-16:00:45.670	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+26.09.25-16:00:46.761	Z=11550   11550__1
+26.09.25-16:00:46.761	Moving to: X= 9800; Y=7300
+26.09.25-16:00:47.006	X=9800   9800__Y=7300   7298
+26.09.25-16:00:48.531	Z=38001   38001__1
+26.09.25-16:00:48.532	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
+26.09.25-16:00:49.687	3	Wait		6000																																																																																																																																																																																								
+26.09.25-16:00:55.713	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
+26.09.25-16:00:55.839	3	Wait		3000																																																																																																																																																																																								
+26.09.25-16:00:58.860	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
+26.09.25-16:01:00.008	3	Wait		5000																																																																																																																																																																																								
+26.09.25-16:01:05.033	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
+26.09.25-16:01:05.151	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
+26.09.25-16:01:21.992	Humidity=	68	  Temperature=	23	  Dew Point=	16.8	  Adj. Temp=	15.8	  Bath Temp=	16.2
+26.09.25-16:01:23.810	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+26.09.25-16:01:25.387	Z=11550   11550__1
+26.09.25-16:01:25.387	Moving to: X= 42435; Y=2497
+26.09.25-16:01:25.889	X=42435   42433__Y=2497   2497
+26.09.25-16:01:26.952	Z=25224   25224__1
+26.09.25-16:01:26.953	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
+26.09.25-16:01:26.955	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+26.09.25-16:01:26.956	Moving to: X= 42435; Y=2497
+26.09.25-16:01:27.020	X=42435   42435__Y=2497   2497
+26.09.25-16:01:27.102	Z=25224   25224__1
+26.09.25-16:01:27.103	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
+26.09.25-16:01:27.106	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
+26.09.25-16:01:27.110	5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0																																																																																																																																																																																			
+26.09.25-16:01:28.280	Z=9114   9114__1
+26.09.25-16:01:28.281	Moving to: X= 137295; Y=2866
+26.09.25-16:01:29.121	X=137295   137284__Y=2866   2866
+26.09.25-16:01:29.360	Moving to: X= 144028; Y=2866
+26.09.25-16:01:29.602	X=144028   144024__Y=2866   2866
+26.09.25-16:01:29.838	Moving to: X= 150761; Y=2866
+26.09.25-16:01:30.081	X=150761   150757__Y=2866   2866
+26.09.25-16:01:30.316	Moving to: X= 137295; Y=8273
+26.09.25-16:01:30.603	X=137295   137309__Y=8273   8275
+26.09.25-16:01:30.841	Moving to: X= 144028; Y=8273
+26.09.25-16:01:31.086	X=144028   144021__Y=8273   8273
+26.09.25-16:01:31.322	Moving to: X= 150761; Y=8273
+26.09.25-16:01:31.568	X=150761   150757__Y=8273   8273
+26.09.25-16:01:31.803	Moving to: X= 137295; Y=13680
+26.09.25-16:01:32.090	X=137295   137310__Y=13680   13682
+26.09.25-16:01:32.329	Moving to: X= 144028; Y=13680
+26.09.25-16:01:32.574	X=144028   144022__Y=13680   13680
+26.09.25-16:01:32.811	Moving to: X= 150761; Y=13680
+26.09.25-16:01:33.057	X=150761   150756__Y=13680   13680
+26.09.25-16:01:33.292	Moving to: X= 137295; Y=19087
+26.09.25-16:01:33.579	X=137295   137310__Y=19087   19089
+26.09.25-16:01:33.819	Moving to: X= 144028; Y=19087
+26.09.25-16:01:34.063	X=144028   144022__Y=19087   19087
+26.09.25-16:01:34.299	Moving to: X= 150761; Y=19087
+26.09.25-16:01:34.547	X=150761   150757__Y=19087   19087
+26.09.25-16:01:34.783	Moving to: X= 137295; Y=24493
+26.09.25-16:01:35.071	X=137295   137310__Y=24493   24494
+26.09.25-16:01:35.308	Moving to: X= 144028; Y=24493
+26.09.25-16:01:35.556	X=144028   144022__Y=24493   24493
+26.09.25-16:01:35.793	Moving to: X= 150761; Y=24493
+26.09.25-16:01:36.037	X=150761   150756__Y=24493   24493
+26.09.25-16:01:36.450	Moving to: X= 154795; Y=2866
+26.09.25-16:01:36.799	X=154795   154795__Y=2866   2871
+26.09.25-16:01:37.036	Moving to: X= 161528; Y=2866
+26.09.25-16:01:37.279	X=161528   161523__Y=2866   2866
+26.09.25-16:01:37.514	Moving to: X= 168261; Y=2866
+26.09.25-16:01:37.761	X=168261   168257__Y=2866   2866
+26.09.25-16:01:38.000	Moving to: X= 154795; Y=8273
+26.09.25-16:01:38.286	X=154795   154810__Y=8273   8275
+26.09.25-16:01:38.524	Moving to: X= 161528; Y=8273
+26.09.25-16:01:38.768	X=161528   161522__Y=8273   8273
+26.09.25-16:01:39.004	Moving to: X= 168261; Y=8273
+26.09.25-16:01:39.249	X=168261   168256__Y=8273   8273
+26.09.25-16:01:39.485	Moving to: X= 154795; Y=13680
+26.09.25-16:01:39.771	X=154795   154810__Y=13680   13682
+26.09.25-16:01:40.010	Moving to: X= 161528; Y=13680
+26.09.25-16:01:40.254	X=161528   161522__Y=13680   13680
+26.09.25-16:01:40.491	Moving to: X= 168261; Y=13680
+26.09.25-16:01:40.735	X=168261   168256__Y=13680   13680
+26.09.25-16:01:40.972	Moving to: X= 154795; Y=19087
+26.09.25-16:01:41.265	X=154795   154810__Y=19087   19089
+26.09.25-16:01:41.501	Moving to: X= 161528; Y=19087
+26.09.25-16:01:41.748	X=161528   161522__Y=19087   19087
+26.09.25-16:01:41.983	Moving to: X= 168261; Y=19087
+26.09.25-16:01:42.227	X=168261   168256__Y=19087   19087
+26.09.25-16:01:42.463	Moving to: X= 154795; Y=24493
+26.09.25-16:01:42.753	X=154795   154810__Y=24493   24494
+26.09.25-16:01:42.991	Moving to: X= 161528; Y=24493
+26.09.25-16:01:43.231	X=161528   161522__Y=24493   24493
+26.09.25-16:01:43.475	Moving to: X= 168261; Y=24493
+26.09.25-16:01:43.716	X=168261   168256__Y=24493   24493
+26.09.25-16:01:44.158	1	I/O		2	DOutput2	Head Cam Light	OFF	0																																																																																																																																																																																				
+26.09.25-16:01:44.161	4	Message		Isolation completed! If you are done dispesnsing cells, make sure to close the cell Monitor before continuing the preparation.	OK																																																																																																																																																																																							
+26.09.25-16:01:44.167	Comment: Isolation completed! If you are done dispesnsing cells, make sure to close the cell Monitor before continuing the preparation.
+26.09.25-16:01:55.502	
+	Total detected particles:	482	
+	Total volume dispensed (nl):	1335.60	
+	Concentration estimated (1/µl):	360.89	
+	AutoROI-LEFT : 	1021.000000	
+	User-ROI-LEFT : 	6.000000	
+	Channels :Transmission-Positive
+Run has finished: 4:01 PM - 9/26/2025
+
+
+§23-28-54-75-62-46-32-80-65-39-58-38-46-60-58-69-24-58-50-27-45-41-76-84-38-77-57-60-30-46-30-80-29-27-69-30-26-73-48-80-41-83-73-31-66
