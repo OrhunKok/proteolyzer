@@ -26,12 +26,17 @@ Proteolyzer is a Python package designed for processing, analyzing, and visualiz
    cd proteolyzer
    ```
 
-2. Install the package and its dependencies:
+2. Install the package:
    ```bash
    pip install .
    ```
 
-3. Alternatively, install the package in editable mode for development:
+3. Optional: Install the dependencies for specific modules:
+   ```bash
+   pip install -e '.[aas]'
+   pip install -e '.[unimod]'
+   ```
+4. Alternatively, install the package in editable mode for development:
    ```bash
    pip install -e .
    ```
