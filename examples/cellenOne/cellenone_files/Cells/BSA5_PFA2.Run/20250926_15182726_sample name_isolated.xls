@@ -1,0 +1,73 @@
+DropNo	X	Y	Diameter	Elongation	Circularity	Intensity	Plate	Well	Target	Field	XPos	YPos	Date        	Time    	ImageFile	Background	EjBound	SedBound	DetDiaMinTrans	DetDiaMaxTrans	IsoDiaMinTrans	IsoDiaMaxTrans	IsoIntMinTrans	IsoIntMaxTrans	IsoDiaMinFlu	IsoDiaMaxFlu	IsoIntMinFlu	IsoIntMaxFlu
+0000054	Transmission						1	A-1	1	1	1	9	9/26/2025	3:18:40 PM	=HYPERLINK("54_Printed_T1_F1_R9_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+54.00	210.08	195.20	21.06	2.06	1.13	112.09
+0000140	Transmission						1	A-1	1	1	1	15	9/26/2025	3:18:53 PM	=HYPERLINK("140_Printed_T1_F1_R15_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+140.00	153.58	181.04	17.06	2.25	1.16	122.79
+0000150	Transmission						1	A-1	1	1	1	21	9/26/2025	3:18:55 PM	=HYPERLINK("150_Printed_T1_F1_R21_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+150.00	151.16	153.12	20.14	2.84	1.26	115.14
+0000159	Transmission						1	A-1	1	1	1	27	9/26/2025	3:18:57 PM	=HYPERLINK("159_Printed_T1_F1_R27_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+159.00	141.08	163.72	22.62	2.23	1.16	112.94
+0000188	Transmission						1	A-1	1	1	1	33	9/26/2025	3:19:02 PM	=HYPERLINK("188_Printed_T1_F1_R33_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+188.00	104.80	186.71	17.82	2.94	1.28	122.57
+0000345	Transmission						1	A-1	1	1	1	39	9/26/2025	3:19:21 PM	=HYPERLINK("345_Printed_T1_F1_R39_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+345.00	171.59	190.89	27.54	2.82	1.26	126.10
+0000370	Transmission						1	A-1	1	1	1	45	9/26/2025	3:19:25 PM	=HYPERLINK("370_Printed_T1_F1_R45_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+370.00	52.82	207.64	28.51	1.47	1.04	88.28
+0000391	Transmission						1	A-1	1	1	1	51	9/26/2025	3:19:28 PM	=HYPERLINK("391_Printed_T1_F1_R51_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+391.00	129.21	192.30	17.32	1.68	1.07	113.15
+0000403	Transmission						1	A-1	1	1	1	57	9/26/2025	3:19:31 PM	=HYPERLINK("403_Printed_T1_F1_R57_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+403.00	194.42	162.40	24.36	2.08	1.13	116.94
+0000579	Transmission						1	A-1	1	1	1	63	9/26/2025	3:19:52 PM	=HYPERLINK("579_Printed_T1_F1_R63_C1_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+579.00	236.17	180.30	18.04	1.94	1.11	120.01
+0000585	Transmission						1	A-1	1	1	5	9	9/26/2025	3:19:53 PM	=HYPERLINK("585_Printed_T1_F1_R9_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+585.00	211.47	169.64	18.16	2.62	1.23	122.20
+0000628	Transmission						1	A-1	1	1	5	15	9/26/2025	3:19:59 PM	=HYPERLINK("628_Printed_T1_F1_R15_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+628.00	200.57	158.81	17.57	2.92	1.28	119.55
+0000632	Transmission						1	A-1	1	1	5	21	9/26/2025	3:20:01 PM	=HYPERLINK("632_Printed_T1_F1_R21_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+632.00	240.02	162.44	19.18	1.96	1.11	124.76
+0000639	Transmission						1	A-1	1	1	5	27	9/26/2025	3:20:03 PM	=HYPERLINK("639_Printed_T1_F1_R27_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+639.00	218.92	179.14	25.86	2.20	1.15	122.05
+0000651	Transmission						1	A-1	1	1	5	33	9/26/2025	3:20:05 PM	=HYPERLINK("651_Printed_T1_F1_R33_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+651.00	246.48	202.31	20.42	2.69	1.24	115.44
+0000844	Transmission						1	A-1	1	1	5	39	9/26/2025	3:20:28 PM	=HYPERLINK("844_Printed_T1_F1_R39_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+844.00	155.64	165.30	18.86	2.70	1.24	109.61
+0000854	Transmission						1	A-1	1	1	5	45	9/26/2025	3:20:31 PM	=HYPERLINK("854_Printed_T1_F1_R45_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+854.00	182.50	166.35	21.45	2.14	1.14	109.43
+0000886	Transmission						1	A-1	1	1	5	51	9/26/2025	3:20:36 PM	=HYPERLINK("886_Printed_T1_F1_R51_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+886.00	219.30	182.74	27.32	1.63	1.06	113.19
+0000921	Transmission						1	A-1	1	1	5	57	9/26/2025	3:20:42 PM	=HYPERLINK("921_Printed_T1_F1_R57_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+921.00	227.83	206.05	18.57	1.74	1.08	124.97
+0000954	Transmission						1	A-1	1	1	5	63	9/26/2025	3:20:47 PM	=HYPERLINK("954_Printed_T1_F1_R63_C5_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+954.00	139.12	164.84	25.47	2.93	1.28	126.36
+0001253	Transmission						1	A-1	1	1	19	21	9/26/2025	3:21:24 PM	=HYPERLINK("1253_Printed_T1_F1_R21_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1253.00	163.49	166.50	22.51	1.88	1.10	122.38
+0001297	Transmission						1	A-1	1	1	19	27	9/26/2025	3:21:29 PM	=HYPERLINK("1297_Printed_T1_F1_R27_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1297.00	223.63	174.75	23.67	2.02	1.12	120.98
+0001418	Transmission						1	A-1	1	1	19	33	9/26/2025	3:21:45 PM	=HYPERLINK("1418_Printed_T1_F1_R33_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1418.00	221.57	197.48	18.93	2.81	1.26	122.19
+0001482	Transmission						1	A-1	1	1	19	39	9/26/2025	3:21:54 PM	=HYPERLINK("1482_Printed_T1_F1_R39_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1482.00	198.18	199.74	22.71	2.98	1.29	122.00
+0001511	Transmission						1	A-1	1	1	19	45	9/26/2025	3:21:59 PM	=HYPERLINK("1511_Printed_T1_F1_R45_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1511.00	207.40	202.49	27.34	2.36	1.18	96.39
+0001543	Transmission						1	A-1	1	1	19	51	9/26/2025	3:22:05 PM	=HYPERLINK("1543_Printed_T1_F1_R51_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1543.00	194.91	175.16	17.92	1.86	1.09	118.19
+0001548	Transmission						1	A-1	1	1	19	57	9/26/2025	3:22:06 PM	=HYPERLINK("1548_Printed_T1_F1_R57_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1548.00	225.46	195.34	23.16	1.82	1.09	117.75
+0001565	Transmission						1	A-1	1	1	19	63	9/26/2025	3:22:10 PM	=HYPERLINK("1565_Printed_T1_F1_R63_C19_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1565.00	177.49	190.91	18.08	2.13	1.14	116.31
+0001612	Transmission						1	A-1	1	1	23	21	9/26/2025	3:22:18 PM	=HYPERLINK("1612_Printed_T1_F1_R21_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1612.00	241.15	204.25	22.08	2.59	1.22	110.20
+0001675	Transmission						1	A-1	1	1	23	27	9/26/2025	3:22:27 PM	=HYPERLINK("1675_Printed_T1_F1_R27_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1675.00	206.09	203.73	17.57	1.90	1.10	118.26
+0001695	Transmission						1	A-1	1	1	23	33	9/26/2025	3:22:30 PM	=HYPERLINK("1695_Printed_T1_F1_R33_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1695.00	234.63	163.61	20.15	2.25	1.16	110.14
+0001700	Transmission						1	A-1	1	1	23	39	9/26/2025	3:22:32 PM	=HYPERLINK("1700_Printed_T1_F1_R39_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1700.00	239.47	207.59	24.07	2.40	1.19	109.49
+0001921	Transmission						1	A-1	1	1	23	45	9/26/2025	3:22:58 PM	=HYPERLINK("1921_Printed_T1_F1_R45_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1921.00	80.27	162.11	20.76	2.16	1.15	118.11
+0001928	Transmission						1	A-1	1	1	23	51	9/26/2025	3:23:00 PM	=HYPERLINK("1928_Printed_T1_F1_R51_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1928.00	236.24	158.25	17.09	1.86	1.10	129.51
+0001966	Transmission						1	A-1	1	1	23	57	9/26/2025	3:23:07 PM	=HYPERLINK("1966_Printed_T1_F1_R57_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+1966.00	95.42	149.71	18.64	2.04	1.13	113.18
+0002016	Transmission						1	A-1	1	1	23	63	9/26/2025	3:23:14 PM	=HYPERLINK("2016_Printed_T1_F1_R63_C23_(A-1)_Trans_samplename_Run.png")	=HYPERLINK("20250926_15182726_sample name_Background.png")	243	192	17	30	10	500	1	255	0	0	0	0
+2016.00	86.86	196.28	17.51	1.97	1.11	117.83
