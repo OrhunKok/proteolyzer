@@ -1,3 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proteolyzer"
+requires-python = ">=3.14"
+dependencies = [
+    "pandas",
+    "numpy",
+    "pydantic",
+    "pyarrow",
+    "matplotlib",
+    "seaborn",
+    "scienceplots",
+    "adjusttext",
+    "chardet",
+    { "python-magic-bin" = { version = "*", markers = "sys_platform == 'win'" } },
+    { "python-magic" = { version = "*", markers = "sys_platform != 'win'" } }
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+unimod = [
+    "requests",
+    "xml2db",
+    "sqlalchemy",
+]
+aas = [
+    "pyahocorasick",
+    "biopython",
+    "quickdna",
+    "pyyaml",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["resources/*"]
+
+[tool.setuptools_scm]
+
+
+
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [

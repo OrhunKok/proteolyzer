@@ -36,17 +36,6 @@ Proteolyzer is a Python package designed for processing, analyzing, and visualiz
    pip install -e .
    ```
 
-## Dependencies
-
-Proteolyzer requires the following Python packages:
-
-- `pandas`
-- `numpy`
-- `pyarrow`
-- `matplotlib`
-- `scienceplots`
-- `seaborn`
-
 ## Contributing
 
 Contributions are welcome! If you'd like to contribute, please fork the repository, make your changes, and submit a pull request. Ensure that your code passes all tests and follows the project's coding standards.
