@@ -14,6 +14,9 @@ Proteolyzer is a Python package designed for processing, analyzing, and visualiz
 - **Data Processing**: Clean and structure raw proteomics data for downstream analysis.
 - **Matrix Transformation**: Build matrices for statistical and machine learning workflows.
 - **Custom Logging**: Integrated logging for better traceability and debugging.
+- **Unimod Integration**: Retrieves and organizes the UniMod Database
+- **CellenOne Module**: Maps single-cells prepared via cellenOne to well positions.
+- **Alternate RNA Decoding Module**: Implementation of the pipeline used for discovery of amino acid substitutions and PTMs. [Paper](https://decode.slavovlab.net/).
 
 ## Installation
 
