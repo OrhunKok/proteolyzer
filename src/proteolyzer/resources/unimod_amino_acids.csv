@@ -1,0 +1,25 @@
+one_letter,three_letter,full_name,num_H,num_O,num_C,num_N,num_S,num_Se,mono_mass
+A,Ala,Alanine,5,1,3,1,0,0,71.037113805
+R,Arg,Arginine,12,1,6,4,0,0,156.10111105
+N,Asn,Asparagine,6,2,4,2,0,0,114.04292747
+D,Asp,Aspartic acid,5,3,4,1,0,0,115.026943065
+C,Cys,Cysteine,5,1,3,1,1,0,103.00918450500001
+E,Glu,Glutamic acid,7,3,5,1,0,0,129.042593135
+Q,Gln,Glutamine,8,2,5,2,0,0,128.05857754
+G,Gly,Glycine,3,1,2,1,0,0,57.021463735
+H,His,Histidine,7,1,6,3,0,0,137.058911875
+I,Ile,Isoleucine,11,1,6,1,0,0,113.084064015
+L,Leu,Leucine,11,1,6,1,0,0,113.084064015
+K,Lys,Lysine,12,1,6,2,0,0,128.09496305
+M,Met,Methionine,9,1,5,1,1,0,131.040484645
+F,Phe,Phenylalanine,9,1,9,1,0,0,147.068413945
+P,Pro,Proline,7,1,5,1,0,0,97.052763875
+S,Ser,Serine,5,2,3,1,0,0,87.032028435
+T,Thr,Threonine,7,2,4,1,0,0,101.047678505
+W,Trp,Tryptophan,10,1,11,2,0,0,186.07931298
+Y,Tyr,Tyrosine,9,2,9,1,0,0,163.06332857499999
+V,Val,Valine,9,1,5,1,0,0,99.068413945
+N-term,N-term,N-term,1,0,0,0,0,0,1.007825035
+C-term,C-term,C-term,1,1,0,0,0,0,17.002739665
+U,Sec,Selenocysteine,5,1,3,1,0,1,150.953633405
+J,Xle,Isoleucine/Leucine,11,1,6,1,0,0,113.084064015

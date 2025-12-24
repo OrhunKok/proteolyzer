@@ -20,7 +20,7 @@ class MatrixBuilder(metaclass=MetaLogging):
     __slots__ = ("processed_data", "data", "matrix", "logger")
 
     def __init__(self, processed_data: ProcessedData):
-        self.data = processed_data.data
+        self.data = processed_data
 
     def missingness_check(
         self, matrix: pd.DataFrame, warning_threshold: float = 0.75

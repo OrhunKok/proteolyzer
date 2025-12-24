@@ -15,9 +15,6 @@ class UnimodDBLoader:
     
     XSD_SOURCE: str = "https://www.unimod.org/xmlns/schema/unimod_tables_1/unimod_tables_1.xsd"
     XML_SOURCE: str = 'https://www.unimod.org/xml/unimod_tables.xml'
-    DB_OUTPUT: str = '../../../data/unimod.db' 
-    DB_CONN: str = f"sqlite:///{DB_OUTPUT}"
-    
     UNIMOD_XML_CONFIG: Dict[str, Any] = {
         "tables": {
             "unimod": {
@@ -28,18 +25,15 @@ class UnimodDBLoader:
             },
         },
     }
-
     data_model: DataModel
     
-    def __init__(self, xsd_source: Optional[str] = None, xml_source: Optional[str] = None, db_conn: Optional[str] = None) -> None:
+    def __init__(self, db_output: str, xsd_source: Optional[str] = None, xml_source: Optional[str] = None) -> None:
         """Initializes the DataModel, fetching XSD content and using a temp file."""
         
+        self.db_output = db_output
         self.xsd_source = xsd_source if xsd_source else self.XSD_SOURCE
         self.xml_source = xml_source if xml_source else self.XML_SOURCE
-        connection_string: str = db_conn if db_conn else self.DB_CONN
-        
-        if db_conn and connection_string.startswith("sqlite:///"):
-            self.DB_OUTPUT = connection_string.split("sqlite:///", 1)[1]
+        connection_string: str = f"sqlite:///{db_output}"
             
         xsd_content: str = self._fetch_content(self.xsd_source)
         
@@ -108,7 +102,7 @@ class UnimodDBLoader:
         print("\nStarting table cleanup...")
         conn: Optional[sqlite3.Connection] = None
         try:
-            conn = sqlite3.connect(self.DB_OUTPUT)
+            conn = sqlite3.connect(self.db_output)
             cursor: sqlite3.Cursor = conn.cursor()
             
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -152,7 +146,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Load UNIMOD XML data into an SQLite database."
     )
-    
+    parser.add_argument(
+        '--db-output',
+        required=True, 
+        type=str, 
+        help=f"Path to the UniMod SQLite database file. (Required)"
+    )
     parser.add_argument(
         '--xsd-source', 
         type=str, 
@@ -165,19 +164,13 @@ def main():
         default=UnimodDBLoader.XML_SOURCE, 
         help=f"Source URL or path for the XML data file. Default: {UnimodDBLoader.XML_SOURCE}"
     )
-    parser.add_argument(
-        '--db-output', 
-        type=str, 
-        default=UnimodDBLoader.DB_OUTPUT, 
-        help=f"Path to the UniMod SQLite database file. Default: {UnimodDBLoader.DB_OUTPUT}"
-    )
     
     args = parser.parse_args()
     
     loader = UnimodDBLoader(
+        db_output=args.db_output,
         xsd_source=args.xsd_source,
         xml_source=args.xml_source,
-        db_conn=args.db_output
     )
     
     loader.load_and_clean()

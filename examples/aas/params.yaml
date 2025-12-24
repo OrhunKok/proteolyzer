@@ -1,0 +1,40 @@
+Utils:
+
+  Data Folder: path_here
+  Output Folder: path_here
+  Metadata File: path_here
+
+  Workflow: MaxQuant
+  Labelling Setup: Label-Free
+  Label Plex: 1
+
+
+Translation:
+  Genome FASTA: path_here
+  Translated Frames Folder: path_here
+
+
+Detection:
+
+  Protease: Trypsin
+  Protein FASTA: path_here
+
+  MaxQuant:
+    Detection PEP: 0.01
+    AA Substitution ppm: 10.0
+    PTM ppm: 5.0
+    Positional Probability Threshold: 0.8
+    C/n-term Modification Threshold: 0.9
+
+Validation:
+
+  MaxQuant:
+    Validation PEP: 0.01
+    PIF: 0.8
+    Fragment Evidence: 0.9
+
+
+Quantification:
+
+  MaxQuant:
+    Minimum Quantity: 0

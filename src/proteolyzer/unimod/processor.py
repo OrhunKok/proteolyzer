@@ -12,19 +12,19 @@ class UniModProcessor:
     A class to extract, process, and save modification and amino acid data
     from a UniMod SQLite database.
     """
+    MODS_OUTPUT: str = 'unimod_modifications.csv'
+    AA_OUTPUT: str = 'unimod_amino_acids.csv'
 
-    DB_FILE: str = '../../../data/unimod.db'
-    MODS_OUTPUT: str = '../../../data/unimod_modifications.csv'
-    AA_OUTPUT: str = '../../../data/unimod_amino_acids.csv'
-
-    def __init__(self, db_file: Optional[str] = None, mods_output: Optional[str] = None, aa_output: Optional[str] = None) -> None:
+    def __init__(self, db_file: str, mods_output: Optional[str] = None, aa_output: Optional[str] = None) -> None:
         """
         Initializes the UniModDataProcessor with a database file path.
-        If no file path is provided, defaults to the class-level DEFAULT_DB_FILE.
         """
-        self.db_file = db_file if db_file else self.DB_FILE
-        self.mods_output = mods_output if mods_output else self.MODS_OUTPUT
-        self.aa_output = aa_output if aa_output else self.AA_OUTPUT
+        
+        self.db_file = db_file
+        db_dir = os.path.dirname(os.path.abspath(self.db_file))
+        
+        self.mods_output = mods_output if mods_output else os.path.join(db_dir, self.MODS_OUTPUT)
+        self.aa_output = aa_output if aa_output else os.path.join(db_dir, self.AA_OUTPUT)
         
         if not os.path.exists(self.db_file):
             print(f"Error: Database file not found at '{self.db_file}'.")
@@ -111,12 +111,13 @@ class UniModProcessor:
             ['one_letter', 'three_letter', 'full_name']
         )[composition_cols].dot(element_vector).values
         
-        # Replace Leu ('L') with Xle ('J') placeholder
-        amino_acids_df.loc[amino_acids_df['one_letter'] == 'L', ['one_letter', 'three_letter', 'full_name']] = ['J', 'Xle', 'Isoleucine/Leucine']
-        
-        # Drop the original Isoleucine ('I') and Leucine ('L') rows
-        processed_aas: pd.DataFrame = amino_acids_df.loc[~amino_acids_df['one_letter'].isin(['I', 'L'])].copy()
-        
+        # Add Xle ('J')
+        xle_rows = amino_acids_df[amino_acids_df['one_letter'] == 'L'].copy()
+        xle_rows['one_letter'] = 'J'
+        xle_rows['three_letter'] = 'Xle'
+        xle_rows['full_name'] = 'Isoleucine/Leucine'
+        processed_aas = pd.concat([amino_acids_df, xle_rows], ignore_index=True)
+
         return processed_aas
 
     # --- Main Execution Method ---
@@ -150,23 +151,21 @@ def main() -> None:
 
     parser.add_argument(
         '--db-file',
+        required=True,
         type=str,
-        default=UniModProcessor.DB_FILE,
-        help=f"Path to the UniMod SQLite database file. Default: {UniModProcessor.DB_FILE}"
+        help=f"Path to the UniMod SQLite database file. (Required)"
     )
 
     parser.add_argument(
         '--mods-output',
         type=str,
-        default=UniModProcessor.MODS_OUTPUT,
-        help=f"Output file for the modifications data. Default: {UniModProcessor.MODS_OUTPUT}"
+        help=f"Output file for the modifications data. If not specified, defaults to the same location as the database file."
     )
 
     parser.add_argument(
         '--aa-output',
         type=str,
-        default=UniModProcessor.AA_OUTPUT,
-        help=f"Output file for the amino acids data. Default: {UniModProcessor.AA_OUTPUT}"
+        help=f"Output file for the amino acids data. If not specified, defaults to the same location as the database file."
     )
     
     args = parser.parse_args()

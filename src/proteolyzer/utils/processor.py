@@ -192,6 +192,7 @@ class DataProcessor(metaclass=MetaLogging):
             raise ValueError(
                 f"Invalid protease: '{protease}'. Must be one of: {available_proteases}"
             )
+        rules = rules.ALLOWED_COUNTS
 
         seqs = np.array(df[seq_col].values, dtype=str)
         terminal_aa = np.array([x[-1] for x in seqs])

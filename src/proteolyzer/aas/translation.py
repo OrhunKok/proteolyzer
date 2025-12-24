@@ -1,20 +1,29 @@
 from Bio import SeqIO
 import numpy as np
 import pickle
+from typing import Dict, Union
 from quickdna import DnaSequence
 from multiprocessing import Queue
-from Utils import NullQueue
+from .config import Config
+from . import utils
+
+CONFIG = Config()
 
 
 class FrameTranslator:
-    def __init__(self, params : dict, queue: Queue = None):
-        self.params = params
-        self.queue = queue if queue is not None else NullQueue()
+    def __init__(self, params : Union[str, Dict], queue: Queue = None):
+        if isinstance(params, str):
+            self.params = utils._load_params(params)
+        elif isinstance(params, dict):
+            self.params = params
+        else:
+            raise ValueError("params must be a file path or dict")
+        self.queue = queue if queue is not None else utils.NullQueue()
 
-        self.path_to_fasta = params.get('Genome FASTA')
-        self.output_dir = params.get('Output Folder')
-        self.isoleucine_leucine_ascii = {73: 76}  # I → L
-        (self.output_dir / 'TranslatedFrames').mkdir(parents=True, exist_ok=True)
+        self.path_to_fasta = self.params.get('Translation').get('Genome FASTA')
+        self.frames_folder = self.params.get('Translation').get('Translated Frames Folder')
+        self.frames_folder.mkdir(parents=True, exist_ok=True)
+        self.isoleucine_leucine_ascii = {73 : 76}  # I → L
 
         self.queue.put(("stdout", f"{self.__class__.__name__} initialized."))
 
@@ -53,10 +62,10 @@ class FrameTranslator:
             il_ambigous_frame = ''.join(self.translated_frames_il_ambiguous[:, frame])
             translated_frame = ''.join(self.translated_frames[:, frame])
 
-            with open(self.output_dir / 'TranslatedFrames' / f'frame_{frame + 1}_il_ambigous.p', 'wb') as f:
+            with open(self.frames_folder / f'frame_{frame + 1}_il_ambigous.p', 'wb') as f:
                 pickle.dump(il_ambigous_frame, f)
 
-            with open(self.output_dir / 'TranslatedFrames' / f'frame_{frame + 1}.p', 'wb') as f:
+            with open(self.frames_folder / f'frame_{frame + 1}.p', 'wb') as f:
                 pickle.dump(translated_frame, f)
 
             self.queue.put(("stdout", f"Frame {frame + 1} written."))

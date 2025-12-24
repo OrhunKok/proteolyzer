@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
-from .. import config as CONFIG
+from proteolyzer import config as CONFIG
+
 
 @dataclass(frozen=True) 
 class DIANN:
     FILES: List[str] = field(default_factory=lambda: [
-        "report", "report-first-pass", "report.stats", "report.stats-first-pass", "report.log"
+        "report", "report-first-pass", "report.stats", "report.stats-first-pass", "report.log", "xic"
     ])
     LOAD_COLS: Dict[str, set] = field(default_factory=lambda: {
         "report.stats": None,  # Load all columns
@@ -21,6 +22,7 @@ class DIANN:
             "PEP", "Ms1.Area", "Ms1.Apex.Area", "Ms1.Normalised", "Precursor.Quantity",
             "Precursor.Normalised"
         },
+        "report.log" : None, # Load all columns
         "xic": None,  # Load all columns
     })
     FILE_EXTENSIONS: List[str] = field(default_factory=lambda: [".parquet", ".tsv"])
@@ -32,7 +34,7 @@ class DIANN:
 @dataclass(frozen=True)
 class MaxQuant:
     FILES: List[str] = field(default_factory=lambda: [
-        "allPeptides", "evidence", "matchedFeatures", "modificationSpecificPeptides",
+        "allPeptides", "evidence", "dependentPeptides", "matchedFeatures", "modificationSpecificPeptides",
         "ms3Scans", "msms", "msmsScans", "mzRange", "Oxidation (M)Sites", "parameters",
         "peptides", "proteinGroups", "summary"
     ])
@@ -43,9 +45,18 @@ class MaxQuant:
             "Proteins", "Leading razor protein", "Missed cleavages", "Retention time",
             "Retention length", "PEP", "Intensity"
         },
+        "dependentPeptides": None,  # Load all columns
+        "matchedFeatures": None,  # Load all columns
+        "modificationSpecificPeptides": None,  # Load all columns
+        "ms3Scans": None,  # Load all columns
+        "msms": None,  # Load all columns
         "msScans": None,  # Load all columns
         "msmsScans": None,  # Load all columns
+        "mzRange": None,  # Load all columns
+        "Oxidation (M)Sites": None,  # Load all columns
         "parameters": None,  # Load all columns
+        "peptides": None,  # Load all columns
+        "proteinGroups": None,  # Load all columns
         "summary": None,  # Load all columns
     })
     FILE_EXTENSIONS: List[str] = field(default_factory=lambda: [".txt"])

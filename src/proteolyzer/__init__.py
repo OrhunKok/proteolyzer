@@ -13,9 +13,10 @@ from . import config
 from . import utils
 from . import plots
 from . import transformers
-from . import plugins
+from . import aas
+from . import cellenone
 
 from .utils import Data
 
 
-__all__ = ["config", "utils", "plots", "transformers", "plugins", 'Data']
+__all__ = ["config", "utils", "plots", "transformers", "aas", "cellenone", 'Data']
