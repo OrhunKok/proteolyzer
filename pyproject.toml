@@ -32,6 +32,7 @@ aas = [
     "biopython",
     "pyyaml",
     "fastparquet",
+    "openpyxl",
     # Windows
     "quickdna @ https://github.com/OrhunKok/quickdna/releases/download/v0.6.0/quickdna-0.6.0-cp314-cp314-win_amd64.whl ; sys_platform == 'win32'",
     # Linux
