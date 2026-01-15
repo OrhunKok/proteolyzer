@@ -351,8 +351,25 @@ class MaxQuant(Detection):
         sub_positions = filtered_mtp['mistranslated aas positions'].astype(int)
         output_fasta_path = self.output_dir / f'{sample_name}_validation.fasta'
         shutil.copy(self.prot_fasta, output_fasta_path)
+
+        appended_headers = []
         with open(output_fasta_path, 'a') as f:
             for i, seq in enumerate(seqs):
-                header = f">MTP|({base_seqs[i]})({sub_positions[i]})({aa_subs[i]})({prots[i]})"
-                f.write(f"{header}\n{seq}\n")
+                sub_aa = aa_subs[i][-1]
+                if sub_aa == 'J':
+                    for aa in ['I', 'L']:
+                        header = f">MTP|({base_seqs[i]})({sub_positions[i]})({aa_subs[i].replace('J', aa)})({prots[i]})"
+                        seq = seq[:sub_positions[i]] + aa + seq[sub_positions[i]+1:]
+
+                        if header not in appended_headers:
+                            f.write(f"{header}\n{seq}\n")
+                            appended_headers.append(header)
+                else:
+                    header = f">MTP|({base_seqs[i]})({sub_positions[i]})({aa_subs[i]})({prots[i]})"
+                    f.write(f"{header}\n{seq}\n")
+
+                    if header not in appended_headers:
+                        f.write(f"{header}\n{seq}\n")
+                        appended_headers.append(header)
+                        
         self.queue.put(('stdout', ('Validation Fasta Written.')))
