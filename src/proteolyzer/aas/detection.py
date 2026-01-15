@@ -344,32 +344,46 @@ class MaxQuant(Detection):
 
     def write_fasta(self, filtered_mtp, sample_name):
         """Write filtered MTP results to a FASTA file."""
-        base_seqs = filtered_mtp['DP Base Sequence']
-        prots = filtered_mtp['Leading.Razor.DP.Protein']
-        seqs = filtered_mtp['mistranslated sequence']
-        aa_subs = filtered_mtp['aa subs'].str.replace(' to ', ':')
-        sub_positions = filtered_mtp['mistranslated aas positions'].astype(int)
+
         output_fasta_path = self.output_dir / f'{sample_name}_validation.fasta'
         shutil.copy(self.prot_fasta, output_fasta_path)
 
-        appended_headers = []
+        fasta_df = filtered_mtp.copy()
+        fasta_df = fasta_df.loc[:, ['DP Base Sequence', 'mistranslated sequence', 'destination aa', 
+                                    'mistranslated aas positions', 'aa subs', 'Leading.Razor.DP.Protein']]
+        fasta_df['aa subs'] = fasta_df['aa subs'].str.replace(' to ', ':')
+        fasta_df['mistranslated aas positions'] = fasta_df['mistranslated aas positions'].astype(int)
+
+        rows_j = fasta_df.loc[fasta_df['destination aa'] == 'J']
+        dfs = []
+        for aa in ['I', 'L']:
+            df = rows_j.assign(**{'destination aa': aa})
+
+            df['aa subs'] = df['aa subs'].str[:-1] + aa
+
+            df['mistranslated sequence'] = df.apply(
+                lambda r: (
+                    r['mistranslated sequence'][:r['mistranslated aas positions']]
+                    + aa
+                    + r['mistranslated sequence'][r['mistranslated aas positions'] + 1:]
+                ),
+                axis=1
+            )
+
+            dfs.append(df)
+        rows_i, rows_l = dfs
+
+        fasta_df = fasta_df.loc[fasta_df['destination aa'] != 'J']
+        fasta_df = pd.concat([fasta_df, rows_i, rows_l], ignore_index=True)
+
+        fasta_df['Header'] = ">MTP|" + "(" + fasta_df['DP Base Sequence'] + ")(" + fasta_df['mistranslated aas positions'].astype(str) + ")(" + fasta_df['aa subs'] + ")(" + fasta_df['Leading.Razor.DP.Protein'] + ")"
+
+        fasta_df = fasta_df.drop_duplicates(subset = ['Header'], ignore_index = True)
+        with open(self.output_dir / 'MTP' / f'{sample_name}_FASTA.p', 'wb') as f:
+            pickle.dump(fasta_df, f)
+
         with open(output_fasta_path, 'a') as f:
-            for i, seq in enumerate(seqs):
-                sub_aa = aa_subs[i][-1]
-                if sub_aa == 'J':
-                    for aa in ['I', 'L']:
-                        header = f">MTP|({base_seqs[i]})({sub_positions[i]})({aa_subs[i].replace('J', aa)})({prots[i]})"
-                        seq = seq[:sub_positions[i]] + aa + seq[sub_positions[i]+1:]
+            for header, seq in zip(fasta_df['Header'], fasta_df['mistranslated sequence']):
+                f.write(f"{header}\n{seq}\n")
 
-                        if header not in appended_headers:
-                            f.write(f"{header}\n{seq}\n")
-                            appended_headers.append(header)
-                else:
-                    header = f">MTP|({base_seqs[i]})({sub_positions[i]})({aa_subs[i]})({prots[i]})"
-                    f.write(f"{header}\n{seq}\n")
-
-                    if header not in appended_headers:
-                        f.write(f"{header}\n{seq}\n")
-                        appended_headers.append(header)
-                        
         self.queue.put(('stdout', ('Validation Fasta Written.')))
