@@ -11,6 +11,8 @@ columns and return pandas DataFrame objects.
 
 ## csv
 
+## os
+
 ## Callable
 
 ## partial
@@ -30,6 +32,25 @@ columns and return pandas DataFrame objects.
 ## Data
 
 #### CONFIG
+
+#### BULK\_READ\_EXPANSION
+
+Peak memory the fast CSV parser needs, as a multiple of the file&#x27;s size on
+disk. Measured at ~16x on a wide, float-heavy report; rounded up, since
+overshooting only costs time and undershooting costs the whole read.
+
+#### ASSUMED\_AVAILABLE\_MEMORY
+
+Assumed free memory where the platform will not say, chosen to be smaller
+than any machine that would be running a search in the first place.
+
+#### \_available\_memory
+
+```python
+def _available_memory() -> int
+```
+
+Free physical memory in bytes, or :data:`ASSUMED_AVAILABLE_MEMORY`.
 
 ## DataLoader Objects
 
@@ -168,10 +189,32 @@ million-row report pyarrow is ~4x faster than the stock parser whole,
 values. It is stricter, though -- it rejects ragged rows the stock
 parser pads -- so that one stays as a fallback.
 
+It also builds an Arrow table and the frame at the same time, so it
+needs several times the memory the frame ends up taking; past
+:data:`BULK_READ_EXPANSION` it is not worth the risk of running out.
+
 The two parsers agree on column order only because
 :meth:`_cols_to_load` hands over the columns in the order the file has
 them: pyarrow returns them in the order asked for, the stock parser
 always in file order.
+
+#### \_fast\_read\_fits
+
+```python
+def _fast_read_fits() -> bool
+```
+
+Whether the fast parser&#x27;s peak memory is affordable for this source.
+
+A stream is already in memory, so there is nothing to weigh. For a
+path, the estimate is the file&#x27;s size on disk: text expands as it is
+parsed, and the Arrow table and the frame coexist, which measured
+~16x the file size in peak RSS on a wide, float-heavy report.
+
+Free physical memory is what is compared against, which underestimates
+what is usable (page cache is reclaimable) and, inside a container,
+reports the host&#x27;s rather than the cgroup&#x27;s. Both err towards the
+parser that needs less memory, which costs time and nothing else.
 
 #### \_get\_delimiter
 

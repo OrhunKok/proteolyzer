@@ -6,6 +6,7 @@ columns and return pandas DataFrame objects.
 """
 
 import csv
+import os
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
@@ -19,6 +20,23 @@ from .logging import Logged
 from .models import Data
 
 CONFIG = Config()
+
+#: Peak memory the fast CSV parser needs, as a multiple of the file's size on
+#: disk. Measured at ~16x on a wide, float-heavy report; rounded up, since
+#: overshooting only costs time and undershooting costs the whole read.
+BULK_READ_EXPANSION = 20
+
+#: Assumed free memory where the platform will not say, chosen to be smaller
+#: than any machine that would be running a search in the first place.
+ASSUMED_AVAILABLE_MEMORY = 2 * 1024**3
+
+
+def _available_memory() -> int:
+    """Free physical memory in bytes, or :data:`ASSUMED_AVAILABLE_MEMORY`."""
+    try:
+        return os.sysconf("SC_AVPHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+    except AttributeError, ValueError, OSError:
+        return ASSUMED_AVAILABLE_MEMORY
 
 
 class DataLoader(Logged):
@@ -151,11 +169,22 @@ class DataLoader(Logged):
         values. It is stricter, though -- it rejects ragged rows the stock
         parser pads -- so that one stays as a fallback.
 
+        It also builds an Arrow table and the frame at the same time, so it
+        needs several times the memory the frame ends up taking; past
+        :data:`BULK_READ_EXPANSION` it is not worth the risk of running out.
+
         The two parsers agree on column order only because
         :meth:`_cols_to_load` hands over the columns in the order the file has
         them: pyarrow returns them in the order asked for, the stock parser
         always in file order.
         """
+        if not self._fast_read_fits():
+            self.logger.info(
+                "File is large for the memory available; reading it with the "
+                "stock parser, which needs less."
+            )
+            return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
+
         try:
             df = pd.read_csv(
                 self.source,
@@ -178,6 +207,27 @@ class DataLoader(Logged):
         self.logger.info(f"{reason}; re-reading with the default parser.")
         self._rewind()
         return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
+
+    def _fast_read_fits(self) -> bool:
+        """Whether the fast parser's peak memory is affordable for this source.
+
+        A stream is already in memory, so there is nothing to weigh. For a
+        path, the estimate is the file's size on disk: text expands as it is
+        parsed, and the Arrow table and the frame coexist, which measured
+        ~16x the file size in peak RSS on a wide, float-heavy report.
+
+        Free physical memory is what is compared against, which underestimates
+        what is usable (page cache is reclaimable) and, inside a container,
+        reports the host's rather than the cgroup's. Both err towards the
+        parser that needs less memory, which costs time and nothing else.
+        """
+        if not self.is_path:
+            return True
+        try:
+            size = Path(str(self.source)).stat().st_size
+        except OSError:
+            return True
+        return size * BULK_READ_EXPANSION < _available_memory()
 
     def _get_delimiter(
         self, default_delimiter="\t", sample_size=524288, sample_percent=0.01

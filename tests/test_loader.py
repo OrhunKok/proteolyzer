@@ -4,6 +4,7 @@ import pandas as pd
 import pyarrow
 import pytest
 
+from proteolyzer.core import loader
 from proteolyzer.core.loader import DataLoader
 from proteolyzer.core.models import Data
 
@@ -57,6 +58,46 @@ def test_tsv_load_matches_the_stock_parser(tmp_path, label_free_report):
     expected = pd.read_csv(path, delimiter="\t")
 
     pd.testing.assert_frame_equal(loaded.frame, expected)
+
+
+def test_a_file_too_large_for_memory_uses_the_stock_parser(
+    tmp_path, label_free_report, caplog, monkeypatch
+):
+    """The fast parser needs several times the file's size; the other does not."""
+    path = tmp_path / "report.tsv"
+    label_free_report.to_csv(path, sep="\t", index=False)
+    monkeypatch.setattr(loader, "_available_memory", lambda: 1024)
+
+    loaded = Data(source=path, load_all_columns=True).load()
+
+    assert "reading it with the stock parser" in caplog.text
+    pd.testing.assert_frame_equal(loaded.frame, pd.read_csv(path, delimiter="\t"))
+
+
+def test_a_file_that_fits_uses_the_fast_parser(
+    tmp_path, label_free_report, caplog, monkeypatch
+):
+    path = tmp_path / "report.tsv"
+    label_free_report.to_csv(path, sep="\t", index=False)
+    monkeypatch.setattr(loader, "_available_memory", lambda: 1024**4)
+
+    Data(source=path, load_all_columns=True).load()
+
+    assert "stock parser" not in caplog.text
+
+
+def test_a_stream_is_already_in_memory(label_free_report):
+    """There is no file size to weigh, so the choice does not arise."""
+    data = Data(source=io.StringIO("Run\tPrecursor.Id\nrun1\tp1\n"))
+    assert DataLoader(data)._fast_read_fits() is True
+
+
+def test_unknown_available_memory_falls_back_to_an_assumption(monkeypatch):
+    def unavailable(name):
+        raise ValueError(name)
+
+    monkeypatch.setattr(loader.os, "sysconf", unavailable)
+    assert loader._available_memory() == loader.ASSUMED_AVAILABLE_MEMORY
 
 
 def test_ragged_rows_fall_back_to_the_stock_parser(tmp_path, caplog):

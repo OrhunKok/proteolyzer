@@ -224,6 +224,8 @@ class Processing:
     labels_complete: bool = True
     #: Large-magnitude float columns were rounded to integers.
     rounded_large_floats: bool = False
+    #: float64 columns were narrowed to float32 where their values allowed it.
+    narrowed_floats: bool = True
 
 
 @dataclass(frozen=True)
@@ -291,6 +293,27 @@ class Report:
         if "Run" not in self.frame.columns:
             return set()
         return set(self.frame["Run"].unique())
+
+    def memory(self) -> pd.DataFrame:
+        """What each column costs in memory, largest first.
+
+        Counted deeply, so the strings behind a text column are measured
+        rather than the pointers to them. This is what :meth:`process` works
+        to bring down -- narrowing numeric columns and replacing repeated
+        strings with categories -- and where to look when a report is larger
+        than expected.
+        """
+        usage = self.frame.memory_usage(deep=True).drop("Index", errors="ignore")
+        total = usage.sum()
+        breakdown = pd.DataFrame(
+            {
+                "Dtype": [str(self.frame[col].dtype) for col in usage.index],
+                "Bytes": usage.astype("int64"),
+                "Share": usage / total if total else 0.0,
+            }
+        )
+        breakdown.index.name = "Column"
+        return breakdown.sort_values("Bytes", ascending=False)
 
     def summary(self) -> pd.DataFrame:
         """Identification counts per run.

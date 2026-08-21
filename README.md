@@ -90,10 +90,35 @@ the first time anyone slices it. `len()`, `report["Run"]` and `.columns` work
 for interactive use; everything else goes through `.frame`, which is always a
 plain `DataFrame`.
 
-`process()` narrows float columns that already hold whole numbers to the
-smallest exact integer dtype. Columns with a real fractional part are left
-alone; pass `process(ROUND_LARGE_FLOATS=True)` to also round high-magnitude
-columns (intensities) to integers, which discards their fractional part.
+#### Memory and dtypes
+
+`process()` works to make a report cheaper to hold, which on a real one cuts
+it by a third to a half:
+
+- Float columns that already hold whole numbers become the smallest exact
+  integer dtype. Columns with a real fractional part keep it; pass
+  `process(round_large_floats=True)` to also round high-magnitude columns
+  (intensities) to integers, discarding their fractional part.
+- Remaining `float64` columns narrow to `float32`, which is what DIA-NN
+  stores in its own parquet output — so a report read from the TSV ends up
+  costing the same as the same report read from parquet, instead of 44% more.
+  The worst relative error measured across every float column of a real
+  report is 6e-8, float32's epsilon. A column is left alone if any value
+  falls outside float32's range, where narrowing would turn it into an
+  infinity or a zero. Pass `process(narrow_floats=False)` to keep double
+  precision — worth doing if you subtract nearly equal values from the frame
+  yourself, since that amplifies the rounding.
+- Text columns become categorical where measuring both says that saves at
+  least 20% of the column. Protein and gene columns typically halve;
+  identifier columns, which barely repeat, are left as they are.
+
+`report.memory()` gives the per-column breakdown, largest first, if a report
+is bigger than you expect.
+
+Reading is chosen the same way. The pyarrow parser is several times faster
+than the stock one but holds its Arrow table and the frame at once, so it is
+used only when the file is small enough for that against the memory
+available; past that the stock parser reads it with a bounded footprint.
 
 ### Logging
 

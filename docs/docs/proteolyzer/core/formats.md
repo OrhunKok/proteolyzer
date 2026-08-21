@@ -65,7 +65,13 @@ class Config()
 
 #### COL\_MEDIAN\_THRESHOLD
 
-#### CARDINALITY\_THRESHOLD
+#### MIN\_CATEGORICAL\_SAVING
+
+Fraction of a column&#x27;s memory that turning it categorical has to save
+for the conversion to be worth making. Set from measurement: on a real
+report the columns that benefit save 49% or more and the ones that do
+not save under 2% (or cost memory), so anything in between separates
+them.
 
 #### DIANN
 

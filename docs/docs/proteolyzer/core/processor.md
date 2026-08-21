@@ -49,7 +49,8 @@ def __init__(report: Report,
              id_col: str = "Precursor.Id",
              label_group_capture: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
              protease: str = "Trypsin",
-             round_large_floats: bool = False)
+             round_large_floats: bool = False,
+             narrow_floats: bool = True)
 ```
 
 Initializes the DataProcessor.
@@ -64,6 +65,9 @@ round_large_floats : bool, default False
     ``Config.COL_MEDIAN_THRESHOLD`` to integers, discarding their
     fractional part. Off by default because it loses real precision in
     the low range of quantitative columns.
+narrow_floats : bool, default True
+    Narrow float64 columns to float32. See
+    :meth:`narrow_float_columns`; pass False to keep double precision.
 
 #### process
 
@@ -144,17 +148,103 @@ the low end of a quantitative column while saving nothing: the loss is
 below float32 resolution only above ~1.7e7, and the resulting nullable
 integer dtype is wider than the float32 it replaces.
 
+#### narrow\_float\_columns
+
+```python
+def narrow_float_columns(df: pd.DataFrame) -> pd.DataFrame
+```
+
+Narrows float64 columns to float32 where the values allow it.
+
+DIA-NN stores these columns as float32 in its own parquet output, so a
+report read from parquet is already single precision while the same
+report read from the TSV is not -- the identical data costs 44% more
+memory depending on which file it came from. This makes the text path
+match, at a worst-case relative error of 6e-8, float32&#x27;s epsilon,
+measured across every float column of a real report.
+
+Runs after :meth:`convert_float_columns_to_int`, so columns holding
+whole numbers are already integers and keep their exact values;
+``Ms1.Total.Signal.*`` reach 1e10, far beyond the 2**24 that float32
+can represent exactly. It runs after :meth:`extra_info` too, so
+derived columns are computed before anything is narrowed.
+
+A column is left alone if any value falls outside float32&#x27;s normal
+range, where narrowing would turn it into an infinity or a zero rather
+than round it.
+
+The bound is on each value, not on what is later computed from it:
+subtracting two nearly equal narrowed values amplifies their rounding
+by the ratio between them and their difference. Pass
+``narrow_floats=False`` when doing that kind of arithmetic on the
+frame directly.
+
+#### narrow\_integer\_columns
+
+```python
+def narrow_integer_columns(df: pd.DataFrame) -> pd.DataFrame
+```
+
+Narrows integer columns to the smallest dtype that holds them.
+
+Unlike the float narrowing this is exact: an integer either fits or it
+does not, and the width is chosen per column. A charge state, a run
+index or a peptide length arrives as int64 and needs one byte, while
+``Ms1.Total.Signal`` reaches 1e10 and keeps all eight.
+
+Runs after :meth:`extra_info` so the integer columns derived there are
+narrowed too. Nullable dtypes stay nullable.
+
+The values are unchanged, but the headroom is not: adding a scalar
+that takes a narrow column past its range wraps around rather than
+raising, as it did before for the columns
+:meth:`convert_float_columns_to_int` narrows. Reductions such as
+``sum`` accumulate in int64 and are unaffected.
+
+#### \_fits\_in\_float32
+
+```python
+@staticmethod
+def _fits_in_float32(column: pd.Series) -> bool
+```
+
+Whether every value of `column` is within float32&#x27;s normal range.
+
 #### convert\_columns\_to\_categorical
 
 ```python
 def convert_columns_to_categorical(df: pd.DataFrame) -> pd.DataFrame
 ```
 
-Converts eligible low-cardinality columns to categorical type.
+Converts columns to categorical where that actually saves memory.
+
+Decided by measuring both representations rather than by a cardinality
+ratio, which is a poor proxy for the saving: on a real report the
+protein, gene and name columns hold 0.3-0.4 distinct values per row
+and still halve in size, while identifier columns approach 1.0, save
+nothing, and can come out *larger* than the strings they replace. A
+ratio tight enough to exclude the second group excludes most of the
+first as well.
 
 Numeric columns are never converted, however few distinct values they
 hold: a categorical of numbers no longer supports arithmetic, so
 q-value or intensity columns would stop working downstream.
+
+#### \_as\_categorical
+
+```python
+@staticmethod
+def _as_categorical(column: pd.Series) -> tuple[float, pd.Series]
+```
+
+`column` as a categorical, and the fraction of memory that saves.
+
+Measured by building it rather than estimated: estimating means
+guessing the width of the codes and the size of the dictionary, and
+the factorize it costs is what counting distinct values would cost
+anyway. The conversion is handed back so a caller that decides to keep
+it does not build it a second time. The saving is negative when the
+categorical is the larger of the two.
 
 #### rename\_columns
 

@@ -124,6 +124,27 @@ def test_summaries_tolerate_missing_columns(report_parquet):
     assert report.n_identifications == 0
 
 
+def test_memory_breaks_down_by_column(report_parquet):
+    frame = pd.DataFrame(
+        {
+            "Run": ["a"] * 100,
+            "Long": [f"a really quite long protein name {i}" for i in range(100)],
+        }
+    )
+    breakdown = _report(frame, Data(source=report_parquet)).memory()
+
+    # Largest first, and the long strings dominate the repeated short ones.
+    assert breakdown.index.tolist() == ["Long", "Run"]
+    assert breakdown["Share"].sum() == pytest.approx(1.0)
+    assert breakdown.loc["Long", "Dtype"] == "str"
+    assert "Index" not in breakdown.index
+
+
+def test_memory_of_an_empty_frame_is_not_a_division_by_zero(report_parquet):
+    breakdown = _report(pd.DataFrame(), Data(source=report_parquet)).memory()
+    assert breakdown.empty
+
+
 def test_summary_counts_identifications_per_run(report_parquet):
     frame = pd.DataFrame(
         {

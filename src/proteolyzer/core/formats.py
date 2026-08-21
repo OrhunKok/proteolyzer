@@ -145,6 +145,11 @@ class MaxQuant:
 @dataclass(frozen=True)
 class Config:
     COL_MEDIAN_THRESHOLD: int = 100
-    CARDINALITY_THRESHOLD: float = 0.1
+    #: Fraction of a column's memory that turning it categorical has to save
+    #: for the conversion to be worth making. Set from measurement: on a real
+    #: report the columns that benefit save 49% or more and the ones that do
+    #: not save under 2% (or cost memory), so anything in between separates
+    #: them.
+    MIN_CATEGORICAL_SAVING: float = 0.2
     DIANN: DIANN = field(default_factory=DIANN)
     MaxQuant: MaxQuant = field(default_factory=MaxQuant)

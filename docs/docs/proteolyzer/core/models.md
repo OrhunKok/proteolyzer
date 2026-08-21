@@ -196,6 +196,10 @@ False when channel information could not be derived in full.
 
 Large-magnitude float columns were rounded to integers.
 
+#### narrowed\_floats
+
+float64 columns were narrowed to float32 where their values allowed it.
+
 ## Report Objects
 
 ```python
@@ -284,6 +288,20 @@ def runs() -> set
 ```
 
 The distinct runs present, empty if the frame has no Run column.
+
+#### memory
+
+```python
+def memory() -> pd.DataFrame
+```
+
+What each column costs in memory, largest first.
+
+Counted deeply, so the strings behind a text column are measured
+rather than the pointers to them. This is what :meth:`process` works
+to bring down -- narrowing numeric columns and replacing repeated
+strings with categories -- and where to look when a report is larger
+than expected.
 
 #### summary
 

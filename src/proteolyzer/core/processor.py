@@ -34,6 +34,7 @@ class DataProcessor(Logged):
         "labels_complete",
         "protease",
         "round_large_floats",
+        "narrow_floats",
     )
 
     def __init__(
@@ -43,6 +44,7 @@ class DataProcessor(Logged):
         label_group_capture: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
         protease: str = "Trypsin",
         round_large_floats: bool = False,
+        narrow_floats: bool = True,
     ):
         """Initializes the DataProcessor.
 
@@ -56,6 +58,9 @@ class DataProcessor(Logged):
             ``Config.COL_MEDIAN_THRESHOLD`` to integers, discarding their
             fractional part. Off by default because it loses real precision in
             the low range of quantitative columns.
+        narrow_floats : bool, default True
+            Narrow float64 columns to float32. See
+            :meth:`narrow_float_columns`; pass False to keep double precision.
         """
         self.report = report
         self.data = report.frame.copy()
@@ -64,6 +69,7 @@ class DataProcessor(Logged):
         self.label_group_capture = label_group_capture
         self.protease = protease
         self.round_large_floats = round_large_floats
+        self.narrow_floats = narrow_floats
         # True unless a label matrix has to be skipped; see _LabelGenerator.
         self.labels_complete = True
         self._check_labelfree()
@@ -82,6 +88,13 @@ class DataProcessor(Logged):
             .pipe(self.convert_float_columns_to_int)
             .pipe(self.rename_columns)
             .pipe(self.extra_info)
+            # After extra_info, so the columns derived there are computed at
+            # full precision: RT.Width is a difference of two nearly equal
+            # retention times, and narrowing its inputs first would amplify
+            # their rounding by the ratio between the times and the width --
+            # 6e-8 becomes 3e-5.
+            .pipe(self.narrow_float_columns)
+            .pipe(self.narrow_integer_columns)
         )
 
         self.data = self.convert_columns_to_categorical(self.data)
@@ -112,6 +125,7 @@ class DataProcessor(Logged):
                 protease=self.protease,
                 labels_complete=self.labels_complete,
                 rounded_large_floats=self.round_large_floats,
+                narrowed_floats=self.narrow_floats,
             ),
         )
 
@@ -237,30 +251,150 @@ class DataProcessor(Logged):
 
         return df
 
+    def narrow_float_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Narrows float64 columns to float32 where the values allow it.
+
+        DIA-NN stores these columns as float32 in its own parquet output, so a
+        report read from parquet is already single precision while the same
+        report read from the TSV is not -- the identical data costs 44% more
+        memory depending on which file it came from. This makes the text path
+        match, at a worst-case relative error of 6e-8, float32's epsilon,
+        measured across every float column of a real report.
+
+        Runs after :meth:`convert_float_columns_to_int`, so columns holding
+        whole numbers are already integers and keep their exact values;
+        ``Ms1.Total.Signal.*`` reach 1e10, far beyond the 2**24 that float32
+        can represent exactly. It runs after :meth:`extra_info` too, so
+        derived columns are computed before anything is narrowed.
+
+        A column is left alone if any value falls outside float32's normal
+        range, where narrowing would turn it into an infinity or a zero rather
+        than round it.
+
+        The bound is on each value, not on what is later computed from it:
+        subtracting two nearly equal narrowed values amplifies their rounding
+        by the ratio between them and their difference. Pass
+        ``narrow_floats=False`` when doing that kind of arithmetic on the
+        frame directly.
+        """
+        if not self.narrow_floats:
+            return df
+
+        narrowed = {}
+        for col in df.select_dtypes(include=["float64"]).columns:
+            if not self._fits_in_float32(df[col]):
+                continue
+            if str(df[col].dtype) == "Float64":
+                # Nullable narrows to nullable: numpy float32 would turn its
+                # pd.NA into nan and drop the mask.
+                df[col] = df[col].astype("Float32")
+            else:
+                df[col] = df[col].astype("float32")
+            narrowed[col] = str(df[col].dtype)
+
+        if narrowed:
+            self.logger.info(f"Narrowed columns to single precision: {narrowed}.")
+
+        return df
+
+    def narrow_integer_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Narrows integer columns to the smallest dtype that holds them.
+
+        Unlike the float narrowing this is exact: an integer either fits or it
+        does not, and the width is chosen per column. A charge state, a run
+        index or a peptide length arrives as int64 and needs one byte, while
+        ``Ms1.Total.Signal`` reaches 1e10 and keeps all eight.
+
+        Runs after :meth:`extra_info` so the integer columns derived there are
+        narrowed too. Nullable dtypes stay nullable.
+
+        The values are unchanged, but the headroom is not: adding a scalar
+        that takes a narrow column past its range wraps around rather than
+        raising, as it did before for the columns
+        :meth:`convert_float_columns_to_int` narrows. Reductions such as
+        ``sum`` accumulate in int64 and are unaffected.
+        """
+        narrowed = {}
+        for col in df.select_dtypes(include=["integer"]).columns:
+            narrower = pd.to_numeric(df[col], downcast="integer")
+            if narrower.dtype != df[col].dtype:
+                df[col] = narrower
+                narrowed[col] = str(narrower.dtype)
+
+        if narrowed:
+            self.logger.info(f"Narrowed integer columns: {narrowed}.")
+
+        return df
+
+    @staticmethod
+    def _fits_in_float32(column: pd.Series) -> bool:
+        """Whether every value of `column` is within float32's normal range."""
+        values = column.to_numpy(dtype="float64", na_value=np.nan)
+        magnitudes = np.abs(values[np.isfinite(values)])
+        magnitudes = magnitudes[magnitudes != 0]
+        if not magnitudes.size:
+            return True
+
+        limits = np.finfo("float32")
+        return bool(magnitudes.max() <= limits.max and magnitudes.min() >= limits.tiny)
+
     def convert_columns_to_categorical(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Converts eligible low-cardinality columns to categorical type.
+        """Converts columns to categorical where that actually saves memory.
+
+        Decided by measuring both representations rather than by a cardinality
+        ratio, which is a poor proxy for the saving: on a real report the
+        protein, gene and name columns hold 0.3-0.4 distinct values per row
+        and still halve in size, while identifier columns approach 1.0, save
+        nothing, and can come out *larger* than the strings they replace. A
+        ratio tight enough to exclude the second group excludes most of the
+        first as well.
 
         Numeric columns are never converted, however few distinct values they
         hold: a categorical of numbers no longer supports arithmetic, so
         q-value or intensity columns would stop working downstream.
         """
-        candidates = df.select_dtypes(exclude=["number", "bool"])
-        cardinality = candidates.nunique() / len(df)
-        cat_cols = list(cardinality[cardinality < CONFIG.CARDINALITY_THRESHOLD].index)
-
         try:
-            config_block = getattr(CONFIG, self.input_type)
-            exclude_from_conversion = config_block.EXCLUDE_CAT_CONVERSION
+            exclude_from_conversion = getattr(
+                CONFIG, self.input_type
+            ).EXCLUDE_CAT_CONVERSION
         except AttributeError:
             exclude_from_conversion = set()
 
-        cat_cols = [col for col in cat_cols if col not in exclude_from_conversion]
-        for col in cat_cols:
-            df[col] = df[col].astype("category")
+        candidates = df.select_dtypes(exclude=["number", "bool"])
+        converted = {}
+        for col in candidates.columns:
+            if col in exclude_from_conversion:
+                continue
+            saving, as_category = self._as_categorical(df[col])
+            if saving >= CONFIG.MIN_CATEGORICAL_SAVING:
+                df[col] = as_category
+                converted[col] = saving
 
-        self.logger.info(f"Converted columns: {cat_cols} to categorical dtype.")
+        if converted:
+            self.logger.info(
+                "Converted columns to categorical dtype, saving: "
+                + ", ".join(f"{col} {pct:.0%}" for col, pct in converted.items())
+            )
 
         return df
+
+    @staticmethod
+    def _as_categorical(column: pd.Series) -> tuple[float, pd.Series]:
+        """`column` as a categorical, and the fraction of memory that saves.
+
+        Measured by building it rather than estimated: estimating means
+        guessing the width of the codes and the size of the dictionary, and
+        the factorize it costs is what counting distinct values would cost
+        anyway. The conversion is handed back so a caller that decides to keep
+        it does not build it a second time. The saving is negative when the
+        categorical is the larger of the two.
+        """
+        as_category = column.astype("category")
+        current = column.memory_usage(deep=True, index=False)
+        if not current:
+            return 0.0, as_category
+        saving = 1 - as_category.memory_usage(deep=True, index=False) / current
+        return saving, as_category
 
     def rename_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Renames columns based on given alias mapping."""
