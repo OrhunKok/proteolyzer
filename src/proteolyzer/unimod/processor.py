@@ -1,10 +1,10 @@
-import sqlite3
-import pandas as pd
-import numpy as np
-import os
-import sys
 import argparse
-from typing import Optional
+import os
+import sqlite3
+import sys
+
+import numpy as np
+import pandas as pd
 
 
 class UniModProcessor:
@@ -12,25 +12,32 @@ class UniModProcessor:
     A class to extract, process, and save modification and amino acid data
     from a UniMod SQLite database.
     """
-    MODS_OUTPUT: str = 'unimod_modifications.csv'
-    AA_OUTPUT: str = 'unimod_amino_acids.csv'
 
-    def __init__(self, db_file: str, mods_output: Optional[str] = None, aa_output: Optional[str] = None) -> None:
+    MODS_OUTPUT: str = "unimod_modifications.csv"
+    AA_OUTPUT: str = "unimod_amino_acids.csv"
+
+    def __init__(
+        self, db_file: str, mods_output: str | None = None, aa_output: str | None = None
+    ) -> None:
         """
         Initializes the UniModDataProcessor with a database file path.
         """
-        
+
         self.db_file = db_file
         db_dir = os.path.dirname(os.path.abspath(self.db_file))
-        
-        self.mods_output = mods_output if mods_output else os.path.join(db_dir, self.MODS_OUTPUT)
-        self.aa_output = aa_output if aa_output else os.path.join(db_dir, self.AA_OUTPUT)
-        
+
+        self.mods_output = (
+            mods_output if mods_output else os.path.join(db_dir, self.MODS_OUTPUT)
+        )
+        self.aa_output = (
+            aa_output if aa_output else os.path.join(db_dir, self.AA_OUTPUT)
+        )
+
         if not os.path.exists(self.db_file):
             print(f"Error: Database file not found at '{self.db_file}'.")
             sys.exit(1)
-        
-        self.connection: Optional[sqlite3.Connection] = None
+
+        self.connection: sqlite3.Connection | None = None
 
     def connect_to_db(self) -> None:
         """Establishes a connection to the SQLite database."""
@@ -100,22 +107,39 @@ class UniModProcessor:
         return pd.read_sql_query(elements_query, self.connection)
 
     # --- Data Processing Methods ---
-    def calculate_aa_masses(self, amino_acids_df: pd.DataFrame, elements_df: pd.DataFrame) -> pd.DataFrame:
+    def calculate_aa_masses(
+        self, amino_acids_df: pd.DataFrame, elements_df: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Calculates mono-mass for amino acids and aggregates Isoleucine/Leucine into Xle ('J').
         """
-        element_vector: np.ndarray = elements_df.set_index('element').loc[['H', 'O', 'C', 'N', 'S', 'Se'], 'mono_mass'].values
-        composition_cols: list[str] = ['num_H', 'num_O', 'num_C', 'num_N', 'num_S', 'num_Se']
-        
-        amino_acids_df['mono_mass'] = amino_acids_df.set_index(
-            ['one_letter', 'three_letter', 'full_name']
-        )[composition_cols].dot(element_vector).values
-        
+        element_vector: np.ndarray = (
+            elements_df.set_index("element")
+            .loc[["H", "O", "C", "N", "S", "Se"], "mono_mass"]
+            .values
+        )
+        composition_cols: list[str] = [
+            "num_H",
+            "num_O",
+            "num_C",
+            "num_N",
+            "num_S",
+            "num_Se",
+        ]
+
+        amino_acids_df["mono_mass"] = (
+            amino_acids_df.set_index(["one_letter", "three_letter", "full_name"])[
+                composition_cols
+            ]
+            .dot(element_vector)
+            .values
+        )
+
         # Add Xle ('J')
-        xle_rows = amino_acids_df[amino_acids_df['one_letter'] == 'L'].copy()
-        xle_rows['one_letter'] = 'J'
-        xle_rows['three_letter'] = 'Xle'
-        xle_rows['full_name'] = 'Isoleucine/Leucine'
+        xle_rows = amino_acids_df[amino_acids_df["one_letter"] == "L"].copy()
+        xle_rows["one_letter"] = "J"
+        xle_rows["three_letter"] = "Xle"
+        xle_rows["full_name"] = "Isoleucine/Leucine"
         processed_aas = pd.concat([amino_acids_df, xle_rows], ignore_index=True)
 
         return processed_aas
@@ -135,7 +159,7 @@ class UniModProcessor:
         processed_aa_df = self.calculate_aa_masses(amino_acids_df, elements_df)
 
         self.close_connection()
-        
+
         print(f"Saving results to CSV files: {self.mods_output}, {self.aa_output}")
         mods_df.to_csv(self.mods_output, index=False)
         processed_aa_df.to_csv(self.aa_output, index=False)
@@ -150,28 +174,30 @@ def main() -> None:
     )
 
     parser.add_argument(
-        '--db-file',
+        "--db-file",
         required=True,
         type=str,
-        help=f"Path to the UniMod SQLite database file. (Required)"
+        help="Path to the UniMod SQLite database file. (Required)",
     )
 
     parser.add_argument(
-        '--mods-output',
+        "--mods-output",
         type=str,
-        help=f"Output file for the modifications data. If not specified, defaults to the same location as the database file."
+        help="Output file for the modifications data. If not specified, defaults to the same location as the database file.",
     )
 
     parser.add_argument(
-        '--aa-output',
+        "--aa-output",
         type=str,
-        help=f"Output file for the amino acids data. If not specified, defaults to the same location as the database file."
+        help="Output file for the amino acids data. If not specified, defaults to the same location as the database file.",
     )
-    
+
     args = parser.parse_args()
-    processor = UniModProcessor(db_file=args.db_file, mods_output=args.mods_output, aa_output=args.aa_output)
+    processor = UniModProcessor(
+        db_file=args.db_file, mods_output=args.mods_output, aa_output=args.aa_output
+    )
     processor.process_and_save()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
