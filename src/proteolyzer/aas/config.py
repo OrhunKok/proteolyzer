@@ -1,29 +1,10 @@
-"""Configuration for the AAS pipeline: input files, columns and label schemes."""
+"""Configuration for the AAS pipeline: input files, columns and label schemes.
+
+MaxQuant only, which is what ``Utils.Workflow`` accepts.
+"""
 
 from dataclasses import dataclass, field
 from typing import ClassVar
-
-
-@dataclass(frozen=True)
-class DIANN:
-    FILES: list[str] = field(default_factory=lambda: ["report", "report-first-pass"])
-    #: Columns to load per file. ``None`` loads every column.
-    LOAD_COLS: dict[str, list[str] | None] = field(
-        default_factory=lambda: {
-            "report.stats": None,
-            "report": None,
-            "report-first-pass": None,
-        }
-    )
-    FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".parquet", ".tsv"])
-    COLS_RENAME_MAPPING: dict[str, str] = field(default_factory=dict)
-    #: Files each stage needs to find in a search output directory.
-    FILES_NEEDED: dict[str, list[str]] = field(
-        default_factory=lambda: {
-            "Detection": ["report"],
-            "Validation": ["report"],
-        }
-    )
 
 
 @dataclass(frozen=True)
@@ -133,6 +114,5 @@ class TMT:
 
 @dataclass(frozen=True)
 class Config:
-    DIANN: DIANN = field(default_factory=DIANN)
     MaxQuant: MaxQuant = field(default_factory=MaxQuant)
     TMT: TMT = field(default_factory=TMT)

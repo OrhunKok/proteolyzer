@@ -32,6 +32,9 @@ class Preprocessor()
 
 Namespace grouping the per-search-engine preprocessors.
 
+Nested to match the Detection stage, which dispatches on
+``Utils.Workflow``; a second search engine would be added alongside.
+
 ## MaxQuant Objects
 
 ```python
@@ -107,27 +110,5 @@ def _msms(df: pd.DataFrame) -> pd.DataFrame
 
 ```python
 def _peptides(df: pd.DataFrame) -> pd.DataFrame
-```
-
-## DIANN Objects
-
-```python
-class DIANN()
-```
-
-#### FILES
-
-#### FILE\_EXT
-
-#### \_\_init\_\_
-
-```python
-def __init__(data_folder: str)
-```
-
-#### run
-
-```python
-def run()
 ```
 

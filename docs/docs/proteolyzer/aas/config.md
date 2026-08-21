@@ -5,32 +5,13 @@ title: proteolyzer.aas.config
 
 Configuration for the AAS pipeline: input files, columns and label schemes.
 
+MaxQuant only, which is what ``Utils.Workflow`` accepts.
+
 ## dataclass
 
 ## field
 
 ## ClassVar
-
-## DIANN Objects
-
-```python
-@dataclass(frozen=True)
-class DIANN()
-```
-
-#### FILES
-
-#### LOAD\_COLS
-
-Columns to load per file. ``None`` loads every column.
-
-#### FILE\_EXTENSIONS
-
-#### COLS\_RENAME\_MAPPING
-
-#### FILES\_NEEDED
-
-Files each stage needs to find in a search output directory.
 
 ## MaxQuant Objects
 
@@ -81,8 +62,6 @@ fmt: skip
 @dataclass(frozen=True)
 class Config()
 ```
-
-#### DIANN
 
 #### MaxQuant
 

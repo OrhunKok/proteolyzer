@@ -18,7 +18,11 @@ CONFIG = Config()
 
 
 class Preprocessor:
-    """Namespace grouping the per-search-engine preprocessors."""
+    """Namespace grouping the per-search-engine preprocessors.
+
+    Nested to match the Detection stage, which dispatches on
+    ``Utils.Workflow``; a second search engine would be added alongside.
+    """
 
     class MaxQuant(Stage):
         FILES = CONFIG.MaxQuant.FILES
@@ -180,15 +184,3 @@ class Preprocessor:
 
             df["Terminus"] = np.where(df["Amino acid after"] == "-", "C", "N")
             return df
-
-    class DIANN:
-        FILES = CONFIG.DIANN.FILES
-        FILE_EXT = CONFIG.DIANN.FILE_EXTENSIONS
-
-        def __init__(self, data_folder: str):
-            self.data_folder = Path(data_folder)
-
-        def run(self):
-            raise NotImplementedError(
-                "No DIA-NN preprocessing pipeline is implemented yet."
-            )

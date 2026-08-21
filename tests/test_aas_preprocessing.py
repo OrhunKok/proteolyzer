@@ -111,11 +111,6 @@ def test_peptides_are_labelled_by_terminus(aas_params, search_dir):
     }
 
 
-def test_diann_preprocessing_is_not_implemented(tmp_path):
-    with pytest.raises(NotImplementedError):
-        Preprocessor.DIANN(tmp_path).run()
-
-
 def test_missing_data_folder_is_reported(aas_params, tmp_path):
     """Regression: this surfaced as a bare errno 2 from iterdir()."""
     aas_params["Utils"]["Data Folder"] = str(tmp_path / "not_there")
