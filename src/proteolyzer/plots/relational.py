@@ -10,18 +10,22 @@ Example
 
 """
 
+from typing import Literal
+
 import numpy as np
-import seaborn as sns
 import pandas as pd
-from typing import Literal, List
-from matplotlib.patches import Rectangle
+import seaborn as sns
 from adjustText import adjust_text
+from matplotlib.patches import Rectangle
+
 from .base import PlotBase
 
 
 class RelPlot(PlotBase):
-    def __init__(self, **kwargs):
-        super().__init__()
+    """Shared annotation helpers for relational (x/y) plots."""
+
+    def __init__(self, theme: str = "science", **kwargs):
+        super().__init__(theme=theme)
 
     def _symmetric_xaxis(self) -> None:
         max_val = max(np.abs(self.data[self.x]))
@@ -78,7 +82,7 @@ class RelPlot(PlotBase):
         ]
         adjust_text(
             texts,
-            arrowprops=dict(arrowstyle="-", color="k", lw=0.5),
+            arrowprops={"arrowstyle": "-", "color": "k", "lw": 0.5},
             ax=self.ax,
             min_arrow_len=0,
             clip_on=True,
@@ -115,12 +119,13 @@ class VolcanoPlot(RelPlot):
         x: str,
         y: str,
         hue: Literal["Regulation", "Significance", str] = "Regulation",
-        hue_order: List = None,
+        hue_order: list = None,
         label: str = None,
         signif: float = 0.05,
+        theme: str = "science",
         **kwargs,
     ):
-        super().__init__()
+        super().__init__(theme=theme)
         self.orig_data = data
         self.x = x
         self.y = y

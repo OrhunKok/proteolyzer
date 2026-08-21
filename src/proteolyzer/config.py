@@ -1,21 +1,31 @@
-from dataclasses import dataclass
-from typing import Dict, Final, ClassVar, List
-import pandas as pd
+"""Domain reference data shared by every proteolyzer subpackage.
+
+Amino acid masses and three-to-one letter codes are read once from the bundled
+UniMod export in ``proteolyzer/resources``; see :mod:`proteolyzer.unimod` for
+how those CSVs are regenerated.
+"""
+
 import importlib.resources
 import io
-from pathlib import Path
+from dataclasses import dataclass
+from importlib.resources.abc import Traversable
+from typing import ClassVar, Final
 
+import pandas as pd
 
-_RESOURCE_MODULE: Final[str] = 'proteolyzer.resources'
+_RESOURCE_MODULE: Final[str] = "proteolyzer.resources"
 _AA_FILE: Final[str] = "unimod_amino_acids.csv"
 
+
 def _get_resource_stream(filename: str) -> io.BytesIO:
-    resource_path: Path = importlib.resources.files(_RESOURCE_MODULE).joinpath(filename)
+    resource_path: Traversable = importlib.resources.files(_RESOURCE_MODULE).joinpath(
+        filename
+    )
     try:
         file_bytes = resource_path.read_bytes()
     except FileNotFoundError as e:
         raise FileNotFoundError(f"Resource file '{filename}' not found.") from e
-    
+
     return io.BytesIO(file_bytes)
 
 
@@ -24,7 +34,8 @@ class AminoAcids:
     """
     Container for amino acid properties.
     """
-    MASS: ClassVar[Final[Dict[str, float]]] = (
+
+    MASS: ClassVar[Final[dict[str, float]]] = (
         pd.read_csv(
             _get_resource_stream(_AA_FILE),
             usecols=["one_letter", "mono_mass"],
@@ -32,7 +43,7 @@ class AminoAcids:
         .set_index("one_letter")["mono_mass"]
         .to_dict()
     )
-    CODE_TO_SYMBOL: ClassVar[Final[Dict[str, str]]] = (
+    CODE_TO_SYMBOL: ClassVar[Final[dict[str, str]]] = (
         pd.read_csv(
             _get_resource_stream(_AA_FILE),
             usecols=["three_letter", "one_letter"],
@@ -47,7 +58,8 @@ class Codons:
     """
     Container for genetic code mappings, organized by species.
     """
-    Standard: ClassVar[Dict[str, str]] = {
+
+    Standard: ClassVar[dict[str, str]] = {
         "UUU": "F", "UUC": "F", "UUA": "L", "UUG": "L",
         "UCU": "S", "UCC": "S", "UCA": "S", "UCG": "S",
         "UAU": "Y", "UAC": "Y", "UAA": "*", "UAG": "*",
@@ -63,9 +75,8 @@ class Codons:
         "GUU": "V", "GUC": "V", "GUA": "V", "GUG": "V",
         "GCU": "A", "GCC": "A", "GCA": "A", "GCG": "A",
         "GAU": "D", "GAC": "D", "GAA": "E", "GAG": "E",
-        "GGU": "G", "GGC": "G", "GGA": "G", "GGG": "G"
-    }
-
+        "GGU": "G", "GGC": "G", "GGA": "G", "GGG": "G",
+    }  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -73,22 +84,24 @@ class Protease:
     """
     Defines cleavage rules and allowed residue counts for common proteases.
     Each protease is a nested subclass with:
-        - CLEAVAGE_SITES: list of residues where cleavage occurs
-        - ALLOWED_COUNTS: dictionary representing maximum allowed counts of specific residues in peptides.
+        - CLEAVAGE_SITES: residues where cleavage occurs
+        - ALLOWED_COUNTS: maximum allowed counts of specific residues in peptides
+
+    CLEAVAGE_SITES are tuples: they are class-level shared state, so callers
+    must build a new sequence rather than extending them in place.
     """
 
     @dataclass(frozen=True)
     class Trypsin:
-        CLEAVAGE_SITES: ClassVar[List[str]] = ["K", "R"]
-        ALLOWED_COUNTS: ClassVar[Dict[str, int]] = {"K": 1, "R": 1}
-        
+        CLEAVAGE_SITES: ClassVar[tuple[str, ...]] = ("K", "R")
+        ALLOWED_COUNTS: ClassVar[dict[str, int]] = {"K": 1, "R": 1}
 
     @dataclass(frozen=True)
     class LysC:
-        CLEAVAGE_SITES: ClassVar[List[str]] = ["K"]
-        ALLOWED_COUNTS: ClassVar[Dict[str, int]] = {"K": 1}
+        CLEAVAGE_SITES: ClassVar[tuple[str, ...]] = ("K",)
+        ALLOWED_COUNTS: ClassVar[dict[str, int]] = {"K": 1}
 
     @dataclass(frozen=True)
     class ArgC:
-        CLEAVAGE_SITES: ClassVar[List[str]] = ["R"]
-        ALLOWED_COUNTS: ClassVar[Dict[str, int]] = {"R": 1}
+        CLEAVAGE_SITES: ClassVar[tuple[str, ...]] = ("R",)
+        ALLOWED_COUNTS: ClassVar[dict[str, int]] = {"R": 1}

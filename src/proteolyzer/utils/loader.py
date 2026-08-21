@@ -5,42 +5,84 @@ and other domain-specific export formats. Helpers validate required
 columns and return pandas DataFrame objects.
 """
 
-import pandas as pd
-from functools import partial
 import csv
-import magic
+from collections.abc import Callable
+from functools import partial
+from pathlib import Path
+
 import chardet
+import pandas as pd
 import pyarrow.parquet as pq
-from .models import Data
-from .logging import MetaLogging
+
 from .config import Config
+from .logging import Logged
+from .models import Data
 
 CONFIG = Config()
 
-class DataLoader(metaclass=MetaLogging):
-    """Loads data from various file formats."""
 
-    __slots__ = ("file", "data", "INPUT_TYPE", "cols_rename_mapping", "logger")
+class DataLoader(Logged):
+    """Loads data from various file formats with robust handling."""
 
+    __slots__ = ("data", "file")
 
-    def __init__(self, file: Data):
+    def __init__(self, file: Data, verbose: bool = False):
         """
-        Initializes the DataLoader with the file to process and the configuration.
+        Initializes DataLoader.
+
+        Parameters
+        ----------
+        file : Data
+            The source descriptor. `file.source` may be a Path, string path,
+            or file-like object. It is held rather than copied field by field,
+            so the two cannot drift apart.
+        verbose : bool, default False
+            If True, run optional diagnostic steps after loading (currently:
+            log the in-memory size of the loaded data). Off by default because
+            memory_usage(deep=True) walks every cell of every object column,
+            which is expensive on large frames.
         """
         self.file = file
-        self.INPUT_TYPE = file.input_type
-        self.cols_rename_mapping = file.cols_rename_mapping
-
         self.data = self._auto_load()
 
         if self.cols_rename_mapping:
             self.data = self._rename_cols()
 
-        self._memory_check(self.data)
+        if verbose:
+            self._memory_check(self.data)
+
+    @property
+    def source(self):
+        return self.file.source
+
+    @property
+    def INPUT_TYPE(self) -> str:
+        return self.file.input_type
+
+    @property
+    def cols_rename_mapping(self) -> dict:
+        return self.file.cols_rename_mapping
+
+    @property
+    def cols_subset(self):
+        return self.file.cols_subset
+
+    @property
+    def file_name(self) -> str:
+        return self.file.file_name
+
+    @property
+    def file_extension(self) -> str:
+        """Lower-cased suffix; taken from Data so named streams dispatch too."""
+        return self.file.file_extension.lower()
+
+    @property
+    def is_path(self) -> bool:
+        return isinstance(self.source, (Path, str))
 
     def _auto_load(self) -> pd.DataFrame:
-        """Automatically loads data based on file extension."""
-        load_methods = {
+        """Automatically dispatch to the correct loader based on file extension."""
+        load_methods: dict[str, Callable[[], pd.DataFrame]] = {
             ".csv": partial(self._load_csv, delimiter=","),
             ".tsv": partial(self._load_csv, delimiter="\t"),
             ".txt": self._load_txt,
@@ -49,173 +91,134 @@ class DataLoader(metaclass=MetaLogging):
             ".parquet": self._load_parquet,
         }
 
-        loader = load_methods.get(self.file.file_extension, self._load_txt)
-        if not loader:
-            self.logger.error(
-                f"Unsupported file format: {self.file.file_extension} for file: {self.file.file_name}"
-            )
-            raise ValueError(f"Unsupported file format: {self.file.file_extension}")
+        loader = load_methods.get(self.file_extension, self._load_txt)
         return loader()
 
-    def _rename_cols(self) -> pd.DataFrame:
-        """Renames columns based on the mapping."""
-        self.logger.info(
-            f"Renaming columns in {self.INPUT_TYPE} input to match mapping"
-        )
-        return self.data.rename(columns=self.cols_rename_mapping)
+    def _rewind(self) -> None:
+        """Return a file-like source to the start so it can be read again.
 
-    def _get_delimiter(
-        self,
-        default_delimiter: str = "\t",
-        encoding: str = "utf-8",
-        min_sample_size: int = 524288,
-        sample_percent: float = 0.01,
-    ) -> str:
-        """Detects the delimiter of a CSV-like file."""
-        sample_size = max(
-            min_sample_size, int(self.file.file_stats["Size (Bytes)"] * sample_percent)
-        )
+        Peeking at the header and then reading the body means the source is read
+        twice; paths reopen transparently but streams have to be rewound.
+        """
+        if self.is_path:
+            return
+        seek = getattr(self.source, "seek", None)
+        if callable(seek):
+            seek(0)
 
-        try:
-            with open(
-                self.file.file_path, "r", newline="", encoding=encoding
-            ) as csvfile:
-                sample = csvfile.read(sample_size)
-            delimiter = csv.Sniffer().sniff(sample).delimiter
-        except Exception as e:
-            delimiter = default_delimiter
-            self.logger.error(
-                f"{e} for: {self.file.file_path}. Falling back to default delimiter {repr(delimiter)}",
-                stacklevel=2,
-            )
+    def _rename_cols(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
+        df = self.data if df is None else df
+        if not self.cols_rename_mapping:
+            return df
+        self.logger.info(f"Renaming columns in {self.INPUT_TYPE} input")
+        return df.rename(columns=self.cols_rename_mapping)
 
-        return delimiter
+    def _cols_to_load(self, all_cols) -> list:
+        """Intersect the file's columns with the configured subset.
 
-    def _cols_to_load(self, all_cols: set) -> list:
-        """Determines columns to load based on settings."""
-        if not self.file.load_all_columns and self.file.cols_subset is not None:
-            return list(all_cols & self.file.cols_subset)
-        return list(all_cols)
+        Keeps the order the columns appear in the file, so repeated loads of the
+        same file always produce the same column order.
+        """
+        all_cols = list(all_cols)
+        if not self.cols_subset:
+            return all_cols
+        wanted = set(self.cols_subset)
+        return [col for col in all_cols if col in wanted]
 
-    def _load_csv(self, delimiter: str = None) -> pd.DataFrame:
-        """Loads a CSV or TSV file."""
+    # ---------------- CSV / TSV ----------------
+
+    def _load_csv(self, delimiter: str | None = None) -> pd.DataFrame:
         if delimiter is None:
             delimiter = self._get_delimiter()
-        self.logger.info(f"Loading {self.file.file_path} with delimiter '{delimiter}'")
 
+        self.logger.info(f"Loading {self.source} with delimiter '{delimiter}'")
         try:
-            df = pd.read_csv(self.file.file_path, delimiter=delimiter, nrows=0)
-            cols_to_load = self._cols_to_load(set(df.columns))
-            return pd.read_csv(
-                self.file.file_path, delimiter=delimiter, usecols=cols_to_load
-            )
-        except FileNotFoundError:
-            self.logger.error(f"File not found: {self.file.file_path}")
-            raise
-        except pd.errors.ParserError:
-            self.logger.error(f"Error parsing CSV file: {self.file.file_path}")
-            raise
+            # Peek at columns
+            df = pd.read_csv(self.source, delimiter=delimiter, nrows=0)
+            cols_to_load = self._cols_to_load(df.columns)
+            self._rewind()
+            return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
         except Exception as e:
-            self.logger.error(
-                f"An unexpected error occured when loading {self.file.file_path}: {e}"
-            )
+            self.logger.error(f"Error loading CSV: {self.source}, {e}")
             raise
+
+    def _get_delimiter(
+        self, default_delimiter="\t", sample_size=524288, sample_percent=0.01
+    ) -> str:
+        """Detect delimiter for CSV-like files."""
+        if not self.is_path:
+            return default_delimiter  # Cannot sniff a stream
+        file_path = str(self.source)
+        try:
+            size = max(
+                sample_size, int(Path(file_path).stat().st_size * sample_percent)
+            )
+            with open(file_path, encoding="utf-8") as f:
+                sample = f.read(size)
+            return csv.Sniffer().sniff(sample).delimiter
+        except Exception as e:
+            self.logger.warning(
+                f"Could not detect delimiter, using default '{default_delimiter}': {e}"
+            )
+            return default_delimiter
+
+    # ---------------- Excel ----------------
 
     def _load_excel(self) -> pd.DataFrame:
-        """Loads an Excel file."""
         try:
-            df = pd.read_excel(self.file.file_path, nrows=0)
-            cols_to_load = self._cols_to_load(set(df.columns))
-            return pd.read_excel(self.file.file_path, usecols=cols_to_load)
-        except FileNotFoundError:
-            self.logger.error(f"File not found: {self.file.file_path}")
-            raise
+            df = pd.read_excel(self.source, nrows=0)
+            cols_to_load = self._cols_to_load(df.columns)
+            self._rewind()
+            return pd.read_excel(self.source, usecols=cols_to_load)
         except Exception as e:
-            self.logger.error(
-                f"An unexpected error occured when loading {self.file.file_path}: {e}"
-            )
+            self.logger.error(f"Error loading Excel: {self.source}, {e}")
             raise
+
+    # ---------------- Parquet ----------------
 
     def _load_parquet(self) -> pd.DataFrame:
-        """Loads a Parquet file."""
         try:
-            schema = pq.ParquetFile(self.file.file_path).schema
-            cols_to_load = self._cols_to_load(set(schema.names))
-            return pd.read_parquet(self.file.file_path, columns=cols_to_load)
-        except FileNotFoundError:
-            self.logger.error(f"File not found: {self.file.file_path}")
-            raise
+            schema = pq.ParquetFile(self.source).schema
+            cols_to_load = self._cols_to_load(schema.names)
+            self._rewind()
+            return pd.read_parquet(self.source, columns=cols_to_load)
         except Exception as e:
-            self.logger.error(
-                f"An unexpected error occured when loading {self.file.file_path}: {e}"
-            )
+            self.logger.error(f"Error loading Parquet: {self.source}, {e}")
+            raise
+
+    # ---------------- TXT ----------------
 
     def _load_txt(self) -> pd.DataFrame:
-        """Loads a plaintext file with detected MIME type and encoding."""
-
-        try:
-            mime_type, encoding = self._detect_file_type_and_encoding()
-        except Exception as e:
-            self.logger.error(f"Failed to detect MIME type or encoding: {e}")
-            raise
-
-        if mime_type != "text/plain":
-            self.logger.error(
-                f"Unsupported MIME type {mime_type} for .txt file. Only 'text/plain' is supported."
-            )
-            raise
-
+        """Load a text file. Detect encoding and MIME type if Path."""
         if self.INPUT_TYPE == "MaxQuant":
-            self.logger.info(
-                "Detected MaxQuant format, treating .txt as structured CSV."
-            )
             return self._load_csv()
 
+        encoding = self._detect_encoding() if self.is_path else "utf-8"
+
         try:
-            with open(self.file.file_path, encoding=encoding) as file:
-                lines = [line for line in file]
-            df = pd.DataFrame({"line": lines})
-            self.logger.info(
-                f"Loaded plaintext file as DataFrame with {len(df)} lines."
-            )
-            return df
-        except FileNotFoundError:
-            self.logger.error(f"File not found: {self.file.file_path}")
-            raise
-        except Exception as e:
-            self.logger.error(
-                f"An unexpected error occurred while loading {self.file.file_path}: {e}"
-            )
-            raise
-
-    def _detect_file_type_and_encoding(self):
-        """Strictly detects MIME type and text encoding for the file. Raises if undetectable."""
-
-        file_path = str(self.file.file_path)
-
-        mime_type = magic.from_file(file_path, mime=True)
-
-        if mime_type:
-            with open(file_path, "rb") as f:
-                raw_data = f.read(100_000)
-                encoding_result = chardet.detect(raw_data)
-                encoding = encoding_result.get("encoding")
-                confidence = encoding_result.get("confidence", 0.0)
-
-            if encoding:
-                self.logger.info(
-                    f"Detected MIME type: {mime_type}, Encoding: {encoding}, Encoding detection reliability {confidence:.2f}, for file: {file_path}"
-                )
+            if self.is_path:
+                with open(self.source, encoding=encoding) as f:
+                    lines = list(f)
             else:
-                self.logger.error(
-                    f"Detected MIME type: {mime_type}, but unable to detect encoding for file: {file_path}"
-                )
-                raise
-
-        else:
-            self.logger.error(
-                f"Failed to detect MIME type and encoding for file: {file_path}"
-            )
+                lines = list(self.source)
+            df = pd.DataFrame({"line": lines})
+            self.logger.info(f"Loaded {len(df)} lines from plaintext file.")
+            return df
+        except Exception as e:
+            self.logger.error(f"Error loading TXT: {self.source}, {e}")
             raise
 
-        return mime_type, encoding
+    # ---------------- Utilities ----------------
+
+    def _detect_encoding(self, sample_size: int = 100_000) -> str:
+        """Detect the character encoding of a file path."""
+        if not self.is_path:
+            raise ValueError("Cannot detect encoding for non-path source")
+        file_path = str(self.source)
+        with open(file_path, "rb") as f:
+            enc_info = chardet.detect(f.read(sample_size))
+        encoding = enc_info.get("encoding")
+        if not encoding:
+            raise ValueError(f"Cannot detect encoding for {file_path}")
+        self.logger.info(f"Detected encoding: {encoding}")
+        return encoding

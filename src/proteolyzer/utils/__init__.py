@@ -5,7 +5,7 @@ project, such as configuration/constants, data loaders, logging helpers,
 and small processing utilities.
 
 Submodules
-    - constants: project-wide constants and default values
+    - config: recognized input formats and their column handling
     - loader: functions to load common file types
     - logging: logging configuration and helpers
     - models: small data classes and typed models
@@ -13,9 +13,18 @@ Submodules
     - processor: higher-level processing pipelines
 """
 
-from .models import Data, ProcessedData
 from .loader import DataLoader
-from .processor import DataProcessor
+from .logging import configure_logging
+from .models import Data, LoadedData, ProcessedData
 from .operations import cv
+from .processor import DataProcessor
 
-__all__ = ["Data", "ProcessedData", "DataLoader", "DataProcessor", "cv"]
+__all__ = [
+    "Data",
+    "DataLoader",
+    "DataProcessor",
+    "LoadedData",
+    "ProcessedData",
+    "configure_logging",
+    "cv",
+]

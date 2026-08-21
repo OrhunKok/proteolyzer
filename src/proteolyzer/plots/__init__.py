@@ -9,6 +9,7 @@ Submodules
 
 """
 
-from .relational import VolcanoPlot
+from .base import PlotBase
+from .relational import RelPlot, VolcanoPlot
 
-__all__ = ["VolcanoPlot"]
+__all__ = ["PlotBase", "RelPlot", "VolcanoPlot"]

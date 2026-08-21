@@ -10,14 +10,20 @@ Key concepts
     - style helpers: functions that standardize color palettes and fonts
 """
 
-import matplotlib.pyplot as plt
-import inspect
 import contextlib
-import scienceplots  # noqa: F401
-from ..utils.logging import MetaLogging
+import inspect
+
+import matplotlib.pyplot as plt
+
+from ..utils.logging import Logged
+
+try:  # Registers the "science" style family with matplotlib.
+    import scienceplots  # noqa: F401
+except ImportError:  # pragma: no cover - optional at runtime
+    scienceplots = None
 
 
-class PlotBase(metaclass=MetaLogging):
+class PlotBase(Logged):
     """
     PlotBase is a base class for creating and managing plots with customizable themes.
     Attributes:
@@ -40,6 +46,10 @@ class PlotBase(metaclass=MetaLogging):
             Displays the current plot using `plt.show()`.
     """
 
+    #: Set by :meth:`plot`; declared here so attribute access never recurses
+    #: into :meth:`__getattr__`.
+    ax = None
+
     def __init__(self, theme: str = "science"):
         self.theme = theme
 
@@ -60,23 +70,26 @@ class PlotBase(metaclass=MetaLogging):
         }
 
     def __getattr__(self, name):
-        if self.ax and hasattr(self.ax, name):
-            return getattr(self.ax, name)
+        """Delegate unknown attributes to the underlying Axes."""
+        ax = self.__dict__.get("ax")
+        if ax is not None and hasattr(ax, name):
+            return getattr(ax, name)
         raise AttributeError(
             f"'{type(self).__name__}' object has no attribute '{name}'"
         )
 
     @contextlib.contextmanager
     def plot_theme(self):
-        """A context manager that sets a specified plot theme."""
-        try:
-            with plt.style.context(self.theme):
-                yield
-        except ValueError as e:
-            print(f"Error applying theme '{self.theme}': {e}")
-            yield
-        except ModuleNotFoundError:
-            print("scienceplots is not installed.")
+        """A context manager that sets a specified plot theme.
+
+        An unknown or unavailable theme is reported and skipped rather than
+        failing the plot. Exceptions raised by the wrapped block propagate.
+        """
+        with contextlib.ExitStack() as stack:
+            try:
+                stack.enter_context(plt.style.context(self.theme))
+            except (OSError, ValueError) as e:
+                self.logger.warning(f"Could not apply theme '{self.theme}': {e}")
             yield
 
     def plot(self, plot_func, plot_kws):
@@ -98,7 +111,7 @@ class PlotBase(metaclass=MetaLogging):
         """
         with self.plot_theme():
             plot_kws = self.filter_kwargs(plot_func, plot_kws)
-            kwargs = plot_kws.pop("kwargs")
+            kwargs = plot_kws.pop("kwargs", {})
             self.ax = plot_func(**plot_kws, **kwargs)
         return self.ax
 
@@ -120,11 +133,11 @@ class PlotBase(metaclass=MetaLogging):
         - If the `ax` attribute is not set, a message is printed indicating that
           the figure could not be saved.
         """
-        if self.ax:
+        if self.ax is not None:
             self.ax.figure.savefig(*args, **kwargs)
             plt.close(self.ax.figure)
         else:
-            print("Save path or Figure not available. Figure not saved.")
+            self.logger.warning("No figure has been generated yet. Nothing saved.")
 
     def show(self):
         """
@@ -138,4 +151,4 @@ class PlotBase(metaclass=MetaLogging):
         if self.ax is not None:
             plt.show()
         else:
-            print("No plot has been generated yet.")
+            self.logger.warning("No plot has been generated yet.")
