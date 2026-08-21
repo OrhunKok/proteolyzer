@@ -29,314 +29,314 @@ Left: 3000
 Up: 1000
 X Field Gap:1000/1000/
 Y Field Gap:8000/
-Pattern Size: 
+Pattern Size:
 X = 67
 Y = 72
-Dot Pitch: 
+Dot Pitch:
 X = 250
 Y = 310
 Field 1
 [0, 0, 0]
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
+
+
+
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+
+
+
+
 
 
 Field 2
 [0, 0, 0]
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
+
+
+
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+1G1				1G2														1G1				1G2														1G1				1G2														1G1				1G2
+
+
+
+
+
+1G2				1G1														1G2				1G1														1G2				1G1														1G2				1G1
+
+
+
+
+
+
+
+
+
 
 
 Volume[pl]/Field 1
 [0, 0, 0]
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
+
+
+
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+
+
+
+
 
 
 Volume[pl]/Field 2
 [0, 0, 0]
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-20000				20000														20000				20000														20000				20000														20000				20000								
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
-																																																																		
+
+
+
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+20000				20000														20000				20000														20000				20000														20000				20000
+
+
+
+
+
+
+
+
+
 
 
 
@@ -346,91 +346,91 @@ Tasks:
 Chiller_Off=
 27	Set Chiller	OFF	0/1/15.0
 Hum_60=
-13	Set Humidity	Keep 60% humidity	60/1/1	
+13	Set Humidity	Keep 60% humidity	60/1/1
 ScanFieldsOnly=
-1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
-5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0																																																																																																																																																																																			
+1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0
+5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0
 Message_DMSO_BulkAspiration=
 4	Message		Load 150uL of DMSO into position 2 of the cellenWASH station. Ensure that the cap is removed or facing front of the cellenONE before pressing OK to start the run.	OK
 Take_10uL_cellenWASH_Solv=
-0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000		
-7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0									
-7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0									
-0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000		
+0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000
+7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0
+7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0
+0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000
 Message_DMSO_StabilityTest=
 4	Message		Confirm dispense stability of bulk DMSO prior to continuing with the run. Consider wiping the nozzle tip with an ethanol soaked kim wipe if excess DMSO remains or adjusting dispense parameters to obtain a single stable drop.	OK
 OpenNozzleSetup=
-5	Function	Open Nozzle Setup	Nozzle Setup	0																																																																																																																																																																																							
+5	Function	Open Nozzle Setup	Nozzle Setup	0
 AutoDropDetectionDropVolume=
-5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		500/0/0/200/1/1/2	3																																																																																																																																																																																			
+5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		500/0/0/200/1/1/2	3
 Flush_PDC=
-0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
-1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-3	Wait		5000																																																																																																																																																																																								
-0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
-2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-3	Wait		6000																																																																																																																																																																																								
-2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-3	Wait		3000																																																																																																																																																																																								
-2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-3	Wait		5000																																																																																																																																																																																								
-2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
-1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
+0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000
+1	I/O		1	DOutput1	Wash Pump	ON	0
+7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0
+3	Wait		5000
+0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
+2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+3	Wait		6000
+2	Piezo		S_N	Stop	0
+3	Wait		3000
+2	Piezo		S_N	Ultrasonics	0
+3	Wait		5000
+2	Piezo		S_N	Stop	0
+7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0
+0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
+1	I/O		1	DOutput1	Wash Pump	OFF	0
 Wait8sec=
-3	Wait		8000																																																																																																																																																																																								
+3	Wait		8000
 BeginLoop=
-5	Function	Begin Loop	Begin Loop	1																																																																																																																																																																																							
+5	Function	Begin Loop	Begin Loop	1
 Take_10uL_sample=
-0	Drives		0	Probe	79991	106787	21500	15000	20000	15000																																																																																																																																																																																	
-7	Syringe Pump		0.0/0.0/0.0/10.0/1.0/500.0/0.0																																																																																																																																																																																								
-7	Syringe Pump		1.0/0.0/0.0/10.0/1.0/500.0/0.0																																																																																																																																																																																								
+0	Drives		0	Probe	79991	106787	21500	15000	20000	15000
+7	Syringe Pump		0.0/0.0/0.0/10.0/1.0/500.0/0.0
+7	Syringe Pump		1.0/0.0/0.0/10.0/1.0/500.0/0.0
 MoveToCameraStation=
-0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000
 Wait8sec=
-3	Wait		8000																																																																																																																																																																																								
+3	Wait		8000
 AutoDropDetection_Nozzlesetup=
-5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3																																																																																																																																																																																			
+5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3
 SpotProbeRun=
-0	Drives		1	Target	163581	106000	23407	25000	25000	15000																																																																																																																																																																																	
-2	Piezo		S_N	Run	0																																																																																																																																																																																						
+0	Drives		1	Target	163581	106000	23407	25000	25000	15000
+2	Piezo		S_N	Run	0
 MoveToCameraStation=
-0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000
 AutoDropDetection_Nozzlesetup=
-5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3																																																																																																																																																																																			
+5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3
 Flush_PDC=
-0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
-1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-3	Wait		5000																																																																																																																																																																																								
-0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
-2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-3	Wait		6000																																																																																																																																																																																								
-2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-3	Wait		3000																																																																																																																																																																																								
-2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-3	Wait		5000																																																																																																																																																																																								
-2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
-1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
+0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000
+1	I/O		1	DOutput1	Wash Pump	ON	0
+7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0
+3	Wait		5000
+0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
+2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+3	Wait		6000
+2	Piezo		S_N	Stop	0
+3	Wait		3000
+2	Piezo		S_N	Ultrasonics	0
+3	Wait		5000
+2	Piezo		S_N	Stop	0
+7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0
+0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
+1	I/O		1	DOutput1	Wash Pump	OFF	0
 Wait8sec=
-3	Wait		8000																																																																																																																																																																																								
+3	Wait		8000
 Wait3sec=
-3	Wait		3000																																																																																																																																																																																								
+3	Wait		3000
 EndLoop=
-5	Function	End Loop	End Loop	2																																																																																																																																																																																							
+5	Function	End Loop	End Loop	2
 HeadCameraLight_ON=
-1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
+1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0
 ScanFieldsOnly=
-1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
-5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0																																																																																																																																																																																			
+1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0
+5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0
 HeadCameraLight_OFF=
-1	I/O		2	DOutput2	Head Cam Light	OFF	0																																																																																																																																																																																				
+1	I/O		2	DOutput2	Head Cam Light	OFF	0
 MoveHome=
-0	Drives		2	Home	0	0	0	25000	20000	15000																																																																																																																																																																																	
+0	Drives		2	Home	0	0	0	25000	20000	15000
 Message_LabelingComplete=
 4	Message		Labeling reagents have been added. Please check the QC images and redispense any labels that have failed the pre-autodrop.	OK
 
@@ -439,10 +439,10 @@ insert 384_well_PCR_plate probe and press "OK".
 
 
 WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC breakage! - Selection: OK
-27.09.25-13:09:19.076	27	Set Chiller	OFF	0/1/15.0																																																																																																																																																																																								
-27.09.25-13:09:20.301	13	Set Humidity	Keep 60% humidity	60/1/1																																																																																																																																																																																								
-27.09.25-13:09:20.303	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
-27.09.25-13:09:20.309	5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0																																																																																																																																																																																			
+27.09.25-13:09:19.076	27	Set Chiller	OFF	0/1/15.0
+27.09.25-13:09:20.301	13	Set Humidity	Keep 60% humidity	60/1/1
+27.09.25-13:09:20.303	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0
+27.09.25-13:09:20.309	5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0
 27.09.25-13:09:21.473	Z=9114   9114__1
 27.09.25-13:09:21.473	Moving to: X= 137295; Y=2866
 27.09.25-13:09:22.370	X=137295   137282__Y=2866   2866
@@ -504,25 +504,25 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:09:36.493	X=161528   161522__Y=24493   24493
 27.09.25-13:09:36.729	Moving to: X= 168261; Y=24493
 27.09.25-13:09:36.973	X=168261   168255__Y=24493   24493
-27.09.25-13:09:37.388	4	Message		Load 150uL of DMSO into position 2 of the cellenWASH station. Ensure that the cap is removed or facing front of the cellenONE before pressing OK to start the run.	OK																																																																																																																																																																																							
+27.09.25-13:09:37.388	4	Message		Load 150uL of DMSO into position 2 of the cellenWASH station. Ensure that the cap is removed or facing front of the cellenONE before pressing OK to start the run.	OK
 27.09.25-13:09:37.395	Comment: Load 150uL of DMSO into position 2 of the cellenWASH station. Ensure that the cap is removed or facing front of the cellenONE before pressing OK to start the run.
 27.09.25-13:09:47.547	Humidity=	63	  Temperature=	24	  Dew Point=	16.5	  Adj. Temp=	15.5	  Bath Temp=	16.7
 27.09.25-13:10:47.567	Humidity=	65	  Temperature=	24	  Dew Point=	17.0	  Adj. Temp=	16.0	  Bath Temp=	16.7
-27.09.25-13:10:51.549	0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000																																																																																																																																																																																	
+27.09.25-13:10:51.549	0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000
 27.09.25-13:10:51.946	Z=11550   11550__1
 27.09.25-13:10:51.947	Moving to: X= 13489; Y=64600
 27.09.25-13:10:52.790	X=13489   13499__Y=64600   64600
 27.09.25-13:10:54.340	Z=38635   38635__1
-27.09.25-13:10:54.342	7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0																																																																																																																																																																																								
-27.09.25-13:10:54.745	7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0																																																																																																																																																																																								
-27.09.25-13:11:03.386	0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000																																																																																																																																																																																	
+27.09.25-13:10:54.342	7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0
+27.09.25-13:10:54.745	7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0
+27.09.25-13:11:03.386	0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000
 27.09.25-13:11:04.999	Z=11550   11550__1
 27.09.25-13:11:05.000	Moving to: X= 33480; Y=2502
 27.09.25-13:11:05.695	X=33480   33479__Y=2502   2502
 27.09.25-13:11:06.760	Z=25269   25269__1
-27.09.25-13:11:06.762	4	Message		Confirm dispense stability of bulk DMSO prior to continuing with the run. Consider wiping the nozzle tip with an ethanol soaked kim wipe if excess DMSO remains or adjusting dispense parameters to obtain a single stable drop.	OK																																																																																																																																																																																							
+27.09.25-13:11:06.762	4	Message		Confirm dispense stability of bulk DMSO prior to continuing with the run. Consider wiping the nozzle tip with an ethanol soaked kim wipe if excess DMSO remains or adjusting dispense parameters to obtain a single stable drop.	OK
 27.09.25-13:11:06.769	Comment: Confirm dispense stability of bulk DMSO prior to continuing with the run. Consider wiping the nozzle tip with an ethanol soaked kim wipe if excess DMSO remains or adjusting dispense parameters to obtain a single stable drop.
-27.09.25-13:11:08.787	5	Function	Open Nozzle Setup	Nozzle Setup	0																																																																																																																																																																																							
+27.09.25-13:11:08.787	5	Function	Open Nozzle Setup	Nozzle Setup	0
 27.09.25-13:11:08.788	Manual Nozzle Setup ON
 27.09.25-13:11:08.799	Moving to: X= 33480; Y=2502
 27.09.25-13:11:08.869	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -545,7 +545,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:11:25.412	X=33480   33480__Y=2502   2502
 27.09.25-13:11:25.489	Z=25269   25269__1
-27.09.25-13:11:25.516	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:11:25.516	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:11:25.517	Moving to: X= 33480; Y=2502
 27.09.25-13:11:25.545	AXIS STATUS:   181	 0	 6	37160A54	003C
 
@@ -581,7 +581,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:11:29.240	X=33480   33480__Y=2502   2502
 27.09.25-13:11:29.320	Z=25269   25269__1
-27.09.25-13:11:29.346	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:11:29.346	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:11:29.346	Moving to: X= 33480; Y=2502
 27.09.25-13:11:29.379	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -617,7 +617,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:11:31.484	X=33480   33480__Y=2502   2502
 27.09.25-13:11:31.563	Z=25269   25269__1
-27.09.25-13:11:31.590	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:11:31.590	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:11:31.590	Moving to: X= 33480; Y=2502
 27.09.25-13:11:31.619	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -646,7 +646,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:11:32.330	X=33480   33480__Y=2502   2502
 27.09.25-13:11:32.410	Z=25269   25269__1
-27.09.25-13:11:36.367	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
+27.09.25-13:11:36.367	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000
 27.09.25-13:11:37.449	Z=11550   11550__1
 27.09.25-13:11:37.449	Moving to: X= 9800; Y=2300
 27.09.25-13:11:37.480	AXIS STATUS:   181	 0	 6	37120254	003C
@@ -655,10 +655,10 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:11:37.816	X=9800   9811__Y=2300   2300
 27.09.25-13:11:38.925	Z=25657   25657__1
-27.09.25-13:11:38.925	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-27.09.25-13:11:38.928	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:11:39.329	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:11:44.350	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+27.09.25-13:11:38.925	1	I/O		1	DOutput1	Wash Pump	ON	0
+27.09.25-13:11:38.928	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:11:39.329	3	Wait		5000
+27.09.25-13:11:44.350	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
 27.09.25-13:11:45.430	Z=11550   11550__1
 27.09.25-13:11:45.431	Moving to: X= 9800; Y=7300
 27.09.25-13:11:45.457	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -667,16 +667,16 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:11:45.667	X=9800   9800__Y=7300   7298
 27.09.25-13:11:47.202	Z=38001   38001__1
-27.09.25-13:11:47.202	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
+27.09.25-13:11:47.202	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
 27.09.25-13:11:47.585	Humidity=	62	  Temperature=	24	  Dew Point=	16.0	  Adj. Temp=	15.0	  Bath Temp=	16.7
-27.09.25-13:11:48.282	3	Wait		6000																																																																																																																																																																																								
-27.09.25-13:11:54.308	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:11:54.366	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:11:57.389	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:11:58.473	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:12:03.496	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:12:03.553	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:12:19.403	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:11:48.282	3	Wait		6000
+27.09.25-13:11:54.308	2	Piezo		S_N	Stop	0
+27.09.25-13:11:54.366	3	Wait		3000
+27.09.25-13:11:57.389	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:11:58.473	3	Wait		5000
+27.09.25-13:12:03.496	2	Piezo		S_N	Stop	0
+27.09.25-13:12:03.553	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:12:19.403	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
 27.09.25-13:12:20.992	Z=11550   11550__1
 27.09.25-13:12:20.992	Moving to: X= 33480; Y=2502
 27.09.25-13:12:21.022	AXIS STATUS:   181	 0	 6	37120354	003C
@@ -685,8 +685,8 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:12:21.424	X=33480   33475__Y=2502   2502
 27.09.25-13:12:22.501	Z=25269   25269__1
-27.09.25-13:12:22.501	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
-27.09.25-13:12:30.791	0	Drives		8	WasteStation1	6500	8000	25000	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:12:22.501	1	I/O		1	DOutput1	Wash Pump	OFF	0
+27.09.25-13:12:30.791	0	Drives		8	WasteStation1	6500	8000	25000	25000	25000	15000
 27.09.25-13:12:31.874	Z=11550   11550__1
 27.09.25-13:12:31.874	Moving to: X= 9800; Y=2300
 27.09.25-13:12:31.903	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -695,23 +695,23 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:12:32.235	X=9800   9811__Y=2300   2300
 27.09.25-13:12:33.342	Z=25657   25657__1
-27.09.25-13:12:33.343	7	Syringe Pump		0,0/0,0/0,0/30,0/2,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:12:33.745	7	Syringe Pump		1,0/0,0/0,0/30,0/2,0/0,0/0,0																																																																																																																																																																																								
+27.09.25-13:12:33.343	7	Syringe Pump		0,0/0,0/0,0/30,0/2,0/0,0/0,0
+27.09.25-13:12:33.745	7	Syringe Pump		1,0/0,0/0,0/30,0/2,0/0,0/0,0
 27.09.25-13:12:47.611	Humidity=	63	  Temperature=	24	  Dew Point=	16.5	  Adj. Temp=	15.5	  Bath Temp=	16.7
-27.09.25-13:12:51.704	7	Syringe Pump		0,0/1,0/0,0/100,0/6,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:12:52.104	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:12:57.130	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:12:58.218	7	Syringe Pump		1,0/1,0/0,0/100,0/6,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:13:12.359	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:13:12.420	7	Syringe Pump		0,0/1,0/0,0/100,0/18,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:13:12.821	3	Wait		4000																																																																																																																																																																																								
-27.09.25-13:13:16.847	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:13:17.927	7	Syringe Pump		1,0/1,0/0,0/100,0/18,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:13:21.940	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:13:22.004	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-27.09.25-13:13:22.007	7	Syringe Pump		0,0/1,0/0,0/125,0/16,0/500,0/1,0																																																																																																																																																																																								
-27.09.25-13:13:22.409	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:13:25.431	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+27.09.25-13:12:51.704	7	Syringe Pump		0,0/1,0/0,0/100,0/6,0/0,0/0,0
+27.09.25-13:12:52.104	3	Wait		5000
+27.09.25-13:12:57.130	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:12:58.218	7	Syringe Pump		1,0/1,0/0,0/100,0/6,0/0,0/0,0
+27.09.25-13:13:12.359	2	Piezo		S_N	Stop	0
+27.09.25-13:13:12.420	7	Syringe Pump		0,0/1,0/0,0/100,0/18,0/0,0/0,0
+27.09.25-13:13:12.821	3	Wait		4000
+27.09.25-13:13:16.847	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:13:17.927	7	Syringe Pump		1,0/1,0/0,0/100,0/18,0/0,0/0,0
+27.09.25-13:13:21.940	2	Piezo		S_N	Stop	0
+27.09.25-13:13:22.004	1	I/O		1	DOutput1	Wash Pump	ON	0
+27.09.25-13:13:22.007	7	Syringe Pump		0,0/1,0/0,0/125,0/16,0/500,0/1,0
+27.09.25-13:13:22.409	3	Wait		3000
+27.09.25-13:13:25.431	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
 27.09.25-13:13:26.510	Z=11550   11550__1
 27.09.25-13:13:26.511	Moving to: X= 9800; Y=7300
 27.09.25-13:13:26.543	AXIS STATUS:   181	 0	 6	37120354	003C
@@ -720,11 +720,11 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:13:26.751	X=9800   9800__Y=7300   7298
 27.09.25-13:13:28.273	Z=38001   38001__1
-27.09.25-13:13:28.273	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:13:29.353	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:13:34.374	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:13:34.431	7	Syringe Pump	WaitOfDone	1,0/1,0/0,0/125,0/16,0/500,0/1,0																																																																																																																																																																																								
-27.09.25-13:13:34.530	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:13:28.273	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+27.09.25-13:13:29.353	3	Wait		5000
+27.09.25-13:13:34.374	2	Piezo		S_N	Stop	0
+27.09.25-13:13:34.431	7	Syringe Pump	WaitOfDone	1,0/1,0/0,0/125,0/16,0/500,0/1,0
+27.09.25-13:13:34.530	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
 27.09.25-13:13:36.114	Z=11550   11550__1
 27.09.25-13:13:36.114	Moving to: X= 33480; Y=2502
 27.09.25-13:13:36.144	AXIS STATUS:   181	 0	 6	37120354	003C
@@ -733,9 +733,9 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:13:36.547	X=33480   33475__Y=2502   2502
 27.09.25-13:13:37.614	Z=25269   25269__1
-27.09.25-13:13:37.614	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
+27.09.25-13:13:37.614	1	I/O		1	DOutput1	Wash Pump	OFF	0
 27.09.25-13:13:47.627	Humidity=	63	  Temperature=	24	  Dew Point=	16.5	  Adj. Temp=	15.5	  Bath Temp=	16.7
-27.09.25-13:13:51.573	0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000		
+27.09.25-13:13:51.573	0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000
 27.09.25-13:13:52.646	Z=11550   11550__1
 27.09.25-13:13:52.646	Moving to: X= 13489; Y=64600
 27.09.25-13:13:52.678	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -744,9 +744,9 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:13:53.203	X=13489   13485__Y=64600   64596
 27.09.25-13:13:54.755	Z=38635   38635__1
-27.09.25-13:13:54.755	7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0									
-27.09.25-13:13:55.154	7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0									
-27.09.25-13:14:04.493	0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000		
+27.09.25-13:13:54.755	7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0
+27.09.25-13:13:55.154	7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0
+27.09.25-13:14:04.493	0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000
 27.09.25-13:14:06.093	Z=11550   11550__1
 27.09.25-13:14:06.093	Moving to: X= 33480; Y=2502
 27.09.25-13:14:06.121	AXIS STATUS:   181	 0	 6	37120354	003C
@@ -762,7 +762,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:14:16.893	X=33480   33480__Y=2502   2502
 27.09.25-13:14:16.976	Z=25269   25269__1
-27.09.25-13:14:17.000	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:14:17.000	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:14:17.001	Moving to: X= 33480; Y=2502
 27.09.25-13:14:17.029	AXIS STATUS:   181	 0	 6	37160A54	003C
 
@@ -807,7 +807,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:14:26.255	X=33480   33480__Y=2502   2502
 27.09.25-13:14:26.335	Z=25269   25269__1
-27.09.25-13:14:26.360	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:14:26.360	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:14:26.361	Moving to: X= 33480; Y=2502
 27.09.25-13:14:26.390	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -843,7 +843,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:14:28.390	X=33480   33480__Y=2502   2502
 27.09.25-13:14:28.470	Z=25269   25269__1
-27.09.25-13:14:28.495	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:14:28.495	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:14:28.496	Moving to: X= 33480; Y=2502
 27.09.25-13:14:28.524	AXIS STATUS:   181	 0	 6	37160A54	003C
 
@@ -879,7 +879,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:14:30.278	X=33480   33480__Y=2502   2502
 27.09.25-13:14:30.357	Z=25269   25269__1
-27.09.25-13:14:30.383	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:14:30.383	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:14:30.410	Moving to: X= 33480; Y=2502
 27.09.25-13:14:30.413	AXIS STATUS:   181	 0	 6	37160A54	003C
 
@@ -915,7 +915,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:14:32.523	X=33480   33480__Y=2502   2502
 27.09.25-13:14:32.604	Z=25269   25269__1
-27.09.25-13:14:32.631	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:14:32.631	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:14:32.632	Moving to: X= 33480; Y=2502
 27.09.25-13:14:32.662	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -951,7 +951,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:14:34.464	X=33480   33480__Y=2502   2502
 27.09.25-13:14:34.545	Z=25269   25269__1
-27.09.25-13:14:34.571	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:14:34.571	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:14:34.571	Moving to: X= 33480; Y=2502
 27.09.25-13:14:34.601	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1003,7 +1003,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:15:24.555	X=33480   33480__Y=2502   2502
 27.09.25-13:15:24.636	Z=25269   25269__1
-27.09.25-13:15:24.662	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:15:24.662	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:15:24.662	Moving to: X= 33480; Y=2502
 27.09.25-13:15:24.689	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1039,7 +1039,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:15:26.989	X=33480   33480__Y=2502   2502
 27.09.25-13:15:27.069	Z=25269   25269__1
-27.09.25-13:15:27.096	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:15:27.096	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:15:27.096	Moving to: X= 33480; Y=2502
 27.09.25-13:15:27.125	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1075,7 +1075,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:15:29.133	X=33480   33480__Y=2502   2502
 27.09.25-13:15:29.211	Z=25269   25269__1
-27.09.25-13:15:29.236	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:15:29.236	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:15:29.237	Moving to: X= 33480; Y=2502
 27.09.25-13:15:29.265	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1111,7 +1111,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:15:31.456	X=33480   33480__Y=2502   2502
 27.09.25-13:15:31.535	Z=25269   25269__1
-27.09.25-13:15:31.561	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:15:31.561	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:15:31.561	Moving to: X= 33480; Y=2502
 27.09.25-13:15:31.593	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1140,7 +1140,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:15:32.306	X=33480   33480__Y=2502   2502
 27.09.25-13:15:32.386	Z=25269   25269__1
-27.09.25-13:15:41.312	0	Drives		8	WasteStation1	6500	8000	25000	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:15:41.312	0	Drives		8	WasteStation1	6500	8000	25000	25000	25000	15000
 27.09.25-13:15:42.406	Z=11550   11550__1
 27.09.25-13:15:42.406	Moving to: X= 9800; Y=2300
 27.09.25-13:15:42.435	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -1149,23 +1149,23 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:15:42.766	X=9800   9812__Y=2300   2300
 27.09.25-13:15:43.868	Z=25657   25657__1
-27.09.25-13:15:43.869	7	Syringe Pump		0,0/0,0/0,0/30,0/2,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:15:44.268	7	Syringe Pump		1,0/0,0/0,0/30,0/2,0/0,0/0,0																																																																																																																																																																																								
+27.09.25-13:15:43.869	7	Syringe Pump		0,0/0,0/0,0/30,0/2,0/0,0/0,0
+27.09.25-13:15:44.268	7	Syringe Pump		1,0/0,0/0,0/30,0/2,0/0,0/0,0
 27.09.25-13:15:47.669	Humidity=	61	  Temperature=	24	  Dew Point=	16.0	  Adj. Temp=	15.0	  Bath Temp=	16.7
-27.09.25-13:16:03.022	7	Syringe Pump		0,0/1,0/0,0/100,0/6,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:16:03.423	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:16:08.448	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:16:09.593	7	Syringe Pump		1,0/1,0/0,0/100,0/6,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:16:24.657	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:16:24.784	7	Syringe Pump		0,0/1,0/0,0/100,0/18,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:16:25.185	3	Wait		4000																																																																																																																																																																																								
-27.09.25-13:16:29.216	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:16:30.359	7	Syringe Pump		1,0/1,0/0,0/100,0/18,0/0,0/0,0																																																																																																																																																																																								
-27.09.25-13:16:35.376	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:16:35.502	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-27.09.25-13:16:35.504	7	Syringe Pump		0,0/1,0/0,0/125,0/16,0/500,0/1,0																																																																																																																																																																																								
-27.09.25-13:16:35.904	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:16:38.924	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+27.09.25-13:16:03.022	7	Syringe Pump		0,0/1,0/0,0/100,0/6,0/0,0/0,0
+27.09.25-13:16:03.423	3	Wait		5000
+27.09.25-13:16:08.448	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:16:09.593	7	Syringe Pump		1,0/1,0/0,0/100,0/6,0/0,0/0,0
+27.09.25-13:16:24.657	2	Piezo		S_N	Stop	0
+27.09.25-13:16:24.784	7	Syringe Pump		0,0/1,0/0,0/100,0/18,0/0,0/0,0
+27.09.25-13:16:25.185	3	Wait		4000
+27.09.25-13:16:29.216	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:16:30.359	7	Syringe Pump		1,0/1,0/0,0/100,0/18,0/0,0/0,0
+27.09.25-13:16:35.376	2	Piezo		S_N	Stop	0
+27.09.25-13:16:35.502	1	I/O		1	DOutput1	Wash Pump	ON	0
+27.09.25-13:16:35.504	7	Syringe Pump		0,0/1,0/0,0/125,0/16,0/500,0/1,0
+27.09.25-13:16:35.904	3	Wait		3000
+27.09.25-13:16:38.924	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
 27.09.25-13:16:40.017	Z=11550   11550__1
 27.09.25-13:16:40.017	Moving to: X= 9800; Y=7300
 27.09.25-13:16:40.046	AXIS STATUS:   181	 0	 6	37120254	003C
@@ -1174,12 +1174,12 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:16:40.254	X=9800   9800__Y=7300   7298
 27.09.25-13:16:41.779	Z=38001   38001__1
-27.09.25-13:16:41.780	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:16:42.931	3	Wait		5000																																																																																																																																																																																								
+27.09.25-13:16:41.780	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+27.09.25-13:16:42.931	3	Wait		5000
 27.09.25-13:16:47.686	Humidity=	70	  Temperature=	24	  Dew Point=	16.8	  Adj. Temp=	15.8	  Bath Temp=	16.7
-27.09.25-13:16:47.960	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:16:48.090	7	Syringe Pump	WaitOfDone	1,0/1,0/0,0/125,0/16,0/500,0/1,0																																																																																																																																																																																								
-27.09.25-13:16:48.189	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:16:47.960	2	Piezo		S_N	Stop	0
+27.09.25-13:16:48.090	7	Syringe Pump	WaitOfDone	1,0/1,0/0,0/125,0/16,0/500,0/1,0
+27.09.25-13:16:48.189	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
 27.09.25-13:16:49.764	Z=11550   11550__1
 27.09.25-13:16:49.764	Moving to: X= 33480; Y=2502
 27.09.25-13:16:49.792	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -1188,7 +1188,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:16:50.195	X=33480   33475__Y=2502   2502
 27.09.25-13:16:51.272	Z=25269   25269__1
-27.09.25-13:16:51.272	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
+27.09.25-13:16:51.272	1	I/O		1	DOutput1	Wash Pump	OFF	0
 27.09.25-13:17:01.961	Moving to: X= 33480; Y=2502
 27.09.25-13:17:01.992	AXIS STATUS:   181	 0	 6	37120354	003C
 
@@ -1204,7 +1204,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:17:15.793	X=42435   42428__Y=2497   2497
 27.09.25-13:17:16.864	Z=25224   25224__1
-27.09.25-13:17:16.890	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:17:16.890	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:17:16.890	Moving to: X= 42435; Y=2497
 27.09.25-13:17:16.919	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1257,7 +1257,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:17:32.527	X=33480   33480__Y=2502   2502
 27.09.25-13:17:32.608	Z=25269   25269__1
-27.09.25-13:17:32.634	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:17:32.634	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:17:32.634	Moving to: X= 33480; Y=2502
 27.09.25-13:17:32.663	AXIS STATUS:   181	 0	 6	37160A54	003C
 
@@ -1293,7 +1293,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:17:34.029	X=33480   33480__Y=2502   2502
 27.09.25-13:17:34.111	Z=25269   25269__1
-27.09.25-13:17:34.137	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:17:34.137	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:17:34.137	Moving to: X= 33480; Y=2502
 27.09.25-13:17:34.166	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1330,7 +1330,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:17:39.084	X=33480   33480__Y=2502   2502
 27.09.25-13:17:39.164	Z=25269   25269__1
 27.09.25-13:17:47.707	Humidity=	66	  Temperature=	24	  Dew Point=	17.3	  Adj. Temp=	16.3	  Bath Temp=	16.7
-27.09.25-13:18:33.458	0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000		
+27.09.25-13:18:33.458	0	Drives		12	cellenWASH1_into	13289	64600	37500	0	0	50000
 27.09.25-13:18:34.531	Z=11550   11550__1
 27.09.25-13:18:34.531	Moving to: X= 13489; Y=64600
 27.09.25-13:18:34.561	AXIS STATUS:   181	 0	 6	37160A54	003C
@@ -1339,9 +1339,9 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:18:35.087	X=13489   13485__Y=64600   64597
 27.09.25-13:18:36.635	Z=38635   38635__1
-27.09.25-13:18:36.635	7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0									
-27.09.25-13:18:37.036	7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0									
-27.09.25-13:18:45.662	0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000		
+27.09.25-13:18:36.635	7	Syringe Pump		0.0/0.0/0.0/10.0/1.5/500.0/0.0
+27.09.25-13:18:37.036	7	Syringe Pump		1.0/0.0/0.0/10.0/1.5/500.0/0.0
+27.09.25-13:18:45.662	0	Drives		3	CameraStation	42531	2300	25144	150000	150000	25000
 27.09.25-13:18:47.268	Z=11550   11550__1
 27.09.25-13:18:47.268	Moving to: X= 33480; Y=2502
 27.09.25-13:18:47.298	AXIS STATUS:   181	 0	 6	37120354	003C
@@ -1365,7 +1365,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:19:09.259	X=33480   33480__Y=2502   2502
 27.09.25-13:19:09.340	Z=25269   25269__1
-27.09.25-13:19:09.366	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:19:09.366	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:19:09.366	Moving to: X= 33480; Y=2502
 27.09.25-13:19:09.394	AXIS STATUS:   181	 0	 6	37120354	003C
 
@@ -1401,7 +1401,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:19:11.137	X=33480   33480__Y=2502   2502
 27.09.25-13:19:11.218	Z=25269   25269__1
-27.09.25-13:19:11.244	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:19:11.244	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:19:11.244	Moving to: X= 33480; Y=2502
 27.09.25-13:19:11.272	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1437,7 +1437,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:19:12.604	X=33480   33480__Y=2502   2502
 27.09.25-13:19:12.687	Z=25269   25269__1
-27.09.25-13:19:12.713	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:19:12.713	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:19:12.713	Moving to: X= 33480; Y=2502
 27.09.25-13:19:12.744	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1473,7 +1473,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:19:14.056	X=33480   33480__Y=2502   2502
 27.09.25-13:19:14.137	Z=25269   25269__1
-27.09.25-13:19:14.163	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:19:14.163	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:19:14.163	Moving to: X= 33480; Y=2502
 27.09.25-13:19:14.194	AXIS STATUS:   181	 0	 6	37120254	003C
 
@@ -1509,7 +1509,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 
 27.09.25-13:19:16.037	X=33480   33480__Y=2502   2502
 27.09.25-13:19:16.118	Z=25269   25269__1
-27.09.25-13:19:16.144	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0																																																																																																																																																																																			
+27.09.25-13:19:16.144	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		0/0/0/200/1/0/2	0
 27.09.25-13:19:16.144	Moving to: X= 33480; Y=2502
 27.09.25-13:19:16.173	AXIS STATUS:   181	 0	 6	37160A54	003C
 
@@ -1553,7 +1553,7 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:19:34.986	X=33480   33480__Y=2502   2502
 27.09.25-13:19:35.063	Z=25269   25269__1
 27.09.25-13:19:35.066	Manual Nozzle Setup OFF
-27.09.25-13:19:35.070	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		500/0/0/200/1/1/2	3																																																																																																																																																																																			
+27.09.25-13:19:35.070	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG		500/0/0/200/1/1/2	3
 27.09.25-13:19:35.070	Moving to: X= 33480; Y=2502
 27.09.25-13:19:35.134	X=33480   33480__Y=2502   2502
 27.09.25-13:19:35.213	Z=25269   25269__1
@@ -1567,52 +1567,52 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:19:37.677	Moving to: X= 33480; Y=2502
 27.09.25-13:19:37.748	X=33480   33480__Y=2502   2502
 27.09.25-13:19:38.815	Z=25269   25269__1
-27.09.25-13:19:38.817	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
+27.09.25-13:19:38.817	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000
 27.09.25-13:19:39.895	Z=11550   11550__1
 27.09.25-13:19:39.895	Moving to: X= 9800; Y=2300
 27.09.25-13:19:40.260	X=9800   9811__Y=2300   2300
 27.09.25-13:19:41.367	Z=25657   25657__1
-27.09.25-13:19:41.369	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-27.09.25-13:19:41.372	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:19:41.774	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:19:46.798	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+27.09.25-13:19:41.369	1	I/O		1	DOutput1	Wash Pump	ON	0
+27.09.25-13:19:41.372	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:19:41.774	3	Wait		5000
+27.09.25-13:19:46.798	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
 27.09.25-13:19:47.745	Humidity=	62	  Temperature=	24	  Dew Point=	16.3	  Adj. Temp=	15.3	  Bath Temp=	16.7
 27.09.25-13:19:47.886	Z=11550   11550__1
 27.09.25-13:19:47.886	Moving to: X= 9800; Y=7300
 27.09.25-13:19:48.124	X=9800   9800__Y=7300   7298
 27.09.25-13:19:49.657	Z=38001   38001__1
-27.09.25-13:19:49.659	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:19:50.808	3	Wait		6000																																																																																																																																																																																								
-27.09.25-13:19:56.830	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:19:56.957	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:19:59.985	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:20:01.127	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:20:06.154	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:20:06.288	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:20:24.752	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:19:49.659	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+27.09.25-13:19:50.808	3	Wait		6000
+27.09.25-13:19:56.830	2	Piezo		S_N	Stop	0
+27.09.25-13:19:56.957	3	Wait		3000
+27.09.25-13:19:59.985	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:20:01.127	3	Wait		5000
+27.09.25-13:20:06.154	2	Piezo		S_N	Stop	0
+27.09.25-13:20:06.288	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:20:24.752	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
 27.09.25-13:20:26.331	Z=11550   11550__1
 27.09.25-13:20:26.331	Moving to: X= 33480; Y=2502
 27.09.25-13:20:26.764	X=33480   33475__Y=2502   2502
 27.09.25-13:20:27.842	Z=25269   25269__1
-27.09.25-13:20:27.844	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
-27.09.25-13:20:27.847	3	Wait		8000																																																																																																																																																																																								
-27.09.25-13:20:35.872	5	Function	Begin Loop	Begin Loop	1																																																																																																																																																																																							
-27.09.25-13:20:35.874	0	Drives		0	Probe	79991	106787	21500	15000	20000	15000																																																																																																																																																																																	
+27.09.25-13:20:27.844	1	I/O		1	DOutput1	Wash Pump	OFF	0
+27.09.25-13:20:27.847	3	Wait		8000
+27.09.25-13:20:35.872	5	Function	Begin Loop	Begin Loop	1
+27.09.25-13:20:35.874	0	Drives		0	Probe	79991	106787	21500	15000	20000	15000
 27.09.25-13:20:36.941	Z=11550   11550__1
 27.09.25-13:20:36.941	Moving to: X= 186530; Y=110806
 27.09.25-13:20:37.785	X=186530   186520__Y=110806   110805
 27.09.25-13:20:38.970	Z=28194   28194__1
 27.09.25-13:20:40.284	Z=37880   37880__1
-27.09.25-13:20:40.285	7	Syringe Pump		0.0/0.0/0.0/10.0/1.0/500.0/0.0																																																																																																																																																																																								
-27.09.25-13:20:40.688	7	Syringe Pump		1.0/0.0/0.0/10.0/1.0/500.0/0.0																																																																																																																																																																																								
+27.09.25-13:20:40.285	7	Syringe Pump		0.0/0.0/0.0/10.0/1.0/500.0/0.0
+27.09.25-13:20:40.688	7	Syringe Pump		1.0/0.0/0.0/10.0/1.0/500.0/0.0
 27.09.25-13:20:47.759	Humidity=	63	  Temperature=	24	  Dew Point=	16.3	  Adj. Temp=	15.3	  Bath Temp=	16.7
-27.09.25-13:20:53.129	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+27.09.25-13:20:53.129	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000
 27.09.25-13:20:54.711	Z=11550   11550__1
 27.09.25-13:20:54.711	Moving to: X= 33480; Y=2502
 27.09.25-13:20:56.011	X=33480   33482__Y=2502   2502
 27.09.25-13:20:57.077	Z=25269   25269__1
-27.09.25-13:20:57.079	3	Wait		8000																																																																																																																																																																																								
-27.09.25-13:21:05.106	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3																																																																																																																																																																																			
+27.09.25-13:20:57.079	3	Wait		8000
+27.09.25-13:21:05.106	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3
 27.09.25-13:21:05.113	Moving to: X= 33480; Y=2502
 27.09.25-13:21:05.178	X=33480   33480__Y=2502   2502
 27.09.25-13:21:05.254	Z=25269   25269__1
@@ -1870,12 +1870,12 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:21:40.247	1	 4/ 0	3	G1	1	1	2	56 drops	58	62
 27.09.25-13:21:40.247	Moving to: X= 96748; Y=20522
 27.09.25-13:21:40.461	X=96748   96748__Y=20522   20520
-27.09.25-13:21:40.600	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+27.09.25-13:21:40.600	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000
 27.09.25-13:21:41.659	Z=11550   11550__1
 27.09.25-13:21:41.659	Moving to: X= 33480; Y=2502
 27.09.25-13:21:42.362	X=33480   33483__Y=2502   2502
 27.09.25-13:21:43.425	Z=25269   25269__1
-27.09.25-13:21:43.428	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3																																																																																																																																																																																			
+27.09.25-13:21:43.428	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3
 27.09.25-13:21:43.428	Moving to: X= 33480; Y=2502
 27.09.25-13:21:43.493	X=33480   33480__Y=2502   2502
 27.09.25-13:21:43.575	Z=25269   25269__1
@@ -1889,53 +1889,53 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:21:46.057	Moving to: X= 33480; Y=2502
 27.09.25-13:21:46.123	X=33480   33480__Y=2502   2502
 27.09.25-13:21:47.191	Z=25269   25269__1
-27.09.25-13:21:47.193	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
+27.09.25-13:21:47.193	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000
 27.09.25-13:21:47.776	Humidity=	58	  Temperature=	24	  Dew Point=	15.2	  Adj. Temp=	14.2	  Bath Temp=	16.7
 27.09.25-13:21:48.278	Z=11550   11550__1
 27.09.25-13:21:48.279	Moving to: X= 9800; Y=2300
 27.09.25-13:21:48.643	X=9800   9811__Y=2300   2300
 27.09.25-13:21:49.751	Z=25657   25657__1
-27.09.25-13:21:49.753	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-27.09.25-13:21:49.758	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:21:50.159	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:21:55.187	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+27.09.25-13:21:49.753	1	I/O		1	DOutput1	Wash Pump	ON	0
+27.09.25-13:21:49.758	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:21:50.159	3	Wait		5000
+27.09.25-13:21:55.187	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
 27.09.25-13:21:56.275	Z=11550   11550__1
 27.09.25-13:21:56.275	Moving to: X= 9800; Y=7300
 27.09.25-13:21:56.514	X=9800   9800__Y=7300   7298
 27.09.25-13:21:58.041	Z=38001   38001__1
-27.09.25-13:21:58.045	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:21:59.196	3	Wait		6000																																																																																																																																																																																								
-27.09.25-13:22:05.222	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:22:05.345	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:22:08.372	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:22:09.515	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:22:14.546	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:22:14.675	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:22:33.331	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:21:58.045	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+27.09.25-13:21:59.196	3	Wait		6000
+27.09.25-13:22:05.222	2	Piezo		S_N	Stop	0
+27.09.25-13:22:05.345	3	Wait		3000
+27.09.25-13:22:08.372	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:22:09.515	3	Wait		5000
+27.09.25-13:22:14.546	2	Piezo		S_N	Stop	0
+27.09.25-13:22:14.675	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:22:33.331	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
 27.09.25-13:22:34.918	Z=11550   11550__1
 27.09.25-13:22:34.919	Moving to: X= 33480; Y=2502
 27.09.25-13:22:35.354	X=33480   33475__Y=2502   2502
 27.09.25-13:22:36.428	Z=25269   25269__1
-27.09.25-13:22:36.430	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
-27.09.25-13:22:36.433	3	Wait		8000																																																																																																																																																																																								
-27.09.25-13:22:44.459	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:22:47.502	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
-27.09.25-13:22:47.505	0	Drives		0	Probe	79991	106787	21500	15000	20000	15000																																																																																																																																																																																	
+27.09.25-13:22:36.430	1	I/O		1	DOutput1	Wash Pump	OFF	0
+27.09.25-13:22:36.433	3	Wait		8000
+27.09.25-13:22:44.459	3	Wait		3000
+27.09.25-13:22:47.502	5	Function	End Loop	End Loop	2
+27.09.25-13:22:47.505	0	Drives		0	Probe	79991	106787	21500	15000	20000	15000
 27.09.25-13:22:47.794	Humidity=	71	  Temperature=	24	  Dew Point=	18.4	  Adj. Temp=	17.4	  Bath Temp=	16.7
 27.09.25-13:22:48.576	Z=11550   11550__1
 27.09.25-13:22:48.577	Moving to: X= 186530; Y=106306
 27.09.25-13:22:49.413	X=186530   186519__Y=106306   106306
 27.09.25-13:22:50.606	Z=28194   28194__1
 27.09.25-13:22:51.932	Z=37880   37880__1
-27.09.25-13:22:51.934	7	Syringe Pump		0.0/0.0/0.0/10.0/1.0/500.0/0.0																																																																																																																																																																																								
-27.09.25-13:22:52.335	7	Syringe Pump		1.0/0.0/0.0/10.0/1.0/500.0/0.0																																																																																																																																																																																								
-27.09.25-13:23:04.777	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+27.09.25-13:22:51.934	7	Syringe Pump		0.0/0.0/0.0/10.0/1.0/500.0/0.0
+27.09.25-13:22:52.335	7	Syringe Pump		1.0/0.0/0.0/10.0/1.0/500.0/0.0
+27.09.25-13:23:04.777	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000
 27.09.25-13:23:06.363	Z=11550   11550__1
 27.09.25-13:23:06.363	Moving to: X= 33480; Y=2502
 27.09.25-13:23:07.662	X=33480   33482__Y=2502   2502
 27.09.25-13:23:08.729	Z=25269   25269__1
-27.09.25-13:23:08.731	3	Wait		8000																																																																																																																																																																																								
-27.09.25-13:23:16.753	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3																																																																																																																																																																																			
+27.09.25-13:23:08.731	3	Wait		8000
+27.09.25-13:23:16.753	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3
 27.09.25-13:23:16.762	Moving to: X= 33480; Y=2502
 27.09.25-13:23:16.827	X=33480   33480__Y=2502   2502
 27.09.25-13:23:16.907	Z=25269   25269__1
@@ -2194,12 +2194,12 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:23:51.590	1	 4/ 1	3	G2	1	1	2	55 drops	58	56
 27.09.25-13:23:51.590	Moving to: X= 96748; Y=18662
 27.09.25-13:23:51.807	X=96748   96748__Y=18662   18660
-27.09.25-13:23:51.945	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000																																																																																																																																																																																	
+27.09.25-13:23:51.945	0	Drives		3	CameraStation	37101	1548	20916	20000	20000	5000
 27.09.25-13:23:53.017	Z=11550   11550__1
 27.09.25-13:23:53.018	Moving to: X= 33480; Y=2502
 27.09.25-13:23:53.719	X=33480   33483__Y=2502   2502
 27.09.25-13:23:54.782	Z=25269   25269__1
-27.09.25-13:23:54.784	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3																																																																																																																																																																																			
+27.09.25-13:23:54.784	5	Function		Auto Drop Detection	3	C:\Users\Scienion AG	OpenNozzleSetup	500/0/3/200/1/1/2/0.00/4	3
 27.09.25-13:23:54.785	Moving to: X= 33480; Y=2502
 27.09.25-13:23:54.854	X=33480   33480__Y=2502   2502
 27.09.25-13:23:54.935	Z=25269   25269__1
@@ -2213,40 +2213,40 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:23:57.279	Moving to: X= 33480; Y=2502
 27.09.25-13:23:57.348	X=33480   33480__Y=2502   2502
 27.09.25-13:23:58.423	Z=25269   25269__1
-27.09.25-13:23:58.425	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000																																																																																																																																																																																	
+27.09.25-13:23:58.425	0	Drives	MoveToWasteStation1	6	WasteStation1	5928	6568	20986	30000	30000	15000
 27.09.25-13:23:59.508	Z=11550   11550__1
 27.09.25-13:23:59.508	Moving to: X= 9800; Y=2300
 27.09.25-13:23:59.872	X=9800   9810__Y=2300   2300
 27.09.25-13:24:00.980	Z=25657   25657__1
-27.09.25-13:24:00.983	1	I/O		1	DOutput1	Wash Pump	ON	0																																																																																																																																																																																				
-27.09.25-13:24:00.988	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:24:01.391	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:24:06.414	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000																																																																																																																																																																																	
+27.09.25-13:24:00.983	1	I/O		1	DOutput1	Wash Pump	ON	0
+27.09.25-13:24:00.988	7	Syringe Pump		0.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:24:01.391	3	Wait		5000
+27.09.25-13:24:06.414	0	Drives		4	WashStation1	5927	11569	28973	25000	25000	10000
 27.09.25-13:24:07.490	Z=11550   11550__1
 27.09.25-13:24:07.490	Moving to: X= 9800; Y=7300
 27.09.25-13:24:07.725	X=9800   9800__Y=7300   7298
 27.09.25-13:24:09.251	Z=38001   38001__1
-27.09.25-13:24:09.253	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:24:10.393	3	Wait		6000																																																																																																																																																																																								
-27.09.25-13:24:16.417	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:24:16.546	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:24:19.572	2	Piezo		S_N	Ultrasonics	0																																																																																																																																																																																						
-27.09.25-13:24:20.714	3	Wait		5000																																																																																																																																																																																								
-27.09.25-13:24:25.735	2	Piezo		S_N	Stop	0																																																																																																																																																																																						
-27.09.25-13:24:25.858	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0																																																																																																																																																																																								
-27.09.25-13:24:44.517	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000																																																																																																																																																																																	
+27.09.25-13:24:09.253	2	Piezo	StartUltrasonic	S_N	Ultrasonics	0
+27.09.25-13:24:10.393	3	Wait		6000
+27.09.25-13:24:16.417	2	Piezo		S_N	Stop	0
+27.09.25-13:24:16.546	3	Wait		3000
+27.09.25-13:24:19.572	2	Piezo		S_N	Ultrasonics	0
+27.09.25-13:24:20.714	3	Wait		5000
+27.09.25-13:24:25.735	2	Piezo		S_N	Stop	0
+27.09.25-13:24:25.858	7	Syringe Pump		1.0/1.0/0.0/500.0/18.0/500.0/1.0
+27.09.25-13:24:44.517	0	Drives		3	CameraStation	38000	6000	21500	25000	25000	15000
 27.09.25-13:24:46.096	Z=11550   11550__1
 27.09.25-13:24:46.096	Moving to: X= 33480; Y=2502
 27.09.25-13:24:46.528	X=33480   33475__Y=2502   2502
 27.09.25-13:24:47.598	Z=25269   25269__1
-27.09.25-13:24:47.600	1	I/O		1	DOutput1	Wash Pump	OFF	0																																																																																																																																																																																				
-27.09.25-13:24:47.604	3	Wait		8000																																																																																																																																																																																								
+27.09.25-13:24:47.600	1	I/O		1	DOutput1	Wash Pump	OFF	0
+27.09.25-13:24:47.604	3	Wait		8000
 27.09.25-13:24:47.821	Humidity=	67	  Temperature=	24	  Dew Point=	17.3	  Adj. Temp=	16.3	  Bath Temp=	16.7
-27.09.25-13:24:55.635	3	Wait		3000																																																																																																																																																																																								
-27.09.25-13:24:58.658	5	Function	End Loop	End Loop	2																																																																																																																																																																																							
-27.09.25-13:24:58.660	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
-27.09.25-13:24:58.669	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0																																																																																																																																																																																				
-27.09.25-13:24:58.674	5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0																																																																																																																																																																																			
+27.09.25-13:24:55.635	3	Wait		3000
+27.09.25-13:24:58.658	5	Function	End Loop	End Loop	2
+27.09.25-13:24:58.660	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0
+27.09.25-13:24:58.669	1	I/O	switch ON	2	DOutput2	Head Cam Light	ON	0
+27.09.25-13:24:58.674	5	Function		Scan Spot Area	10	C:\Users\Scienion AG	0	1	0
 27.09.25-13:24:59.850	Z=9114   9114__1
 27.09.25-13:24:59.850	Moving to: X= 137295; Y=2866
 27.09.25-13:25:00.749	X=137295   137282__Y=2866   2866
@@ -2308,19 +2308,19 @@ WARNING - The PDC is going to uptake. Please do not open the door. Risk of PDC b
 27.09.25-13:25:14.871	X=161528   161521__Y=24493   24493
 27.09.25-13:25:15.107	Moving to: X= 168261; Y=24493
 27.09.25-13:25:15.350	X=168261   168256__Y=24493   24493
-27.09.25-13:25:15.762	1	I/O		2	DOutput2	Head Cam Light	OFF	0																																																																																																																																																																																				
-27.09.25-13:25:15.766	0	Drives		2	Home	0	0	0	25000	20000	15000																																																																																																																																																																																	
+27.09.25-13:25:15.762	1	I/O		2	DOutput2	Head Cam Light	OFF	0
+27.09.25-13:25:15.766	0	Drives		2	Home	0	0	0	25000	20000	15000
 27.09.25-13:25:16.616	Z=0   0__1
 27.09.25-13:25:16.616	Moving to: X= 0; Y=0
 27.09.25-13:25:17.491	X=0   10__Y=0   0
-27.09.25-13:25:17.493	4	Message		Labeling reagents have been added. Please check the QC images and redispense any labels that have failed the pre-autodrop.	OK																																																																																																																																																																																							
+27.09.25-13:25:17.493	4	Message		Labeling reagents have been added. Please check the QC images and redispense any labels that have failed the pre-autodrop.	OK
 27.09.25-13:25:17.501	Comment: Labeling reagents have been added. Please check the QC images and redispense any labels that have failed the pre-autodrop.
-27.09.25-13:25:32.154	
-	Total detected particles:	0	
-	Total volume dispensed (nl):	0.00	
-	Concentration estimated (1/µl):	NaN	
-	AutoROI-LEFT : 	1021.000000	
-	User-ROI-LEFT : 	6.000000	
+27.09.25-13:25:32.154
+	Total detected particles:	0
+	Total volume dispensed (nl):	0.00
+	Concentration estimated (1/µl):	NaN
+	AutoROI-LEFT : 	1021.000000
+	User-ROI-LEFT : 	6.000000
 	Channels :Transmission-Positive
 Run has finished: 1:25 PM - 9/27/2025
 

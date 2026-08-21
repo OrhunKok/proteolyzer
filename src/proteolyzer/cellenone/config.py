@@ -62,6 +62,16 @@ PICKUP_NOZZLE_ID = 3
 PICKUP_NOZZLE_XPOS_OFFSET = 36
 
 
+#: Geoprops column naming the imaging channel a measurement came from. The
+#: export writes one row per (cell, channel), e.g. Transmission and Green.
+CHANNEL_COL = "Teg"
+
+#: Channel whose measurements keep the unsuffixed column names when several are
+#: present; the others become e.g. "Diameter.Green". Transmission is the
+#: detection channel, so it is the one that always carries the geometry.
+PRIMARY_CHANNEL = "Transmission"
+
+
 TEMP_STATS_COLS = [
     "Timestamp",
     "Humidity",

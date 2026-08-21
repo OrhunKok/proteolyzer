@@ -12,6 +12,10 @@ Submodules
     base: common plotting base classes and utilities
     relational: relational plot implementations (pairwise, scatter, etc.)
 
+## PlotBase
+
+## RelPlot
+
 ## VolcanoPlot
 
 #### \_\_all\_\_

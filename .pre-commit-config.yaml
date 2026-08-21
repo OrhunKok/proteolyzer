@@ -1,0 +1,28 @@
+# Mirrors the lint job in .github/workflows/ci.yml, so failures show up before
+# a push rather than after. Install with: pre-commit install
+#
+# Notebook outputs are deliberately left alone: examples/ keeps them as
+# documentation, so no nbstripout hook here.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+        files: ^(src|tests)/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.ipynb$
+      - id: end-of-file-fixer
+        exclude: \.ipynb$
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      # Roomy enough for the bundled unimod.db (5 MB), tight enough to catch
+      # search output being committed by accident.
+      - id: check-added-large-files
+        args: [--maxkb=6144]

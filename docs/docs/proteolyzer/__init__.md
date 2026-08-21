@@ -3,26 +3,52 @@ sidebar_label: proteolyzer
 title: proteolyzer
 ---
 
-Top-level package for proteolyzer.
+Proteolyzer: processing, analysis and visualization of proteomics data.
 
-This package collects subpackages that handle data loading, transformations,
-visualizations and utilities used throughout the proteolyzer project.
+The base suite is :mod:`proteolyzer.core` — recognizing search-engine output,
+reading it, and normalizing it into a consistent frame — with
+:mod:`proteolyzer.reference` holding the domain constants they share. Both are
+imported eagerly.
 
-Docstring style
-    Google-style docstrings are used across the project to maximize
-    compatibility with pydoc-markdown and other documentation tools.
+Everything else is an optional subpackage, imported on first attribute access
+so that a missing extra (``pip install proteolyzer[aas]``) only fails for the
+module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
 
-Package contents
-    - cellenone: I/O and processing specific to CellenONE data
-    - plots: visualization helpers and plotting abstractions
-    - transformers: matrix and tensor transformations
-    - utils: constants, helpers, and core processors
+## importlib
 
-## utils
+## core
 
-## plots
+## reference
 
-## transformers
+## Data
+
+## DataLoader
+
+## DataProcessor
+
+## MatrixBuilder
+
+## Report
+
+## configure\_logging
+
+## read
 
 #### \_\_all\_\_
+
+#### \_\_lazy\_\_
+
+Subpackages imported on first attribute access, see :func:`__getattr__`.
+
+#### \_\_getattr\_\_
+
+```python
+def __getattr__(name: str)
+```
+
+#### \_\_dir\_\_
+
+```python
+def __dir__() -> list[str]
+```
 

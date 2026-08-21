@@ -10,10 +10,11 @@ process CellenONE export formats used by proteolyzer.
 
 Modules
     cellenone: high-level data loader and adapter for CellenONE exports.
-
-## CELLEONE\_MAPPING
+    config: label/well layouts and log file column names.
 
 ## CoordinatesMapping
+
+## CELLEONE\_MAPPING
 
 #### \_\_all\_\_
 
