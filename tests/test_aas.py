@@ -15,7 +15,7 @@ from proteolyzer.aas.utils import (  # noqa: E402
     calculate_aa_substitution_matrix,
     column_mapping,
     gen_mod_dict,
-    ptm_mtp_output,
+    saap_alt_output,
 )
 from proteolyzer.core.io import read_frame  # noqa: E402
 
@@ -110,14 +110,14 @@ def test_column_mapping_skips_absent_columns():
 # ----------------------------------------------------------------- ptm/mtp split
 
 
-def test_ptm_mtp_output_splits_the_candidates(tmp_path):
-    (tmp_path / "PTM").mkdir()
-    (tmp_path / "MTP").mkdir()
+def test_saap_alt_output_splits_the_candidates(tmp_path):
+    (tmp_path / "ALT").mkdir()
+    (tmp_path / "SAAP").mkdir()
 
     frame = pd.DataFrame(
         {
-            "PTM": ["Oxidation", None, None],
-            "mistranslated sequence": ["AAAK", "AAGK", "AAVK"],
+            "ALT": ["Oxidation", None, None],
+            "SAAP sequence": ["AAAK", "AAGK", "AAVK"],
             **{
                 f"{frame_no}-frame genome substring": [False, False, False]
                 for frame_no in range(1, 7)
@@ -127,12 +127,12 @@ def test_ptm_mtp_output_splits_the_candidates(tmp_path):
     # The third candidate is explained by the genome, so it is not an MTP.
     frame.loc[2, "3-frame genome substring"] = True
 
-    ptm_mtp_output(frame, "sample_a", tmp_path)
+    saap_alt_output(frame, "sample_a", tmp_path)
 
-    ptm = read_frame(tmp_path / "PTM" / "sample_a_PTM")
-    mtp = read_frame(tmp_path / "MTP" / "sample_a_MTP")
-    assert ptm["mistranslated sequence"].tolist() == ["AAAK"]
-    assert mtp["mistranslated sequence"].tolist() == ["AAGK"]
+    alt = read_frame(tmp_path / "ALT" / "sample_a_ALT")
+    saap = read_frame(tmp_path / "SAAP" / "sample_a_SAAP")
+    assert alt["SAAP sequence"].tolist() == ["AAAK"]
+    assert saap["SAAP sequence"].tolist() == ["AAGK"]
 
 
 # ------------------------------------------------------------------------ Stage
@@ -240,7 +240,7 @@ def test_validation_locates_fragments_spanning_the_substitution(aas_params):
 
     validation = Validation(aas_params)
     b_ions, y_ions = validation.frags_containing_aas(
-        pd.Series({"mistranslated sequence": "AAGAK", "mistranslated aas positions": 2})
+        pd.Series({"SAAP sequence": "AAGAK", "SAAP position": 2})
     )
     assert b_ions.tolist() == [3, 4]
     assert y_ions.tolist() == [3, 4]
@@ -257,18 +257,18 @@ def test_quantification_reports_missing_inputs(aas_params):
 def test_quantification_label_free_ratio_is_log2(aas_params):
     from proteolyzer.aas.quantification import Quantification
 
-    mtp = pd.DataFrame(
+    saap = pd.DataFrame(
         {
             "DP Base Sequence": ["AAAK"],
-            "mistranslated sequence": ["AAGK"],
+            "SAAP sequence": ["AAGK"],
             "aa subs": ["A:G"],
         }
     )
-    mtp_df = pd.DataFrame({"Intensity": [200.0]})
-    bp_df = pd.DataFrame({"Intensity": [100.0]})
+    saap_df = pd.DataFrame({"Intensity": [200.0]})
+    base_df = pd.DataFrame({"Intensity": [100.0]})
 
     quant = Quantification(aas_params)._raas(
-        mtp, mtp_df, bp_df, pd.DataFrame({"MQ": [np.nan]}), "Label-Free"
+        saap, saap_df, base_df, pd.DataFrame({"MQ": [np.nan]}), "Label-Free"
     )
     assert quant["Ratio"].tolist() == [1.0]
 
@@ -281,7 +281,7 @@ def test_quantification_rejects_unknown_label_designation(aas_params):
             pd.DataFrame(
                 {
                     "DP Base Sequence": [],
-                    "mistranslated sequence": [],
+                    "SAAP sequence": [],
                     "aa subs": [],
                 }
             ),

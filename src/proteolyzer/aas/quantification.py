@@ -9,12 +9,12 @@ from .base import Stage
 
 
 class Quantification(Stage):
-    """Computes mistranslated-to-base-peptide intensity ratios per sample."""
+    """Computes SAAP-to-base-peptide intensity ratios per sample."""
 
     def __init__(self, params, queue=None):
         super().__init__(params, queue)
         # A ratio is only meaningful if both peptides carry enough signal, so
-        # the threshold is applied to the mistranslated and the base peptide.
+        # the threshold is applied to the SAAP and to the BASE peptide.
         self.min_quant = float(self.params["Quantification"]["Minimum Quantity"])
 
     def process_sample(self, sample):
@@ -24,19 +24,19 @@ class Quantification(Stage):
             return
 
         val_evidence_path = (
-            self.output_dir / "MTP" / f"{sample}_Val_Evidence_Filtered_Stage_2"
+            self.output_dir / "SAAP" / f"{sample}_Val_Evidence_Filtered_Stage_2"
         )
-        mtp_path = self.output_dir / "MTP" / f"{sample}_MTP_Filtered_Stage_2"
+        saap_path = self.output_dir / "SAAP" / f"{sample}_SAAP_Filtered_Stage_2"
 
-        if not all(frame_exists(path) for path in (val_evidence_path, mtp_path)):
+        if not all(frame_exists(path) for path in (val_evidence_path, saap_path)):
             self.queue.put(("stderr", f"Missing files for sample {sample}"))
             return
 
         val_evidence = read_frame(val_evidence_path)
-        mtp = read_frame(mtp_path)
+        saap = read_frame(saap_path)
 
         ev_filter_seqs = np.unique(
-            mtp[["DP Base Sequence", "mistranslated sequence"]].to_numpy()
+            saap[["DP Base Sequence", "SAAP sequence"]].to_numpy()
         )
         val_evidence = (
             val_evidence[val_evidence["Sequence"].isin(ev_filter_seqs)]
@@ -50,12 +50,12 @@ class Quantification(Stage):
             .sum()
         )
 
-        mtp = mtp[
-            (mtp["DP Base Sequence"].isin(val_evidence.index))
-            & (mtp["mistranslated sequence"].isin(val_evidence.index))
+        saap = saap[
+            (saap["DP Base Sequence"].isin(val_evidence.index))
+            & (saap["SAAP sequence"].isin(val_evidence.index))
         ]
-        mtp_df = val_evidence.loc[mtp["mistranslated sequence"]]
-        bp_df = val_evidence.loc[mtp["DP Base Sequence"]]
+        saap_df = val_evidence.loc[saap["SAAP sequence"]]
+        base_df = val_evidence.loc[saap["DP Base Sequence"]]
 
         label_designation = (
             "TMT"
@@ -64,13 +64,17 @@ class Quantification(Stage):
         )
         with np.errstate(divide="ignore"):
             quant = self._raas(
-                mtp, mtp_df, bp_df, self.metadata, label_designation=label_designation
+                saap,
+                saap_df,
+                base_df,
+                self.metadata,
+                label_designation=label_designation,
             )
 
         quant = quant[np.isfinite(quant["Ratio"])]
         quant = self._apply_minimum_quantity(quant)
 
-        write_frame(quant, self.output_dir / "MTP" / f"{sample}_MTP_Quant")
+        write_frame(quant, self.output_dir / "SAAP" / f"{sample}_SAAP_Quant")
 
         self.queue.put(("stdout", f"Quantification complete for sample: {sample}"))
 
@@ -79,8 +83,8 @@ class Quantification(Stage):
         if not self.min_quant:
             return quant
 
-        keep = (quant["MTP.Sum"] >= self.min_quant) & (
-            quant["BP.Sum"] >= self.min_quant
+        keep = (quant["SAAP.Sum"] >= self.min_quant) & (
+            quant["BASE.Sum"] >= self.min_quant
         )
         dropped = int((~keep).sum())
         if dropped:
@@ -93,52 +97,53 @@ class Quantification(Stage):
             )
         return quant[keep]
 
-    def _raas(self, mtp, mtp_df, bp_df, sample_df, label_designation):
+    def _raas(self, saap, saap_df, base_df, sample_df, label_designation):
         """Relative abundance of the substituted peptide vs its base peptide."""
         output_dict = {
-            "DP Base Sequence": mtp["DP Base Sequence"],
-            "mistranslated sequence": mtp["mistranslated sequence"],
-            "aa subs": mtp["aa subs"],
+            "DP Base Sequence": saap["DP Base Sequence"],
+            "SAAP sequence": saap["SAAP sequence"],
+            "aa subs": saap["aa subs"],
         }
 
         if label_designation == "Label-Free":
-            ratios = np.log2(mtp_df["Intensity"].values / bp_df["Intensity"].values)
+            ratios = np.log2(saap_df["Intensity"].values / base_df["Intensity"].values)
         elif label_designation == "TMT":
-            ratios = np.log10(mtp_df["Intensity"].values / bp_df["Intensity"].values)
+            ratios = np.log10(saap_df["Intensity"].values / base_df["Intensity"].values)
 
             reporter_regex = r"^(?!.*Normalised).*Reporter intensity corrected.*$"
-            mtp_reporters = mtp_df.filter(regex=reporter_regex, axis=1)
-            bp_reporters = bp_df.filter(regex=reporter_regex, axis=1)
+            saap_reporters = saap_df.filter(regex=reporter_regex, axis=1)
+            base_reporters = base_df.filter(regex=reporter_regex, axis=1)
 
             norm_regex = "Normalised Reporter intensity corrected"
-            mtp_reporters_norm = mtp_df.filter(regex=norm_regex, axis=1)
-            bp_reporters_norm = bp_df.filter(regex=norm_regex, axis=1)
+            saap_reporters_norm = saap_df.filter(regex=norm_regex, axis=1)
+            base_reporters_norm = base_df.filter(regex=norm_regex, axis=1)
 
-            mtp_ratios = mtp_reporters.div(mtp_reporters.sum(axis=1).values, axis=0)
-            bp_ratios = bp_reporters.div(bp_reporters.sum(axis=1).values, axis=0)
+            saap_ratios = saap_reporters.div(saap_reporters.sum(axis=1).values, axis=0)
+            base_ratios = base_reporters.div(base_reporters.sum(axis=1).values, axis=0)
 
-            mtp_distributed = mtp_ratios.mul(mtp_df["Intensity"], axis=0)
-            bp_distributed = bp_ratios.mul(bp_df["Intensity"], axis=0)
+            saap_distributed = saap_ratios.mul(saap_df["Intensity"], axis=0)
+            base_distributed = base_ratios.mul(base_df["Intensity"], axis=0)
 
             for tmt_plex in sample_df["MQ"].dropna().unique():
                 channel = str(int(tmt_plex))
                 reporter = f"Reporter intensity corrected {channel}"
-                output_dict[f"MTP.Plex.{channel}"] = mtp_distributed[reporter].values
-                output_dict[f"BP.Plex.{channel}"] = bp_distributed[reporter].values
+                output_dict[f"SAAP.Plex.{channel}"] = saap_distributed[reporter].values
+                output_dict[f"BASE.Plex.{channel}"] = base_distributed[reporter].values
                 output_dict[f"Ratio.Plex.{channel}"] = np.log10(
-                    mtp_distributed[reporter].values / bp_distributed[reporter].values
+                    saap_distributed[reporter].values
+                    / base_distributed[reporter].values
                 )
-                output_dict[f"MTP.Plex.{channel}.Norm.Sum"] = mtp_reporters_norm[
+                output_dict[f"SAAP.Plex.{channel}.Norm.Sum"] = saap_reporters_norm[
                     f"Normalised {reporter}"
                 ].values
-                output_dict[f"BP.Plex.{channel}.Norm.Sum"] = bp_reporters_norm[
+                output_dict[f"BASE.Plex.{channel}.Norm.Sum"] = base_reporters_norm[
                     f"Normalised {reporter}"
                 ].values
         else:
             raise ValueError(f"Unknown label designation: {label_designation!r}")
 
-        output_dict["MTP.Sum"] = mtp_df["Intensity"].values
-        output_dict["BP.Sum"] = bp_df["Intensity"].values
+        output_dict["SAAP.Sum"] = saap_df["Intensity"].values
+        output_dict["BASE.Sum"] = base_df["Intensity"].values
         output_dict["Ratio"] = ratios
 
         return pd.DataFrame.from_dict(output_dict)

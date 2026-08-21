@@ -29,34 +29,34 @@ class Validation(Stage):
 
         evidence_path = sample_dir / "evidence.parquet"
         msms_path = sample_dir / "msms.parquet"
-        mtp_path = self.output_dir / "MTP" / f"{sample}_MTP_Filtered_Stage_1"
+        saap_path = self.output_dir / "SAAP" / f"{sample}_SAAP_Filtered_Stage_1"
 
         if not (
-            evidence_path.exists() and msms_path.exists() and frame_exists(mtp_path)
+            evidence_path.exists() and msms_path.exists() and frame_exists(saap_path)
         ):
             self.queue.put(("stderr", f"Missing data files for sample {sample}"))
             return
 
         evidence = pd.read_parquet(evidence_path, engine="fastparquet")
         msms = pd.read_parquet(msms_path, engine="fastparquet")
-        mtp = read_frame(mtp_path)
+        saap = read_frame(saap_path)
 
-        validated_mtp, val_evidence = self.mtp_validate(evidence, msms, mtp)
+        validated_saap, val_evidence = self.saap_validate(evidence, msms, saap)
 
         write_frame(
-            validated_mtp, self.output_dir / "MTP" / f"{sample}_MTP_Filtered_Stage_2"
+            validated_saap, self.output_dir / "SAAP" / f"{sample}_SAAP_Filtered_Stage_2"
         )
         write_frame(
             val_evidence,
-            self.output_dir / "MTP" / f"{sample}_Val_Evidence_Filtered_Stage_2",
+            self.output_dir / "SAAP" / f"{sample}_Val_Evidence_Filtered_Stage_2",
         )
 
         self.queue.put(("stdout", f"Validation complete for sample: {sample}"))
 
     def frags_containing_aas(self, row: pd.Series):
         """Fragment indices whose ions span the substituted residue."""
-        seq = row["mistranslated sequence"]
-        pos = row["mistranslated aas positions"]
+        seq = row["SAAP sequence"]
+        pos = row["SAAP position"]
 
         b_ions_pos = pos + 1
         y_ions_pos = len(seq) - pos
@@ -75,7 +75,7 @@ class Validation(Stage):
         """
         b_ions = row["b_ions_aas"]
         y_ions = row["y_ions_aas"]
-        seq = row["mistranslated sequence"]
+        seq = row["SAAP sequence"]
         scan = row["MS/MS scan number"]
         charge = row["Charge"]
 
@@ -106,7 +106,7 @@ class Validation(Stage):
     )
 
     def fragment_evidence(
-        self, mtp: pd.DataFrame, frag_ev_merge: pd.DataFrame
+        self, saap: pd.DataFrame, frag_ev_merge: pd.DataFrame
     ) -> pd.Series:
         """Matched b/y fragment count per candidate, for the whole frame.
 
@@ -115,9 +115,9 @@ class Validation(Stage):
         candidate instead costs one pass over the fragments each, which is
         quadratic in the size of the run.
         """
-        wanted = self._expected_fragments(mtp)
+        wanted = self._expected_fragments(saap)
         if wanted.empty:
-            return pd.Series(0, index=mtp.index, dtype="int64")
+            return pd.Series(0, index=saap.index, dtype="int64")
 
         observed = frag_ev_merge.loc[:, list(self._FRAGMENT_KEYS)].copy()
         for frame in (wanted, observed):
@@ -129,19 +129,19 @@ class Validation(Stage):
             .groupby("_candidate")
             .size()
         )
-        return counts.reindex(mtp.index, fill_value=0).astype("int64")
+        return counts.reindex(saap.index, fill_value=0).astype("int64")
 
-    def _expected_fragments(self, mtp: pd.DataFrame) -> pd.DataFrame:
+    def _expected_fragments(self, saap: pd.DataFrame) -> pd.DataFrame:
         """One row per (candidate, scan, ion) the candidate should produce."""
         keys = pd.DataFrame(
             {
-                "_candidate": mtp.index,
-                "Raw file": mtp["Raw file"].to_numpy(),
-                "Sequence": mtp["mistranslated sequence"].to_numpy(),
-                "Charge": mtp["Charge"].to_numpy(),
-                "MS/MS scan number": mtp["MS/MS scan number"].to_numpy(),
-                "b_ions_aas": mtp["b_ions_aas"].to_numpy(),
-                "y_ions_aas": mtp["y_ions_aas"].to_numpy(),
+                "_candidate": saap.index,
+                "Raw file": saap["Raw file"].to_numpy(),
+                "Sequence": saap["SAAP sequence"].to_numpy(),
+                "Charge": saap["Charge"].to_numpy(),
+                "MS/MS scan number": saap["MS/MS scan number"].to_numpy(),
+                "b_ions_aas": saap["b_ions_aas"].to_numpy(),
+                "y_ions_aas": saap["y_ions_aas"].to_numpy(),
             }
         ).explode("MS/MS scan number")
 
@@ -159,8 +159,8 @@ class Validation(Stage):
             subset=["MS/MS scan number", "Frag.Number"]
         )
 
-    def mtp_validate(
-        self, val_evidence: pd.DataFrame, val_msms: pd.DataFrame, mtp: pd.DataFrame
+    def saap_validate(
+        self, val_evidence: pd.DataFrame, val_msms: pd.DataFrame, saap: pd.DataFrame
     ):
         val_evidence = val_evidence[
             (val_evidence["PEP"] <= self.validation_pep)
@@ -180,9 +180,7 @@ class Validation(Stage):
                 val_evidence["Intensity"] / val_evidence["Intensity"].median()
             )
 
-        filter_list = mtp[
-            ["Raw file", "Charge", "DP Base Sequence", "mistranslated sequence"]
-        ]
+        filter_list = saap[["Raw file", "Charge", "DP Base Sequence", "SAAP sequence"]]
         filter_list = (
             filter_list.melt(
                 id_vars=["Raw file", "Charge"], var_name="Type", value_name="Sequence"
@@ -204,20 +202,22 @@ class Validation(Stage):
             val_evidence, how="inner", on=["Raw file", "MS/MS scan number"]
         )
 
-        mtp.loc[:, "b_ions_aas"], mtp.loc[:, "y_ions_aas"] = zip(
-            *mtp.apply(self.frags_containing_aas, axis=1), strict=True
+        saap.loc[:, "b_ions_aas"], saap.loc[:, "y_ions_aas"] = zip(
+            *saap.apply(self.frags_containing_aas, axis=1), strict=True
         )
-        mtp.loc[:, "fragment_evidence"] = self.fragment_evidence(mtp, msms_ev_merge)
+        saap.loc[:, "fragment_evidence"] = self.fragment_evidence(saap, msms_ev_merge)
 
-        # Group and sum fragment evidence across same MTP
+        # Group and sum fragment evidence across the same SAAP
         # (ignore scan/raw/charge-level variation)
-        mtp_grouped = (
-            mtp.groupby(["DP Base Sequence", "mistranslated sequence", "aa subs"])[
+        saap_grouped = (
+            saap.groupby(["DP Base Sequence", "SAAP sequence", "aa subs"])[
                 "fragment_evidence"
             ]
             .sum()
             .reset_index()
         )
-        mtp_grouped = mtp_grouped[mtp_grouped["fragment_evidence"] > self.frag_evidence]
+        saap_grouped = saap_grouped[
+            saap_grouped["fragment_evidence"] > self.frag_evidence
+        ]
 
-        return mtp_grouped, msms_ev_merge
+        return saap_grouped, msms_ev_merge

@@ -68,7 +68,7 @@ class MaxQuant(Detection):
         # "Detection PEP" is applied by Preprocessor.MaxQuant, which is where
         # dependent peptides are filtered.
         self.aa_sub_ppm = float(self.mq_params["AA Substitution ppm"])
-        self.ptm_ppm = float(self.mq_params["PTM ppm"])
+        self.alt_ppm = float(self.mq_params["ALT ppm"])
         self.pos_prob = float(self.mq_params["Positional Probability Threshold"])
         self.cn_term_prob = float(self.mq_params["C/n-term Modification Threshold"])
 
@@ -98,19 +98,19 @@ class MaxQuant(Detection):
         c_term_peps = peptides.loc[peptides["Terminus"] == "C", "Sequence"].to_numpy()
 
         sample_df = self.find_potential_aas(all_peps, n_term_peps, c_term_peps)
-        utils.ptm_mtp_output(sample_df, sample, self.output_dir)
-        self._validate_mtp(sample, sample_dir / "evidence.parquet")
+        utils.saap_alt_output(sample_df, sample, self.output_dir)
+        self._validate_saap(sample, sample_dir / "evidence.parquet")
 
-    def _validate_mtp(self, sample, evidence_path):
-        """Validate MTP and output filtered MTP."""
-        mtp = read_frame(self.output_dir / "MTP" / f"{sample}_MTP")
+    def _validate_saap(self, sample, evidence_path):
+        """Validate SAAPs and write the filtered set."""
+        saap = read_frame(self.output_dir / "SAAP" / f"{sample}_SAAP")
 
         evidence = pd.read_parquet(evidence_path, engine="fastparquet")
-        mtp = self.validate_mtp(evidence, mtp)
+        saap = self.validate_saap(evidence, saap)
 
-        write_frame(mtp, self.output_dir / "MTP" / f"{sample}_MTP_Filtered_Stage_1")
+        write_frame(saap, self.output_dir / "SAAP" / f"{sample}_SAAP_Filtered_Stage_1")
 
-        self.write_fasta(mtp, sample)
+        self.write_fasta(saap, sample)
 
     def find_potential_aas(self, dp_df, n_term_peps, c_term_peps):
         """Identify potential AA substitutions and other modifications."""
@@ -150,7 +150,7 @@ class MaxQuant(Detection):
         return dp_df
 
     def _apply_modifications(self, dp_df):
-        """Apply AA substitutions and PTM modifications to peptides."""
+        """Assign substitutions, then alternative explanations, to peptides."""
         dp_df[
             [
                 "aa subs",
@@ -161,20 +161,20 @@ class MaxQuant(Detection):
         ] = None
         dp_df = dp_df.apply(lambda x: self.get_aa_subs(x), axis=1)
 
-        dp_df[["mistranslated sequence", "mistranslated aas positions"]] = None
+        dp_df[["SAAP sequence", "SAAP position"]] = None
         dp_df = dp_df.apply(
-            lambda x: self.get_mistranslated_seq(x) if x["aa subs"] else x, axis=1
+            lambda x: self.get_saap_sequence(x) if x["aa subs"] else x, axis=1
         )
 
         dp_df[
             [
-                "PTM",
-                "PTM site",
-                "PTM positional probability",
-                "PTM mass error [observed-expected] (ppm)",
+                "ALT",
+                "ALT site",
+                "ALT positional probability",
+                "ALT mass error [observed-expected] (ppm)",
             ]
         ] = None
-        dp_df = dp_df.apply(lambda x: self.find_PTMs(x), axis=1)
+        dp_df = dp_df.apply(lambda x: self.find_alt(x), axis=1)
         self.queue.put(("progress", (2, 4)))
         return dp_df
 
@@ -225,29 +225,29 @@ class MaxQuant(Detection):
                 row["destination aa"] = s[-1]
         return row
 
-    def get_mistranslated_seq(self, row):
-        """Generate the mistranslated sequence based on substitutions."""
-        bp = row["DP Base Sequence"]
+    def get_saap_sequence(self, row):
+        """Generate the SAAP sequence implied by the substitution."""
+        base = row["DP Base Sequence"]
         seq = row["DP Probabilities"]
         sub = row["destination aa"]
         pos = row["DP Positions"]
         parsed_seq = np.array(list(seq))
-        mtp = parsed_seq.copy()
-        mtp[pos] = sub
-        mtp = "".join(mtp)
-        mtp = re.sub(r"\([^)]*\)", "", mtp)
+        saap = parsed_seq.copy()
+        saap[pos] = sub
+        saap = "".join(saap)
+        saap = re.sub(r"\([^)]*\)", "", saap)
 
-        position = int([i for i, x in enumerate(bp) if mtp[i] != x][0])
-        row["mistranslated sequence"] = mtp
-        row["mistranslated aas positions"] = position
+        position = int([i for i, x in enumerate(base) if saap[i] != x][0])
+        row["SAAP sequence"] = saap
+        row["SAAP position"] = position
         return row
 
-    def find_PTMs(self, row):
-        """Find potential PTMs for a given peptide."""
+    def find_alt(self, row):
+        """Find an alternative explanation (a known modification) for a peptide."""
         res = row["DP candidate residues"]
         prob = row["DP positional probabilities"]
         DP_deltam = row["DP Mass Difference"]
-        mtol = row["m/z"] * (self.ptm_ppm / 1e6)
+        mtol = row["m/z"] * (self.alt_ppm / 1e6)
 
         if row["Peptide N-term"]:
             res = "N-term"
@@ -266,10 +266,10 @@ class MaxQuant(Detection):
                     or (pos == "Any C-term" and row["Peptide C-term"])
                 )
                 if term_filter:
-                    row["PTM"] = modification
-                    row["PTM site"] = res
-                    row["PTM positional probability"] = prob
-                    row["PTM mass error [observed-expected] (ppm)"] = (
+                    row["ALT"] = modification
+                    row["ALT site"] = res
+                    row["ALT positional probability"] = prob
+                    row["ALT mass error [observed-expected] (ppm)"] = (
                         DP_deltam - delta_m
                     )
         return row
@@ -296,7 +296,7 @@ class MaxQuant(Detection):
         # A new list, not `+=`: CLEAVAGE_SITES is shared class-level state.
         # The stop codon is a valid preceding residue here too.
         cleavage_sites = [*reference.protease(self.protease).cleavage_sites, "*"]
-        all_mtps = sample_df["mistranslated sequence"].dropna().unique()
+        all_mtps = sample_df["SAAP sequence"].dropna().unique()
         all_mtps = [prefix + seq for seq in all_mtps for prefix in cleavage_sites]
 
         for frame in range(1, 7):
@@ -313,7 +313,7 @@ class MaxQuant(Detection):
             ) + self.aho_corasick_output_organize(s_aa_out)
             col = f"{frame}-frame genome substring"
             sample_df[col] = False
-            sample_df.loc[sample_df["mistranslated sequence"].isin(matched), col] = True
+            sample_df.loc[sample_df["SAAP sequence"].isin(matched), col] = True
         return sample_df
 
     def evidence_ppm(self, evidence):
@@ -331,9 +331,9 @@ class MaxQuant(Detection):
 
         return pdf * pp
 
-    def q_val_calc(self, mtp):
+    def q_val_calc(self, saap):
         """Calculate q-values for peptides based on posterior probabilities."""
-        post_prob = mtp["Posterior subs probability"].to_numpy()
+        post_prob = saap["Posterior subs probability"].to_numpy()
         pval = 1 - post_prob
         ranked_pval = np.sort(pval)
         cumsum = np.cumsum(ranked_pval)
@@ -341,9 +341,9 @@ class MaxQuant(Detection):
         qval = ranked_qval[np.argsort(np.argsort(pval))]
         return qval
 
-    def gen_metrics(self, mtp):
+    def gen_metrics(self, saap):
         """Generate evaluation metrics."""
-        qval = mtp["q-value"].to_numpy()
+        qval = saap["q-value"].to_numpy()
         thresh = np.max(qval)
         n_thresh = len([x for x in qval if x <= thresh])
         TP_thresh = np.floor((1 - thresh) * n_thresh)
@@ -372,65 +372,63 @@ class MaxQuant(Detection):
             ],
         )
 
-    def mtp_filter(self, mtp, metric_df):
-        """Filter MTP based on F-score."""
+    def saap_filter(self, saap, metric_df):
+        """Filter SAAPs based on F-score."""
         max_F_idx = metric_df["F_score"].idxmax()
         q_thresh = metric_df.loc[max_F_idx, "q_threshold"]
-        filtered_mtp = mtp[mtp["q-value"] <= q_thresh].reset_index(drop=True)
-        return filtered_mtp
+        filtered_saap = saap[saap["q-value"] <= q_thresh].reset_index(drop=True)
+        return filtered_saap
 
-    def validate_mtp(self, evidence, mtp):
-        """Validate MTP using posterior probability and q-value filtering."""
+    def validate_saap(self, evidence, saap):
+        """Validate SAAPs using posterior probability and q-value filtering."""
         group_cols = ["Raw file", "DP Base Sequence", "Charge", "DP PEP"]
 
         # A sample can legitimately end up with no candidates (every mass shift
-        # explained by a PTM or by the genome). The q-value model has nothing to
-        # rank in that case, so return early rather than reduce empty arrays.
-        if mtp.empty:
-            self.queue.put(("stdout", "No MTP candidates to validate."))
-            return mtp
+        # explained by a modification or by the genome). The q-value model has
+        # nothing to rank, so return early rather than reduce empty arrays.
+        if saap.empty:
+            self.queue.put(("stdout", "No SAAP candidates to validate."))
+            return saap
 
         mean, std = self.evidence_ppm(evidence)
-        mtp["Posterior subs probability"] = mtp.apply(
+        saap["Posterior subs probability"] = saap.apply(
             lambda x: self.posterior_aasub_prob(x, mean, std), axis=1
         )
         pp_sum = (
-            mtp.groupby(group_cols)["Posterior subs probability"].sum().reset_index()
+            saap.groupby(group_cols)["Posterior subs probability"].sum().reset_index()
         )
         pp_sum = pp_sum.rename(
             {"Posterior subs probability": "Posterior subs probability sum"}, axis=1
         )
-        mtp = mtp.merge(pp_sum, on=group_cols, how="left")
-        mtp["Posterior subs probability"] = (
-            mtp["Posterior subs probability"]
-            / mtp["Posterior subs probability sum"]
-            * (1 - mtp["DP PEP"])
+        saap = saap.merge(pp_sum, on=group_cols, how="left")
+        saap["Posterior subs probability"] = (
+            saap["Posterior subs probability"]
+            / saap["Posterior subs probability sum"]
+            * (1 - saap["DP PEP"])
         )
-        mtp["q-value"] = self.q_val_calc(mtp)
-        metrics = self.gen_metrics(mtp)
-        return self.mtp_filter(mtp, metrics)
+        saap["q-value"] = self.q_val_calc(saap)
+        metrics = self.gen_metrics(saap)
+        return self.saap_filter(saap, metrics)
 
-    def write_fasta(self, filtered_mtp, sample_name):
-        """Write filtered MTP results to a FASTA file."""
+    def write_fasta(self, filtered_saap, sample_name):
+        """Write the filtered SAAPs to a FASTA file."""
 
         output_fasta_path = self.output_dir / f"{sample_name}_validation.fasta"
         shutil.copy(self.prot_fasta, output_fasta_path)
 
-        fasta_df = filtered_mtp.loc[
+        fasta_df = filtered_saap.loc[
             :,
             [
                 "DP Base Sequence",
-                "mistranslated sequence",
+                "SAAP sequence",
                 "destination aa",
-                "mistranslated aas positions",
+                "SAAP position",
                 "aa subs",
                 "Leading.Razor.DP.Protein",
             ],
         ].copy()
         fasta_df["aa subs"] = fasta_df["aa subs"].str.replace(" to ", ":")
-        fasta_df["mistranslated aas positions"] = fasta_df[
-            "mistranslated aas positions"
-        ].astype(int)
+        fasta_df["SAAP position"] = fasta_df["SAAP position"].astype(int)
 
         # J (Xle) is ambiguous: emit one entry for isoleucine and one for leucine.
         rows_j = fasta_df.loc[fasta_df["destination aa"] == "J"]
@@ -441,11 +439,11 @@ class MaxQuant(Detection):
             # Built by comprehension rather than DataFrame.apply(axis=1): apply
             # on an empty frame returns a frame, not a series, which cannot be
             # assigned back to a single column.
-            df["mistranslated sequence"] = [
+            df["SAAP sequence"] = [
                 sequence[:position] + aa + sequence[position + 1 :]
                 for sequence, position in zip(
-                    rows_j["mistranslated sequence"],
-                    rows_j["mistranslated aas positions"],
+                    rows_j["SAAP sequence"],
+                    rows_j["SAAP position"],
                     strict=True,
                 )
             ]
@@ -457,10 +455,10 @@ class MaxQuant(Detection):
         )
 
         fasta_df["Header"] = (
-            ">MTP|("
+            ">SAAP|("
             + fasta_df["DP Base Sequence"]
             + ")("
-            + fasta_df["mistranslated aas positions"].astype(str)
+            + fasta_df["SAAP position"].astype(str)
             + ")("
             + fasta_df["aa subs"]
             + ")("
@@ -469,11 +467,11 @@ class MaxQuant(Detection):
         )
 
         fasta_df = fasta_df.drop_duplicates(subset=["Header"], ignore_index=True)
-        write_frame(fasta_df, self.output_dir / "MTP" / f"{sample_name}_FASTA")
+        write_frame(fasta_df, self.output_dir / "SAAP" / f"{sample_name}_FASTA")
 
         with open(output_fasta_path, "a") as f:
             for header, seq in zip(
-                fasta_df["Header"], fasta_df["mistranslated sequence"], strict=True
+                fasta_df["Header"], fasta_df["SAAP sequence"], strict=True
             ):
                 f.write(f"{header}\n{seq}\n")
 

@@ -101,13 +101,13 @@ def process_sample(sample)
 
 Process each sample with MaxQuant-specific logic.
 
-#### \_validate\_mtp
+#### \_validate\_saap
 
 ```python
-def _validate_mtp(sample, evidence_path)
+def _validate_saap(sample, evidence_path)
 ```
 
-Validate MTP and output filtered MTP.
+Validate SAAPs and write the filtered set.
 
 #### find\_potential\_aas
 
@@ -131,7 +131,7 @@ Prepare the peptide data for further processing.
 def _apply_modifications(dp_df)
 ```
 
-Apply AA substitutions and PTM modifications to peptides.
+Assign substitutions, then alternative explanations, to peptides.
 
 #### refine\_localization\_probabilities
 
@@ -167,21 +167,21 @@ def get_aa_subs(row)
 
 Get the amino acid substitutions for a given row.
 
-#### get\_mistranslated\_seq
+#### get\_saap\_sequence
 
 ```python
-def get_mistranslated_seq(row)
+def get_saap_sequence(row)
 ```
 
-Generate the mistranslated sequence based on substitutions.
+Generate the SAAP sequence implied by the substitution.
 
-#### find\_PTMs
+#### find\_alt
 
 ```python
-def find_PTMs(row)
+def find_alt(row)
 ```
 
-Find potential PTMs for a given peptide.
+Find an alternative explanation (a known modification) for a peptide.
 
 #### aho\_corasick\_search
 
@@ -226,7 +226,7 @@ Calculate posterior probability for amino acid substitution.
 #### q\_val\_calc
 
 ```python
-def q_val_calc(mtp)
+def q_val_calc(saap)
 ```
 
 Calculate q-values for peptides based on posterior probabilities.
@@ -234,32 +234,32 @@ Calculate q-values for peptides based on posterior probabilities.
 #### gen\_metrics
 
 ```python
-def gen_metrics(mtp)
+def gen_metrics(saap)
 ```
 
 Generate evaluation metrics.
 
-#### mtp\_filter
+#### saap\_filter
 
 ```python
-def mtp_filter(mtp, metric_df)
+def saap_filter(saap, metric_df)
 ```
 
-Filter MTP based on F-score.
+Filter SAAPs based on F-score.
 
-#### validate\_mtp
+#### validate\_saap
 
 ```python
-def validate_mtp(evidence, mtp)
+def validate_saap(evidence, saap)
 ```
 
-Validate MTP using posterior probability and q-value filtering.
+Validate SAAPs using posterior probability and q-value filtering.
 
 #### write\_fasta
 
 ```python
-def write_fasta(filtered_mtp, sample_name)
+def write_fasta(filtered_saap, sample_name)
 ```
 
-Write filtered MTP results to a FASTA file.
+Write the filtered SAAPs to a FASTA file.
 

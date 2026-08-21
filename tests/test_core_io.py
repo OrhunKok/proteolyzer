@@ -50,7 +50,7 @@ def test_written_path_is_parquet_whatever_suffix_is_given(tmp_path, stage_frame)
 
 
 def test_parent_directories_are_created(tmp_path, stage_frame):
-    written = write_frame(stage_frame, tmp_path / "MTP" / "sample_MTP")
+    written = write_frame(stage_frame, tmp_path / "SAAP" / "sample_MTP")
     assert written.exists()
 
 

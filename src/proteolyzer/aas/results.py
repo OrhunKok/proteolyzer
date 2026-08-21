@@ -1,10 +1,13 @@
 """Read back what the AAS pipeline produced.
 
 The stages write one frame per sample per step, named after the step that
-wrote them and split across ``MTP/`` and ``PTM/``. That is fine for the
+wrote them and split across ``SAAP/`` and ``ALT/``. That is fine for the
 pipeline and unhelpful for the person asking "what did we find?", who has to
-know that the answer is ``MTP/<sample>_MTP_Quant.parquet`` and that stage 2 is
-validated while stage 1 is not.
+know that the answer is ``SAAP/<sample>_SAAP_Quant.parquet`` and that stage 2
+is validated while stage 1 is not.
+
+Folders written before the SAAP/ALT/BASE naming (``MTP/``, ``PTM/``) are still
+read: see :data:`LEGACY_ARTEFACTS`.
 
 :class:`Results` is the way in: it finds the samples, says which steps
 completed for each, and combines a step's frames across samples.
@@ -30,8 +33,20 @@ from proteolyzer.core.pipeline import PROVENANCE_FILE
 #: What the stages write, under a name describing the result rather than the
 #: step: (subdirectory, file stem). The order is the order of the pipeline.
 ARTEFACTS: dict[str, tuple[str, str]] = {
+    "candidates": ("SAAP", "{sample}_SAAP"),
+    "alt": ("ALT", "{sample}_ALT"),
+    "filtered": ("SAAP", "{sample}_SAAP_Filtered_Stage_1"),
+    "fasta_entries": ("SAAP", "{sample}_FASTA"),
+    "validated": ("SAAP", "{sample}_SAAP_Filtered_Stage_2"),
+    "evidence": ("SAAP", "{sample}_Val_Evidence_Filtered_Stage_2"),
+    "quantified": ("SAAP", "{sample}_SAAP_Quant"),
+}
+
+#: Where the same artefacts lived before the SAAP/ALT/BASE naming, so an older
+#: output folder can still be read back.
+LEGACY_ARTEFACTS: dict[str, tuple[str, str]] = {
     "candidates": ("MTP", "{sample}_MTP"),
-    "ptms": ("PTM", "{sample}_PTM"),
+    "alt": ("PTM", "{sample}_PTM"),
     "filtered": ("MTP", "{sample}_MTP_Filtered_Stage_1"),
     "fasta_entries": ("MTP", "{sample}_FASTA"),
     "validated": ("MTP", "{sample}_MTP_Filtered_Stage_2"),
@@ -57,12 +72,23 @@ class Results(Logged):
         return cls(load_params(params)["Utils"]["Output Folder"])
 
     def path(self, artefact: str, sample: str) -> Path:
-        """Where `artefact` for `sample` lives, whether or not it exists."""
-        if artefact not in ARTEFACTS:
+        """Where `artefact` for `sample` lives, whether or not it exists.
+
+        Falls back to the pre-SAAP/ALT layout if only that copy is there, so an
+        older results folder reads back unchanged.
+        """
+        current = self._path(ARTEFACTS, artefact, sample)
+        if frame_exists(current):
+            return current
+        legacy = self._path(LEGACY_ARTEFACTS, artefact, sample)
+        return legacy if frame_exists(legacy) else current
+
+    def _path(self, layout: dict, artefact: str, sample: str) -> Path:
+        if artefact not in layout:
             raise ValueError(
                 f"No artefact '{artefact}'. Available: {sorted(ARTEFACTS)}"
             )
-        subdir, stem = ARTEFACTS[artefact]
+        subdir, stem = layout[artefact]
         return self.output_dir / subdir / stem.format(sample=sample)
 
     def has(self, artefact: str, sample: str) -> bool:
@@ -73,7 +99,7 @@ class Results(Logged):
     def samples(self) -> list[str]:
         """Every sample with at least one artefact, in a stable order."""
         found: set[str] = set()
-        for subdir, stem in ARTEFACTS.values():
+        for subdir, stem in (*ARTEFACTS.values(), *LEGACY_ARTEFACTS.values()):
             suffix = stem.replace("{sample}", "")
             directory = self.output_dir / subdir
             if not directory.is_dir():

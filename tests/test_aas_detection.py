@@ -24,7 +24,7 @@ from proteolyzer.core.io import read_frame  # noqa: E402
 #: Mass shift of the substitution the fixture encodes, and the peptides it maps.
 ALA_TO_GLY = aa_subs_ref()["A"]["A to G"]
 BASE_SEQUENCE = "AAAK"
-MISTRANSLATED = "AGAK"
+SAAP_SEQUENCE = "AGAK"
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def detection_inputs(aas_params):
             "Retention time": [10.0, 11.0],
             "Reverse": [None, None],
             "Potential contaminant": [None, None],
-            "Sequence": [BASE_SEQUENCE, MISTRANSLATED],
+            "Sequence": [BASE_SEQUENCE, SAAP_SEQUENCE],
             "PIF": [0.9, 0.9],
             "PEP": [0.001, 0.002],
             "Mass error [ppm]": [1.0, 3.0],
@@ -100,15 +100,15 @@ def detection_inputs(aas_params):
     return search
 
 
-def test_detection_writes_ptm_and_mtp_artefacts(aas_params, detection_inputs):
+def test_detection_writes_the_saap_and_alt_artefacts(aas_params, detection_inputs):
     detector = Detection(aas_params)
     detector.run()
 
     output_dir = detector.output_dir
-    assert (output_dir / "PTM" / "sample_a_PTM.parquet").exists()
-    assert (output_dir / "MTP" / "sample_a_MTP.parquet").exists()
-    assert (output_dir / "MTP" / "sample_a_MTP_Filtered_Stage_1.parquet").exists()
-    assert (output_dir / "MTP" / "sample_a_FASTA.parquet").exists()
+    assert (output_dir / "ALT" / "sample_a_ALT.parquet").exists()
+    assert (output_dir / "SAAP" / "sample_a_SAAP.parquet").exists()
+    assert (output_dir / "SAAP" / "sample_a_SAAP_Filtered_Stage_1.parquet").exists()
+    assert (output_dir / "SAAP" / "sample_a_FASTA.parquet").exists()
     assert (output_dir / "sample_a_validation.fasta").exists()
 
 
@@ -116,14 +116,14 @@ def test_detection_identifies_the_substitution(aas_params, detection_inputs):
     detector = Detection(aas_params)
     detector.run()
 
-    mtp = read_frame(detector.output_dir / "MTP" / "sample_a_MTP")
+    saap = read_frame(detector.output_dir / "SAAP" / "sample_a_SAAP")
 
-    assert mtp["aa subs"].tolist() == ["A to G"]
-    assert mtp["mistranslated sequence"].tolist() == [MISTRANSLATED]
-    assert mtp["mistranslated aas positions"].tolist() == [1]
+    assert saap["aa subs"].tolist() == ["A to G"]
+    assert saap["SAAP sequence"].tolist() == [SAAP_SEQUENCE]
+    assert saap["SAAP position"].tolist() == [1]
     # No PTM explains the shift, and no frame contains the peptide.
-    assert mtp["PTM"].isna().all()
-    assert not mtp[[f"{i}-frame genome substring" for i in range(1, 7)]].any().any()
+    assert saap["ALT"].isna().all()
+    assert not saap[[f"{i}-frame genome substring" for i in range(1, 7)]].any().any()
 
 
 def test_detection_flags_candidates_found_in_the_genome(aas_params, detection_inputs):
@@ -134,13 +134,13 @@ def test_detection_flags_candidates_found_in_the_genome(aas_params, detection_in
     frames = Path(aas_params["Translation"]["Translated Frames Folder"])
     with open(frames / "frame_3.p", "wb") as f:
         # Preceded by a cleavage site, as the search requires.
-        pickle.dump(f"MTTTK{MISTRANSLATED}VVVV", f)
+        pickle.dump(f"MTTTK{SAAP_SEQUENCE}VVVV", f)
 
     detector = Detection(aas_params)
     detector.run()
 
-    assert read_frame(detector.output_dir / "MTP" / "sample_a_MTP").empty
-    stage_1 = detector.output_dir / "MTP" / "sample_a_MTP_Filtered_Stage_1"
+    assert read_frame(detector.output_dir / "SAAP" / "sample_a_SAAP").empty
+    stage_1 = detector.output_dir / "SAAP" / "sample_a_SAAP_Filtered_Stage_1"
     assert read_frame(stage_1).empty
     # The validation FASTA is still written, holding just the input proteins.
     assert (
@@ -157,9 +157,9 @@ def test_write_fasta_appends_candidates_to_the_protein_fasta(
         pd.DataFrame(
             {
                 "DP Base Sequence": [BASE_SEQUENCE],
-                "mistranslated sequence": [MISTRANSLATED],
+                "SAAP sequence": [SAAP_SEQUENCE],
                 "destination aa": ["G"],
-                "mistranslated aas positions": [1],
+                "SAAP position": [1],
                 "aa subs": ["A to G"],
                 "Leading.Razor.DP.Protein": ["P00001"],
             }
@@ -171,7 +171,7 @@ def test_write_fasta_appends_candidates_to_the_protein_fasta(
     # The input protein FASTA is copied first, then candidates are appended.
     assert fasta == (
         ">sp|P00001|TEST\nMAIV\n"
-        f">MTP|({BASE_SEQUENCE})(1)(A:G)(P00001)\n{MISTRANSLATED}\n"
+        f">SAAP|({BASE_SEQUENCE})(1)(A:G)(P00001)\n{SAAP_SEQUENCE}\n"
     )
 
 
@@ -183,9 +183,9 @@ def test_write_fasta_expands_ambiguous_xle_substitutions(aas_params, detection_i
         pd.DataFrame(
             {
                 "DP Base Sequence": ["AAAK"],
-                "mistranslated sequence": ["AJAK"],
+                "SAAP sequence": ["AJAK"],
                 "destination aa": ["J"],
-                "mistranslated aas positions": [1],
+                "SAAP position": [1],
                 "aa subs": ["A to J"],
                 "Leading.Razor.DP.Protein": ["P00001"],
             }
@@ -193,7 +193,7 @@ def test_write_fasta_expands_ambiguous_xle_substitutions(aas_params, detection_i
         "xle_sample",
     )
 
-    fasta_df = read_frame(workflow.output_dir / "MTP" / "xle_sample_FASTA")
+    fasta_df = read_frame(workflow.output_dir / "SAAP" / "xle_sample_FASTA")
     assert set(fasta_df["destination aa"]) == {"I", "L"}
-    assert set(fasta_df["mistranslated sequence"]) == {"AIAK", "ALAK"}
+    assert set(fasta_df["SAAP sequence"]) == {"AIAK", "ALAK"}
     assert set(fasta_df["aa subs"]) == {"A:I", "A:L"}

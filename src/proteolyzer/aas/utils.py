@@ -66,23 +66,24 @@ def gen_mod_dict() -> dict:
     }
 
 
-def ptm_mtp_output(
+def saap_alt_output(
     dp_df: pd.DataFrame,
     sample_name: str,
     output_dir: Path,
 ) -> None:
-    """Split detected dependent peptides into PTM and MTP sets and pickle both.
+    """Split detected dependent peptides into the ALT and SAAP sets.
 
-    MTP are peptides with a potential AA substitution that cannot be explained
-    by a PTM and that have no homologous sequence in any translated frame.
+    A SAAP carries an amino acid substitution that no known modification
+    explains (those go to ALT) and that has no homologue in any translated
+    frame. BASE is the unmodified peptide a SAAP is measured against.
     """
-    ptm_df = dp_df[dp_df["PTM"].notna()]
-    write_frame(ptm_df, output_dir / "PTM" / f"{sample_name}_PTM")
+    alt_df = dp_df[dp_df["ALT"].notna()]
+    write_frame(alt_df, output_dir / "ALT" / f"{sample_name}_ALT")
 
     frame_cols = [f"{frame}-frame genome substring" for frame in range(1, 7)]
-    mtp_df = dp_df[dp_df["PTM"].isna() & dp_df["mistranslated sequence"].notna()]
-    mtp_df = mtp_df[~mtp_df[frame_cols].any(axis=1)]
-    write_frame(mtp_df, output_dir / "MTP" / f"{sample_name}_MTP")
+    saap_df = dp_df[dp_df["ALT"].isna() & dp_df["SAAP sequence"].notna()]
+    saap_df = saap_df[~saap_df[frame_cols].any(axis=1)]
+    write_frame(saap_df, output_dir / "SAAP" / f"{sample_name}_SAAP")
 
 
 def calculate_aa_substitution_matrix(

@@ -6,12 +6,15 @@ title: proteolyzer.aas.results
 Read back what the AAS pipeline produced.
 
 The stages write one frame per sample per step, named after the step that
-wrote them and split across ``MTP/`` and ``PTM/``. That is fine for the
+wrote them and split across ``SAAP/`` and ``ALT/``. That is fine for the
 pipeline and unhelpful for the person asking &quot;what did we find?&quot;, who has to
-know that the answer is ``MTP/&lt;sample&gt;_MTP_Quant.parquet`` and that stage 2 is
-validated while stage 1 is not.
+know that the answer is ``SAAP/&lt;sample&gt;_SAAP_Quant.parquet`` and that stage 2
+is validated while stage 1 is not.
 
-:class:`Results` is the way in: it finds the samples, says which steps
+Folders written before the SAAP/ALT/BASE naming (``MTP/``, ``PTM/``) are still
+read: see :data:``0.
+
+:class:``1 is the way in: it finds the samples, says which steps
 completed for each, and combines a step&#x27;s frames across samples.
 
     from proteolyzer import aas
@@ -40,6 +43,11 @@ completed for each, and combines a step&#x27;s frames across samples.
 
 What the stages write, under a name describing the result rather than the
 step: (subdirectory, file stem). The order is the order of the pipeline.
+
+#### LEGACY\_ARTEFACTS
+
+Where the same artefacts lived before the SAAP/ALT/BASE naming, so an older
+output folder can still be read back.
 
 #### SAMPLE\_COL
 
@@ -75,6 +83,15 @@ def path(artefact: str, sample: str) -> Path
 ```
 
 Where `artefact` for `sample` lives, whether or not it exists.
+
+Falls back to the pre-SAAP/ALT layout if only that copy is there, so an
+older results folder reads back unchanged.
+
+#### \_path
+
+```python
+def _path(layout: dict, artefact: str, sample: str) -> Path
+```
 
 #### has
 

@@ -167,8 +167,21 @@ results.provenance()                        # what produced it
 ```
 
 The steps are named for their result rather than the file that holds it:
-`candidates`, `ptms`, `filtered`, `fasta_entries`, `validated`, `evidence`,
+`candidates`, `alt`, `filtered`, `fasta_entries`, `validated`, `evidence`,
 `quantified`.
+
+### Nomenclature
+
+| term | meaning |
+|---|---|
+| **SAAP** | a peptide carrying an amino acid substitution |
+| **BASE** | the unmodified peptide a SAAP is measured against |
+| **ALT** | a mass shift with an alternative explanation: a known modification |
+
+Outputs live under `SAAP/` and `ALT/`, and the quantification columns are
+`SAAP.Sum`, `BASE.Sum`, `SAAP.Plex.<n>`, `BASE.Plex.<n>`. Folders written
+before this naming (`MTP/`, `PTM/`) are still read back by `Results`. The
+`PTM ppm` parameter is now `ALT ppm`; the old spelling still loads.
 
 ### Reference data
 

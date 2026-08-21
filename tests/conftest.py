@@ -123,7 +123,7 @@ def aas_params(tmp_path, metadata_xlsx) -> dict:
             "MaxQuant": {
                 "Detection PEP": 0.01,
                 "AA Substitution ppm": 10.0,
-                "PTM ppm": 5.0,
+                "ALT ppm": 5.0,
                 "Positional Probability Threshold": 0.8,
                 "C/n-term Modification Threshold": 0.9,
             },

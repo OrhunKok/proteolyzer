@@ -2,7 +2,7 @@
 
 The YAML file is validated against :class:`ParamsSchema` and then flattened:
 each section keeps its shared keys and is merged with the block named after
-``Utils.Workflow``, so a stage can read ``params["Detection"]["PTM ppm"]``
+``Utils.Workflow``, so a stage can read ``params["Detection"]["ALT ppm"]``
 without knowing which search engine produced the data.
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class ParamsModel(BaseModel):
@@ -37,7 +37,11 @@ class Translation(ParamsModel):
 class DetectionMaxQuant(ParamsModel):
     Detection_PEP: float = Field(alias="Detection PEP")
     AA_Substitution_ppm: float = Field(alias="AA Substitution ppm")
-    PTM_ppm: float = Field(alias="PTM ppm")
+    # "PTM ppm" is the old name; ALT is the peptide class it assigns.
+    ALT_ppm: float = Field(
+        validation_alias=AliasChoices("ALT ppm", "PTM ppm"),
+        serialization_alias="ALT ppm",
+    )
     Positional_Probability_Threshold: float = Field(
         alias="Positional Probability Threshold"
     )

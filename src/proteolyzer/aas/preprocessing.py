@@ -38,8 +38,8 @@ class Preprocessor:
         def run(self):
             self.record_run()
             self.translated_frames.mkdir(parents=True, exist_ok=True)
-            (self.output_dir / "PTM").mkdir(parents=True, exist_ok=True)
-            (self.output_dir / "MTP").mkdir(parents=True, exist_ok=True)
+            (self.output_dir / "ALT").mkdir(parents=True, exist_ok=True)
+            (self.output_dir / "SAAP").mkdir(parents=True, exist_ok=True)
 
             converted = sum(
                 self._convert_directory(subdir) for subdir in self._search_directories()

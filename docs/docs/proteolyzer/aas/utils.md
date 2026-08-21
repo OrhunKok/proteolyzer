@@ -49,17 +49,18 @@ returns. This reference exists to decide whether a mass shift has an
 explanation *other than* mistranslation, so leaving the substitutions in it
 would make every candidate substitution match itself as a modification.
 
-#### ptm\_mtp\_output
+#### saap\_alt\_output
 
 ```python
-def ptm_mtp_output(dp_df: pd.DataFrame, sample_name: str,
-                   output_dir: Path) -> None
+def saap_alt_output(dp_df: pd.DataFrame, sample_name: str,
+                    output_dir: Path) -> None
 ```
 
-Split detected dependent peptides into PTM and MTP sets and pickle both.
+Split detected dependent peptides into the ALT and SAAP sets.
 
-MTP are peptides with a potential AA substitution that cannot be explained
-by a PTM and that have no homologous sequence in any translated frame.
+A SAAP carries an amino acid substitution that no known modification
+explains (those go to ALT) and that has no homologue in any translated
+frame. BASE is the unmodified peptide a SAAP is measured against.
 
 #### calculate\_aa\_substitution\_matrix
 

@@ -64,7 +64,7 @@ Columns identifying one observed fragment.
 #### fragment\_evidence
 
 ```python
-def fragment_evidence(mtp: pd.DataFrame,
+def fragment_evidence(saap: pd.DataFrame,
                       frag_ev_merge: pd.DataFrame) -> pd.Series
 ```
 
@@ -78,15 +78,15 @@ quadratic in the size of the run.
 #### \_expected\_fragments
 
 ```python
-def _expected_fragments(mtp: pd.DataFrame) -> pd.DataFrame
+def _expected_fragments(saap: pd.DataFrame) -> pd.DataFrame
 ```
 
 One row per (candidate, scan, ion) the candidate should produce.
 
-#### mtp\_validate
+#### saap\_validate
 
 ```python
-def mtp_validate(val_evidence: pd.DataFrame, val_msms: pd.DataFrame,
-                 mtp: pd.DataFrame)
+def saap_validate(val_evidence: pd.DataFrame, val_msms: pd.DataFrame,
+                  saap: pd.DataFrame)
 ```
 

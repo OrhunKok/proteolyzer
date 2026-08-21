@@ -23,7 +23,7 @@ Quantification of validated substitutions relative to their base peptide.
 class Quantification(Stage)
 ```
 
-Computes mistranslated-to-base-peptide intensity ratios per sample.
+Computes SAAP-to-base-peptide intensity ratios per sample.
 
 #### \_\_init\_\_
 
@@ -48,7 +48,7 @@ Drop ratios where either peptide is below ``Minimum Quantity``.
 #### \_raas
 
 ```python
-def _raas(mtp, mtp_df, bp_df, sample_df, label_designation)
+def _raas(saap, saap_df, base_df, sample_df, label_designation)
 ```
 
 Relative abundance of the substituted peptide vs its base peptide.

@@ -7,7 +7,7 @@ Schema and loader for the AAS pipeline parameter file.
 
 The YAML file is validated against :class:`ParamsSchema` and then flattened:
 each section keeps its shared keys and is merged with the block named after
-``Utils.Workflow``, so a stage can read ``params[&quot;Detection&quot;][&quot;PTM ppm&quot;]``
+``Utils.Workflow``, so a stage can read ``params[&quot;Detection&quot;][&quot;ALT ppm&quot;]``
 without knowing which search engine produced the data.
 
 ## Path
@@ -17,6 +17,8 @@ without knowing which search engine produced the data.
 ## Literal
 
 ## yaml
+
+## AliasChoices
 
 ## BaseModel
 
@@ -68,7 +70,7 @@ class DetectionMaxQuant(ParamsModel)
 
 #### AA\_Substitution\_ppm
 
-#### PTM\_ppm
+#### ALT\_ppm
 
 #### Positional\_Probability\_Threshold
 

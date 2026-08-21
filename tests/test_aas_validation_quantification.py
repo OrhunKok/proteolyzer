@@ -18,7 +18,7 @@ from proteolyzer.aas.quantification import Quantification  # noqa: E402
 from proteolyzer.aas.validation import Validation  # noqa: E402
 from proteolyzer.core.io import read_frame, write_frame  # noqa: E402
 
-BASE, MTP_SEQ = "AAAK", "AGAK"
+BASE, SAAP_SEQ = "AAAK", "AGAK"
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def validation_inputs(aas_params):
         {
             "Raw file": ["r1", "r1"],
             "Charge": [2, 2],
-            "Sequence": [BASE, MTP_SEQ],
+            "Sequence": [BASE, SAAP_SEQ],
             "MS/MS scan number": [1, 2],
             "PEP": [0.001, 0.001],
             "PIF": [0.95, 0.95],
@@ -58,15 +58,15 @@ def validation_inputs(aas_params):
                 "Raw file": ["r1"],
                 "Charge": [2],
                 "DP Base Sequence": [BASE],
-                "mistranslated sequence": [MTP_SEQ],
-                "mistranslated aas positions": [1],
+                "SAAP sequence": [SAAP_SEQ],
+                "SAAP position": [1],
                 "aa subs": ["A to G"],
                 "MS/MS scan number": [[1, 2]],
             }
         ),
         Path(aas_params["Utils"]["Output Folder"])
-        / "MTP"
-        / "sample_a_MTP_Filtered_Stage_1",
+        / "SAAP"
+        / "sample_a_SAAP_Filtered_Stage_1",
     )
     return val_dir
 
@@ -74,8 +74,8 @@ def validation_inputs(aas_params):
 def test_validation_writes_both_stage_two_frames(aas_params, validation_inputs):
     Validation(aas_params).run()
 
-    mtp_dir = Path(aas_params["Utils"]["Output Folder"]) / "MTP"
-    assert (mtp_dir / "sample_a_MTP_Filtered_Stage_2.parquet").exists()
+    mtp_dir = Path(aas_params["Utils"]["Output Folder"]) / "SAAP"
+    assert (mtp_dir / "sample_a_SAAP_Filtered_Stage_2.parquet").exists()
     assert (mtp_dir / "sample_a_Val_Evidence_Filtered_Stage_2.parquet").exists()
 
 
@@ -86,10 +86,10 @@ def test_validation_keeps_candidates_with_fragment_support(
 
     validated = read_frame(
         Path(aas_params["Utils"]["Output Folder"])
-        / "MTP"
-        / "sample_a_MTP_Filtered_Stage_2"
+        / "SAAP"
+        / "sample_a_SAAP_Filtered_Stage_2"
     )
-    assert validated["mistranslated sequence"].tolist() == [MTP_SEQ]
+    assert validated["SAAP sequence"].tolist() == [SAAP_SEQ]
     # Only the scan whose evidence row is the mistranslated peptide counts
     # (scan 2). Of its four fragments, b2, b3 and y3 span position 1 of AGAK.
     assert validated["fragment_evidence"].tolist() == [3]
@@ -112,8 +112,8 @@ def test_validation_drops_candidates_without_fragment_support(
 
     validated = read_frame(
         Path(aas_params["Utils"]["Output Folder"])
-        / "MTP"
-        / "sample_a_MTP_Filtered_Stage_2"
+        / "SAAP"
+        / "sample_a_SAAP_Filtered_Stage_2"
     )
     assert validated.empty
 
@@ -123,7 +123,7 @@ def test_validation_normalizes_label_free_intensities(aas_params, validation_inp
 
     evidence = read_frame(
         Path(aas_params["Utils"]["Output Folder"])
-        / "MTP"
+        / "SAAP"
         / "sample_a_Val_Evidence_Filtered_Stage_2"
     )
     assert "Intensity.Normalised" in evidence.columns
@@ -140,19 +140,17 @@ def test_fragment_evidence_matches_the_row_wise_count(aas_params):
     rng = np.random.default_rng(0)
 
     for trial in range(25):
-        n_mtp = int(rng.integers(1, 12))
+        n_saap = int(rng.integers(1, 12))
         sequences = [
             "".join(rng.choice(list("AGVLK"), size=int(rng.integers(3, 9))))
-            for _ in range(n_mtp)
+            for _ in range(n_saap)
         ]
-        mtp = pd.DataFrame(
+        saap = pd.DataFrame(
             {
-                "Raw file": rng.choice(["r1", "r2"], n_mtp),
-                "Charge": rng.integers(1, 4, n_mtp),
-                "mistranslated sequence": sequences,
-                "mistranslated aas positions": [
-                    int(rng.integers(0, len(s))) for s in sequences
-                ],
+                "Raw file": rng.choice(["r1", "r2"], n_saap),
+                "Charge": rng.integers(1, 4, n_saap),
+                "SAAP sequence": sequences,
+                "SAAP position": [int(rng.integers(0, len(s))) for s in sequences],
                 "MS/MS scan number": [
                     list(
                         rng.choice(
@@ -161,13 +159,13 @@ def test_fragment_evidence_matches_the_row_wise_count(aas_params):
                             replace=False,
                         )
                     )
-                    for _ in range(n_mtp)
+                    for _ in range(n_saap)
                 ],
             },
-            index=rng.permutation(n_mtp) if trial % 3 else None,
+            index=rng.permutation(n_saap) if trial % 3 else None,
         )
-        mtp["b_ions_aas"], mtp["y_ions_aas"] = zip(
-            *mtp.apply(validation.frags_containing_aas, axis=1), strict=True
+        saap["b_ions_aas"], saap["y_ions_aas"] = zip(
+            *saap.apply(validation.frags_containing_aas, axis=1), strict=True
         )
 
         n_msms = int(rng.integers(0, 60))
@@ -182,24 +180,24 @@ def test_fragment_evidence_matches_the_row_wise_count(aas_params):
             }
         )
 
-        row_wise = mtp.apply(
+        row_wise = saap.apply(
             lambda row, fragments=observed: validation.frag_count(row, fragments),
             axis=1,
         ).astype("int64")
 
         pd.testing.assert_series_equal(
-            validation.fragment_evidence(mtp, observed), row_wise
+            validation.fragment_evidence(saap, observed), row_wise
         )
 
 
 def test_fragment_evidence_without_any_observed_fragments(aas_params):
     validation = Validation(aas_params)
-    mtp = pd.DataFrame(
+    saap = pd.DataFrame(
         {
             "Raw file": ["r1"],
             "Charge": [2],
-            "mistranslated sequence": [MTP_SEQ],
-            "mistranslated aas positions": [1],
+            "SAAP sequence": [SAAP_SEQ],
+            "SAAP position": [1],
             "MS/MS scan number": [[1]],
             "b_ions_aas": [np.array([2, 3])],
             "y_ions_aas": [np.array([3])],
@@ -209,25 +207,25 @@ def test_fragment_evidence_without_any_observed_fragments(aas_params):
         {key: [] for key in Validation._FRAGMENT_KEYS},
     )
 
-    assert validation.fragment_evidence(mtp, empty).tolist() == [0]
+    assert validation.fragment_evidence(saap, empty).tolist() == [0]
 
 
 @pytest.fixture
 def quantification_inputs(aas_params, validation_inputs):
     """Run validation so quantification has its stage-2 inputs."""
     Validation(aas_params).run()
-    return Path(aas_params["Utils"]["Output Folder"]) / "MTP"
+    return Path(aas_params["Utils"]["Output Folder"]) / "SAAP"
 
 
 def test_quantification_writes_log2_ratios(aas_params, quantification_inputs):
     Quantification(aas_params).run()
 
-    quant = read_frame(quantification_inputs / "sample_a_MTP_Quant")
-    assert quant["mistranslated sequence"].tolist() == [MTP_SEQ]
+    quant = read_frame(quantification_inputs / "sample_a_SAAP_Quant")
+    assert quant["SAAP sequence"].tolist() == [SAAP_SEQ]
     # Label-free: log2(250 / 1000) = -2.
     assert quant["Ratio"].tolist() == [pytest.approx(-2.0)]
-    assert quant["MTP.Sum"].tolist() == [pytest.approx(250.0)]
-    assert quant["BP.Sum"].tolist() == [pytest.approx(1000.0)]
+    assert quant["SAAP.Sum"].tolist() == [pytest.approx(250.0)]
+    assert quant["BASE.Sum"].tolist() == [pytest.approx(1000.0)]
 
 
 def test_minimum_quantity_filters_low_signal_ratios(
@@ -238,7 +236,7 @@ def test_minimum_quantity_filters_low_signal_ratios(
 
     Quantification(aas_params).run()
 
-    quant = read_frame(quantification_inputs / "sample_a_MTP_Quant")
+    quant = read_frame(quantification_inputs / "sample_a_SAAP_Quant")
     # The mistranslated peptide sums to 250, below the threshold.
     assert quant.empty
 
@@ -248,7 +246,7 @@ def test_minimum_quantity_of_zero_keeps_everything(aas_params, quantification_in
 
     Quantification(aas_params).run()
 
-    assert not read_frame(quantification_inputs / "sample_a_MTP_Quant").empty
+    assert not read_frame(quantification_inputs / "sample_a_SAAP_Quant").empty
 
 
 def test_quantification_reports_missing_validation_directory(aas_params):
@@ -271,7 +269,7 @@ def test_quantification_ratio_is_finite_only(aas_params, quantification_inputs):
             pd.DataFrame(
                 {
                     "DP Base Sequence": [BASE, BASE],
-                    "mistranslated sequence": [MTP_SEQ, MTP_SEQ],
+                    "SAAP sequence": [SAAP_SEQ, SAAP_SEQ],
                     "aa subs": ["A to G", "A to G"],
                 }
             ),

@@ -82,8 +82,8 @@ def test_run_creates_the_output_layout(aas_params, search_dir):
     Preprocessor.MaxQuant(aas_params).run()
 
     output_dir = Preprocessor.MaxQuant(aas_params).output_dir
-    assert (output_dir / "PTM").is_dir()
-    assert (output_dir / "MTP").is_dir()
+    assert (output_dir / "ALT").is_dir()
+    assert (output_dir / "SAAP").is_dir()
 
 
 def test_allpeptides_filtering(aas_params, search_dir):

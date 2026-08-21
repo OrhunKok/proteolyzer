@@ -17,7 +17,7 @@ Modules
     results: read back what a run produced
     preprocessing: search-engine output to parquet conversion
     translation: six-frame translation of a genome FASTA
-    detection: candidate substitution and PTM detection
+    detection: SAAP and ALT assignment
     validation: fragment-level validation of candidates
     quantification: substitution ratio quantification
 
