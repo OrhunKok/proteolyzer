@@ -1,6 +1,4 @@
-"""Frames handed between stages must survive a round trip, old files included."""
-
-import pickle
+"""Frames handed between stages must survive a round trip."""
 
 import numpy as np
 import pandas as pd
@@ -31,8 +29,8 @@ def stage_frame() -> pd.DataFrame:
 
 
 def test_frames_round_trip(tmp_path, stage_frame):
-    write_frame(stage_frame, tmp_path / "sample_MTP")
-    restored = read_frame(tmp_path / "sample_MTP")
+    write_frame(stage_frame, tmp_path / "sample_SAAP")
+    restored = read_frame(tmp_path / "sample_SAAP")
 
     assert list(restored.columns) == list(stage_frame.columns)
     assert dict(restored.dtypes) == dict(stage_frame.dtypes)
@@ -43,38 +41,20 @@ def test_frames_round_trip(tmp_path, stage_frame):
     assert list(restored.loc[0, "b_ions_aas"]) == [3, 4]
 
 
-def test_written_path_is_parquet_whatever_suffix_is_given(tmp_path, stage_frame):
-    written = write_frame(stage_frame, tmp_path / "sample_MTP.p")
-    assert written == tmp_path / "sample_MTP.parquet"
+def test_the_written_path_gains_the_parquet_suffix(tmp_path, stage_frame):
+    written = write_frame(stage_frame, tmp_path / "sample_SAAP")
+    assert written == tmp_path / "sample_SAAP.parquet"
     assert written.exists()
 
 
 def test_parent_directories_are_created(tmp_path, stage_frame):
-    written = write_frame(stage_frame, tmp_path / "SAAP" / "sample_MTP")
+    written = write_frame(stage_frame, tmp_path / "SAAP" / "sample_SAAP")
     assert written.exists()
 
 
 def test_empty_frames_round_trip(tmp_path, stage_frame):
     write_frame(stage_frame.iloc[:0], tmp_path / "empty")
     assert read_frame(tmp_path / "empty").empty
-
-
-def test_legacy_pickles_are_still_readable(tmp_path, stage_frame):
-    """A run half-finished under the old format can be picked up."""
-    legacy = tmp_path / "sample_MTP.p"
-    with open(legacy, "wb") as f:
-        pickle.dump(stage_frame, f)
-
-    assert frame_exists(tmp_path / "sample_MTP")
-    pd.testing.assert_frame_equal(read_frame(tmp_path / "sample_MTP"), stage_frame)
-
-
-def test_parquet_wins_over_a_stale_pickle(tmp_path, stage_frame):
-    with open(tmp_path / "sample_MTP.p", "wb") as f:
-        pickle.dump(stage_frame.iloc[:0], f)
-    write_frame(stage_frame, tmp_path / "sample_MTP")
-
-    assert len(read_frame(tmp_path / "sample_MTP")) == 2
 
 
 def test_missing_frame_names_both_candidates(tmp_path):
@@ -91,13 +71,12 @@ def test_frame_path_is_idempotent(tmp_path):
 @pytest.mark.parametrize(
     ("name", "expected"),
     [
-        ("sample_MTP", "sample_MTP.parquet"),
-        ("sample_MTP.p", "sample_MTP.parquet"),
-        ("sample_MTP.parquet", "sample_MTP.parquet"),
+        ("sample_SAAP", "sample_SAAP.parquet"),
+        ("sample_SAAP.parquet", "sample_SAAP.parquet"),
         # Regression: with_suffix() ate everything after the last dot, so a
         # dotted sample id lost part of its name.
-        ("pt.01_MTP", "pt.01_MTP.parquet"),
-        ("run_2.5_MTP", "run_2.5_MTP.parquet"),
+        ("pt.01_SAAP", "pt.01_SAAP.parquet"),
+        ("run_2.5_SAAP", "run_2.5_SAAP.parquet"),
     ],
 )
 def test_frame_path_only_replaces_its_own_suffixes(tmp_path, name, expected):
@@ -105,18 +84,10 @@ def test_frame_path_only_replaces_its_own_suffixes(tmp_path, name, expected):
 
 
 def test_dotted_sample_ids_do_not_collide(tmp_path, stage_frame):
-    """Regression: pt.01_MTP and pt.02_MTP both became pt.parquet."""
-    first = write_frame(stage_frame, tmp_path / "pt.01_MTP")
-    second = write_frame(stage_frame.iloc[:1], tmp_path / "pt.02_MTP")
+    """Regression: pt.01_SAAP and pt.02_SAAP both became pt.parquet."""
+    first = write_frame(stage_frame, tmp_path / "pt.01_SAAP")
+    second = write_frame(stage_frame.iloc[:1], tmp_path / "pt.02_SAAP")
 
     assert first != second
-    assert len(read_frame(tmp_path / "pt.01_MTP")) == 2
-    assert len(read_frame(tmp_path / "pt.02_MTP")) == 1
-
-
-def test_dotted_legacy_pickles_are_found(tmp_path, stage_frame):
-    with open(tmp_path / "pt.01_MTP.p", "wb") as f:
-        pickle.dump(stage_frame, f)
-
-    assert frame_exists(tmp_path / "pt.01_MTP")
-    assert len(read_frame(tmp_path / "pt.01_MTP")) == 2
+    assert len(read_frame(tmp_path / "pt.01_SAAP")) == 2
+    assert len(read_frame(tmp_path / "pt.02_SAAP")) == 1

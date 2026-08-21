@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class ParamsModel(BaseModel):
@@ -37,11 +37,7 @@ class Translation(ParamsModel):
 class DetectionMaxQuant(ParamsModel):
     Detection_PEP: float = Field(alias="Detection PEP")
     AA_Substitution_ppm: float = Field(alias="AA Substitution ppm")
-    # "PTM ppm" is the old name; ALT is the peptide class it assigns.
-    ALT_ppm: float = Field(
-        validation_alias=AliasChoices("ALT ppm", "PTM ppm"),
-        serialization_alias="ALT ppm",
-    )
+    ALT_ppm: float = Field(alias="ALT ppm")
     Positional_Probability_Threshold: float = Field(
         alias="Positional Probability Threshold"
     )

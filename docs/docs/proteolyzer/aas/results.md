@@ -11,10 +11,7 @@ pipeline and unhelpful for the person asking &quot;what did we find?&quot;, who 
 know that the answer is ``SAAP/&lt;sample&gt;_SAAP_Quant.parquet`` and that stage 2
 is validated while stage 1 is not.
 
-Folders written before the SAAP/ALT/BASE naming (``MTP/``, ``PTM/``) are still
-read: see :data:``0.
-
-:class:``1 is the way in: it finds the samples, says which steps
+:class:`Results` is the way in: it finds the samples, says which steps
 completed for each, and combines a step&#x27;s frames across samples.
 
     from proteolyzer import aas
@@ -43,11 +40,6 @@ completed for each, and combines a step&#x27;s frames across samples.
 
 What the stages write, under a name describing the result rather than the
 step: (subdirectory, file stem). The order is the order of the pipeline.
-
-#### LEGACY\_ARTEFACTS
-
-Where the same artefacts lived before the SAAP/ALT/BASE naming, so an older
-output folder can still be read back.
 
 #### SAMPLE\_COL
 
@@ -83,15 +75,6 @@ def path(artefact: str, sample: str) -> Path
 ```
 
 Where `artefact` for `sample` lives, whether or not it exists.
-
-Falls back to the pre-SAAP/ALT layout if only that copy is there, so an
-older results folder reads back unchanged.
-
-#### \_path
-
-```python
-def _path(layout: dict, artefact: str, sample: str) -> Path
-```
 
 #### has
 

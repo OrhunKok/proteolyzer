@@ -124,27 +124,3 @@ def test_a_folder_without_provenance_is_reported(results, caplog):
 def test_results_can_be_opened_from_the_parameters(aas_params):
     results = Results.from_params(aas_params)
     assert results.output_dir == Path(aas_params["Utils"]["Output Folder"])
-
-
-def test_a_folder_from_before_the_saap_naming_is_still_read(tmp_path):
-    """Runs written as MTP/ and PTM/ must not become unreadable."""
-    results = Results(tmp_path / "out")
-    frame = pd.DataFrame({"aa subs": ["A to G"], "Ratio": [-2.0]})
-    write_frame(frame, tmp_path / "out" / "MTP" / "old_sample_MTP_Quant")
-    write_frame(frame, tmp_path / "out" / "PTM" / "old_sample_PTM")
-
-    assert results.samples == ["old_sample"]
-    assert results.has("quantified", "old_sample")
-    assert results.has("alt", "old_sample")
-    assert len(results.load("quantified", "old_sample")) == 1
-    assert results.combined("quantified")[SAMPLE_COL].tolist() == ["old_sample"]
-
-
-def test_the_current_layout_wins_over_a_legacy_copy(tmp_path):
-    results = Results(tmp_path / "out")
-    write_frame(
-        pd.DataFrame({"n": [1, 2, 3]}), tmp_path / "out" / "MTP" / "s_MTP_Quant"
-    )
-    write_frame(pd.DataFrame({"n": [1]}), tmp_path / "out" / "SAAP" / "s_SAAP_Quant")
-
-    assert len(results.load("quantified", "s")) == 1

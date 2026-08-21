@@ -14,30 +14,11 @@ This lives in the core rather than in one subpackage: persisting a frame is
 not specific to any pipeline, and a subpackage should not have to import
 another one to do it.
 
-:func:`read_frame` still accepts the old ``.p`` files, so a half-finished run
-from a previous version can be picked up where it left off.
-
-## pickle
-
 ## Path
 
 ## pd
 
 #### FRAME\_SUFFIX
-
-#### LEGACY\_SUFFIX
-
-#### \_with\_suffix
-
-```python
-def _with_suffix(path: Path, suffix: str) -> Path
-```
-
-`path` carrying `suffix`, without eating part of the name.
-
-``Path.with_suffix`` replaces everything after the last dot, so a sample
-named ``pt.01_MTP`` would become ``pt.parquet`` — and two samples could
-collapse onto the same file. Only a suffix this module owns is replaced.
 
 #### frame\_path
 
@@ -45,15 +26,11 @@ collapse onto the same file. Only a suffix this module owns is replaced.
 def frame_path(path: Path) -> Path
 ```
 
-The parquet path for `path`, whatever suffix it was given.
+The parquet path for `path`.
 
-#### legacy\_path
-
-```python
-def legacy_path(path: Path) -> Path
-```
-
-The pre-parquet pickle path for `path`.
+``Path.with_suffix`` replaces everything after the last dot, so a sample
+named ``pt.01_SAAP`` would become ``pt.parquet`` — and two samples could
+collapse onto the same file. Only this module&#x27;s own suffix is replaced.
 
 #### write\_frame
 
@@ -69,7 +46,7 @@ Write `df` as parquet, returning the path actually written.
 def read_frame(path: Path) -> pd.DataFrame
 ```
 
-Read a frame written by :func:`write_frame`, or a legacy pickle.
+Read a frame written by :func:`write_frame`.
 
 #### frame\_exists
 
@@ -77,5 +54,5 @@ Read a frame written by :func:`write_frame`, or a legacy pickle.
 def frame_exists(path: Path) -> bool
 ```
 
-Whether a frame is available at `path`, in either format.
+Whether a frame is available at `path`.
 

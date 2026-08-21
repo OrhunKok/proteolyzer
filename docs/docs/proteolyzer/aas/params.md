@@ -18,8 +18,6 @@ without knowing which search engine produced the data.
 
 ## yaml
 
-## AliasChoices
-
 ## BaseModel
 
 ## Field

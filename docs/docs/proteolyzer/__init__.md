@@ -40,10 +40,6 @@ module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
 
 Subpackages imported on first attribute access, see :func:`__getattr__`.
 
-#### \_MOVED
-
-Modules that moved, kept importable so existing scripts keep working.
-
 #### \_\_getattr\_\_
 
 ```python

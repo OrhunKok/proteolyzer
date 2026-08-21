@@ -6,9 +6,6 @@ pipeline and unhelpful for the person asking "what did we find?", who has to
 know that the answer is ``SAAP/<sample>_SAAP_Quant.parquet`` and that stage 2
 is validated while stage 1 is not.
 
-Folders written before the SAAP/ALT/BASE naming (``MTP/``, ``PTM/``) are still
-read: see :data:`LEGACY_ARTEFACTS`.
-
 :class:`Results` is the way in: it finds the samples, says which steps
 completed for each, and combines a step's frames across samples.
 
@@ -42,18 +39,6 @@ ARTEFACTS: dict[str, tuple[str, str]] = {
     "quantified": ("SAAP", "{sample}_SAAP_Quant"),
 }
 
-#: Where the same artefacts lived before the SAAP/ALT/BASE naming, so an older
-#: output folder can still be read back.
-LEGACY_ARTEFACTS: dict[str, tuple[str, str]] = {
-    "candidates": ("MTP", "{sample}_MTP"),
-    "alt": ("PTM", "{sample}_PTM"),
-    "filtered": ("MTP", "{sample}_MTP_Filtered_Stage_1"),
-    "fasta_entries": ("MTP", "{sample}_FASTA"),
-    "validated": ("MTP", "{sample}_MTP_Filtered_Stage_2"),
-    "evidence": ("MTP", "{sample}_Val_Evidence_Filtered_Stage_2"),
-    "quantified": ("MTP", "{sample}_MTP_Quant"),
-}
-
 #: Column the sample identifier is added under when frames are combined.
 SAMPLE_COL = "Sample"
 
@@ -72,23 +57,12 @@ class Results(Logged):
         return cls(load_params(params)["Utils"]["Output Folder"])
 
     def path(self, artefact: str, sample: str) -> Path:
-        """Where `artefact` for `sample` lives, whether or not it exists.
-
-        Falls back to the pre-SAAP/ALT layout if only that copy is there, so an
-        older results folder reads back unchanged.
-        """
-        current = self._path(ARTEFACTS, artefact, sample)
-        if frame_exists(current):
-            return current
-        legacy = self._path(LEGACY_ARTEFACTS, artefact, sample)
-        return legacy if frame_exists(legacy) else current
-
-    def _path(self, layout: dict, artefact: str, sample: str) -> Path:
-        if artefact not in layout:
+        """Where `artefact` for `sample` lives, whether or not it exists."""
+        if artefact not in ARTEFACTS:
             raise ValueError(
                 f"No artefact '{artefact}'. Available: {sorted(ARTEFACTS)}"
             )
-        subdir, stem = layout[artefact]
+        subdir, stem = ARTEFACTS[artefact]
         return self.output_dir / subdir / stem.format(sample=sample)
 
     def has(self, artefact: str, sample: str) -> bool:
@@ -99,7 +73,7 @@ class Results(Logged):
     def samples(self) -> list[str]:
         """Every sample with at least one artefact, in a stable order."""
         found: set[str] = set()
-        for subdir, stem in (*ARTEFACTS.values(), *LEGACY_ARTEFACTS.values()):
+        for subdir, stem in ARTEFACTS.values():
             suffix = stem.replace("{sample}", "")
             directory = self.output_dir / subdir
             if not directory.is_dir():
@@ -108,7 +82,7 @@ class Results(Logged):
                 # Match the stem exactly: sample ids contain underscores, so
                 # splitting on them would truncate them.
                 name = path.name.removesuffix(path.suffix)
-                if name.endswith(suffix) and path.suffix in (".parquet", ".p"):
+                if name.endswith(suffix) and path.suffix == ".parquet":
                     found.add(name.removesuffix(suffix))
         return sorted(found)
 

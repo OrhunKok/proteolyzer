@@ -69,12 +69,3 @@ def test_shipped_example_params_are_valid_apart_from_paths():
     }
     # Placeholders are paths, so the schema accepts them as-is.
     assert load_params(raw)["Utils"]["Workflow"] == "MaxQuant"
-
-
-def test_the_old_ptm_ppm_spelling_still_loads(aas_params):
-    """Existing parameter files say "PTM ppm"; ALT is the new name for it."""
-    aas_params["Detection"]["MaxQuant"]["ALT ppm"] = None
-    del aas_params["Detection"]["MaxQuant"]["ALT ppm"]
-    aas_params["Detection"]["MaxQuant"]["PTM ppm"] = 7.5
-
-    assert load_params(aas_params)["Detection"]["ALT ppm"] == 7.5

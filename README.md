@@ -160,9 +160,8 @@ aas.Validation(params).run()
 aas.Quantification(params).run()
 ```
 
-Stages exchange frames as parquet under the output folder (`.p` files from
-earlier versions are still read), and each run appends its resolved
-parameters, timestamp and package version to
+Stages exchange frames as parquet under the output folder, and each run
+appends its resolved parameters, timestamp and package version to
 `<output folder>/provenance.jsonl`.
 
 To read a run back without knowing the stage-internal file names:
@@ -192,9 +191,8 @@ The steps are named for their result rather than the file that holds it:
 | **ALT** | a mass shift with an alternative explanation: a known modification |
 
 Outputs live under `SAAP/` and `ALT/`, and the quantification columns are
-`SAAP.Sum`, `BASE.Sum`, `SAAP.Plex.<n>`, `BASE.Plex.<n>`. Folders written
-before this naming (`MTP/`, `PTM/`) are still read back by `Results`. The
-`PTM ppm` parameter is now `ALT ppm`; the old spelling still loads.
+`SAAP.Sum`, `BASE.Sum`, `SAAP.Plex.<n>`, `BASE.Plex.<n>`. The mass tolerance
+for matching a known modification is `ALT ppm`.
 
 ### Reference data
 
