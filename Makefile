@@ -18,14 +18,14 @@ test:
 
 lint:
 	ruff check .
-	ruff format --check src tests tools
+	ruff format --check src tests tools scripts
 
 types:
 	mypy
 
 format:
-	ruff check --fix src tests tools
-	ruff format src tests tools
+	ruff check --fix src tests tools scripts
+	ruff format src tests tools scripts
 
 docs:
 	mkdocs build --strict

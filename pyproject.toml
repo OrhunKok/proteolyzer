@@ -66,13 +66,27 @@ dev = [
     "pytest-cov",
     "ruff",
 ]
+# Bounded on purpose. MkDocs 1.6.1 is from August 2024 and its maintainer is
+# reportedly moving to an incompatible 2.0, so a major release must not be able
+# to reach a build: mkdocs-material already requires mkdocs<2, and these bounds
+# hold even without it.
+#
+# Staying on the 1.x line rather than pre-emptively switching to properdocs, the
+# community continuation: mkdocs-material and mkdocstrings are the actively
+# released parts of this stack and both still depend on mkdocs itself. If they
+# move, the switch is `pip install properdocs` and `properdocs build` with no
+# change to mkdocs.yml or to any page -- properdocs reads the mkdocs.plugins and
+# mkdocs.themes entry points as well as its own, so the plugins below are found
+# either way.
 docs = [
-    "mkdocs",
-    "mkdocs-material",
-    "mkdocstrings[python]",
-    "mkdocs-gen-files",
-    "mkdocs-literate-nav",
-    "mkdocs-section-index",
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.5,<10",
+    "mkdocstrings[python]>=1.0,<2",
+    # The handler owning the options block in mkdocs.yml.
+    "mkdocstrings-python>=2,<3",
+    "mkdocs-gen-files>=0.5,<1",
+    "mkdocs-literate-nav>=0.6,<1",
+    "mkdocs-section-index>=0.3,<1",
 ]
 
 [tool.setuptools]
