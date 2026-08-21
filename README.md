@@ -130,22 +130,34 @@ what was actually picked up.
 Every stage reads the same parameter file (see `examples/aas/params.yaml`) and
 is run in order:
 
+There is a manual database search in the middle: detection writes a FASTA
+that has to be searched against the raw files before validation has anything
+to read. So the pipeline runs in two phases:
+
 ```python
 import proteolyzer.aas as aas
 
-params = "params.yaml"
+pipeline = aas.Pipeline("params.yaml")
 
-aas.Preprocessor.MaxQuant(params).run()   # search output -> parquet
-aas.FrameTranslator(params).run()         # six-frame genome translation
-aas.Detection(params).run()               # candidate substitutions and PTMs
-aas.Validation(params).run()              # fragment-level validation
-aas.Quantification(params).run()          # substitution ratios
+pipeline.run_detection()    # preprocess -> translate -> detect
+#   ... search the raw files against <output>/<sample>_validation.fasta ...
+pipeline.run_validation()   # preprocess -> validate -> quantify
+
+pipeline.status()           # what has run, and what can run now
 ```
 
-There is a manual database search between detection and validation — the
-detection stage writes a FASTA to search against — so the pipeline is not one
-automated run, and the preprocessor is invoked again once the validation
-searches exist.
+`Pipeline` exists for the ordering: the preprocessor runs again in phase two
+to convert the validation searches, the six-frame translation is skipped when
+its frames are already on disk, and phase two refuses to start before the
+searches exist. The stages can still be driven individually:
+
+```python
+aas.Preprocessor.MaxQuant(params).run()
+aas.FrameTranslator(params).run()
+aas.Detection(params).run()
+aas.Validation(params).run()
+aas.Quantification(params).run()
+```
 
 Stages exchange frames as parquet under the output folder (`.p` files from
 earlier versions are still read), and each run appends its resolved

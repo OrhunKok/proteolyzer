@@ -8,6 +8,7 @@ each reading the same parameter file:
 
 Modules
     base: shared stage plumbing (parameter loading, queue, metadata)
+    pipeline: run the stages in order, in the two phases the method allows
     params: parameter file schema and loader
     results: read back what a run produced
     preprocessing: search-engine output to parquet conversion
@@ -20,6 +21,7 @@ Modules
 from .base import NullQueue, Stage
 from .detection import Detection, MaxQuant
 from .params import ParamsSchema, load_params
+from .pipeline import Pipeline
 from .preprocessing import Preprocessor
 from .quantification import Quantification
 from .results import ARTEFACTS, Results
@@ -33,6 +35,7 @@ __all__ = [
     "MaxQuant",
     "NullQueue",
     "ParamsSchema",
+    "Pipeline",
     "Preprocessor",
     "Quantification",
     "Results",

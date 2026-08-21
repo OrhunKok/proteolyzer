@@ -13,6 +13,7 @@ each reading the same parameter file:
 
 Modules
     base: shared stage plumbing (parameter loading, queue, metadata)
+    pipeline: run the stages in order, in the two phases the method allows
     params: parameter file schema and loader
     results: read back what a run produced
     preprocessing: search-engine output to parquet conversion
@@ -32,6 +33,8 @@ Modules
 ## ParamsSchema
 
 ## load\_params
+
+## Pipeline
 
 ## Preprocessor
 

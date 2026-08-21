@@ -9,6 +9,7 @@
             "docs/proteolyzer/aas/config",
             "docs/proteolyzer/aas/detection",
             "docs/proteolyzer/aas/params",
+            "docs/proteolyzer/aas/pipeline",
             "docs/proteolyzer/aas/preprocessing",
             "docs/proteolyzer/aas/quantification",
             "docs/proteolyzer/aas/results",
