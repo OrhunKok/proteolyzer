@@ -142,10 +142,33 @@ aas.Validation(params).run()              # fragment-level validation
 aas.Quantification(params).run()          # substitution ratios
 ```
 
+There is a manual database search between detection and validation — the
+detection stage writes a FASTA to search against — so the pipeline is not one
+automated run, and the preprocessor is invoked again once the validation
+searches exist.
+
 Stages exchange frames as parquet under the output folder (`.p` files from
-earlier versions are still read), and each run appends its resolved parameters,
-timestamp and package version to `<output folder>/provenance.jsonl`, so a
-results folder records how it was produced.
+earlier versions are still read), and each run appends its resolved
+parameters, timestamp and package version to
+`<output folder>/provenance.jsonl`.
+
+To read a run back without knowing the stage-internal file names:
+
+```python
+results = aas.Results.from_params(params)   # or aas.Results("out/")
+
+results.samples                             # what is in there
+results.summary()                           # rows per sample per step; NA where
+                                            # a step did not run, so reading down
+                                            # a column shows where it stopped
+results.combined("quantified")              # every sample in one frame, with a
+                                            # Sample column
+results.provenance()                        # what produced it
+```
+
+The steps are named for their result rather than the file that holds it:
+`candidates`, `ptms`, `filtered`, `fasta_entries`, `validated`, `evidence`,
+`quantified`.
 
 ### Reference data
 

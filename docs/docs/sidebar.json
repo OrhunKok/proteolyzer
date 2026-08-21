@@ -11,6 +11,7 @@
             "docs/proteolyzer/aas/params",
             "docs/proteolyzer/aas/preprocessing",
             "docs/proteolyzer/aas/quantification",
+            "docs/proteolyzer/aas/results",
             "docs/proteolyzer/aas/translation",
             "docs/proteolyzer/aas/utils",
             "docs/proteolyzer/aas/validation"

@@ -282,3 +282,26 @@ def test_quantification_ratio_is_finite_only(aas_params, quantification_inputs):
         )
     assert np.isinf(quant["Ratio"]).any()
     assert len(quant[np.isfinite(quant["Ratio"])]) == 1
+
+
+def test_results_read_back_a_real_run(aas_params, quantification_inputs):
+    """The other side of the pipeline: find what the stages just wrote."""
+    from proteolyzer.aas.results import Results
+
+    Quantification(aas_params).run()
+    results = Results.from_params(aas_params)
+
+    assert results.samples == ["sample_a"]
+    assert results.has("quantified", "sample_a")
+
+    summary = results.summary()
+    assert summary.loc["sample_a", "validated"] == 1
+    assert summary.loc["sample_a", "quantified"] == 1
+    # Detection never ran here, so its artefacts are absent rather than empty.
+    assert pd.isna(summary.loc["sample_a", "candidates"])
+
+    combined = results.combined("quantified")
+    assert combined["Sample"].tolist() == ["sample_a"]
+    assert combined["Ratio"].tolist() == [pytest.approx(-2.0)]
+
+    assert results.provenance()["step"].tolist() == ["Validation", "Quantification"]

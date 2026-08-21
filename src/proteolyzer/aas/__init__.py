@@ -9,6 +9,7 @@ each reading the same parameter file:
 Modules
     base: shared stage plumbing (parameter loading, queue, metadata)
     params: parameter file schema and loader
+    results: read back what a run produced
     preprocessing: search-engine output to parquet conversion
     translation: six-frame translation of a genome FASTA
     detection: candidate substitution and PTM detection
@@ -21,10 +22,12 @@ from .detection import Detection, MaxQuant
 from .params import ParamsSchema, load_params
 from .preprocessing import Preprocessor
 from .quantification import Quantification
+from .results import ARTEFACTS, Results
 from .translation import FrameTranslator
 from .validation import Validation
 
 __all__ = [
+    "ARTEFACTS",
     "Detection",
     "FrameTranslator",
     "MaxQuant",
@@ -32,6 +35,7 @@ __all__ = [
     "ParamsSchema",
     "Preprocessor",
     "Quantification",
+    "Results",
     "Stage",
     "Validation",
     "load_params",

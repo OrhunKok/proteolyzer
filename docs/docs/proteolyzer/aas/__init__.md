@@ -14,6 +14,7 @@ each reading the same parameter file:
 Modules
     base: shared stage plumbing (parameter loading, queue, metadata)
     params: parameter file schema and loader
+    results: read back what a run produced
     preprocessing: search-engine output to parquet conversion
     translation: six-frame translation of a genome FASTA
     detection: candidate substitution and PTM detection
@@ -35,6 +36,10 @@ Modules
 ## Preprocessor
 
 ## Quantification
+
+## ARTEFACTS
+
+## Results
 
 ## FrameTranslator
 
