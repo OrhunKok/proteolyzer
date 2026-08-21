@@ -181,7 +181,7 @@ def test_record_run_logs_parameters_and_version(aas_params):
 
     assert log.name == PROVENANCE_FILE
     entry = json.loads(log.read_text().splitlines()[0])
-    assert entry["stage"] == "Stage"
+    assert entry["step"] == "Stage"
     assert entry["params"]["Detection"]["Protease"] == "Trypsin"
     assert entry["proteolyzer_version"]
     assert entry["timestamp"].endswith("+00:00")

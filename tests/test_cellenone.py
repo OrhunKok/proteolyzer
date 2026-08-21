@@ -4,10 +4,13 @@ The fixtures below reproduce the shape of a cellenOne run directory: one
 isolation table per condition plus the dispense, label and pickup logs.
 """
 
+import json
+
 import pandas as pd
 import pytest
 
 from proteolyzer.cellenone import CoordinatesMapping
+from proteolyzer.core.io import read_frame
 
 LOG_HEADER = "01.01.25-10:00:00.000\tHumidity\t45.0\tTemperature\t20.0\t10.0\t19.5\t4.0"
 
@@ -438,3 +441,65 @@ def test_positions_without_a_well_are_left_alone():
     """Without the channel column there is nothing to collapse on."""
     label = pd.DataFrame({"XPos": [1], "YPos": [2], "Target": [1], "Field": [1]})
     assert len(_mapper()._collapse_label_dispenses(label)) == 1
+
+
+# --------------------------------------------------------------------- saving
+
+
+def test_save_writes_the_metadata_and_a_run_record(run_dir, tmp_path):
+    out = tmp_path / "results"
+    mapper = CoordinatesMapping(str(run_dir), label_type="mTRAQ", plex=2)
+
+    assert mapper.save(out) == out
+    assert {p.name for p in out.iterdir()} == {
+        "metadata.parquet",
+        "instrument_stats.parquet",
+        "provenance.jsonl",
+    }
+    assert len(read_frame(out / "metadata")) == len(CELLS)
+
+
+def test_the_run_record_says_how_the_metadata_was_produced(run_dir, tmp_path):
+    """The metadata frame alone does not say what was parsed or configured."""
+    out = tmp_path / "results"
+    CoordinatesMapping(str(run_dir), label_type="mTRAQ", plex=2).save(out)
+
+    entry = json.loads((out / "provenance.jsonl").read_text().splitlines()[0])
+
+    assert entry["step"] == "CoordinatesMapping"
+    assert entry["proteolyzer_version"]
+    assert entry["params"] == {
+        "root_dir": str(run_dir),
+        "label_type": "mTRAQ",
+        "plex": 2,
+    }
+    assert entry["summary"]["cells"] == len(CELLS)
+    assert entry["summary"]["parsed_rows"]["Geoprops"] == len(CELLS)
+    # Which logs were picked up as what: the audit trail for a misfiled run.
+    assert len(entry["inputs"]["Label"]) == 1
+    assert len(entry["inputs"]["Pickup"]) == 1
+
+
+def test_the_run_record_counts_the_clashes(run_dir, tmp_path):
+    out = tmp_path / "results"
+    CoordinatesMapping(str(run_dir)).save(out)  # no plex, so every well clashes
+
+    entry = json.loads((out / "provenance.jsonl").read_text().splitlines()[0])
+    assert entry["summary"]["clashes"]["Well.Clash"] == len(CELLS)
+
+
+def test_saving_twice_appends_a_second_record(run_dir, tmp_path):
+    out = tmp_path / "results"
+    for plex in (2, 3):
+        CoordinatesMapping(str(run_dir), label_type="mTRAQ", plex=plex).save(out)
+
+    records = (out / "provenance.jsonl").read_text().splitlines()
+    assert [json.loads(r)["params"]["plex"] for r in records] == [2, 3]
+
+
+def test_saving_nothing_is_refused(tmp_path):
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    with pytest.raises(ValueError, match="Nothing to save"):
+        CoordinatesMapping(str(empty)).save(tmp_path / "results")

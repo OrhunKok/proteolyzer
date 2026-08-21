@@ -114,7 +114,16 @@ mapper = pz.cellenone.CoordinatesMapping(
 )
 metadata = mapper.map_data()   # one row per isolated cell, with pickup well and label
 stats = mapper.map_stats()     # environment readings from the instrument logs
+
+mapper.save("prep_results/")   # both frames plus a record of how they were made
 ```
+
+`save` writes `metadata.parquet`, `instrument_stats.parquet` and a
+`provenance.jsonl` entry naming the package version, the configuration, which
+logs were classified as what, and how many wells clashed. The metadata frame
+on its own says none of that, and the classification in particular is worth
+keeping: operators name labelling logs inconsistently, so it is the record of
+what was actually picked up.
 
 ### AAS: substitution discovery
 

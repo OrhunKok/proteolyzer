@@ -1,11 +1,14 @@
 import os
 import re
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
 import pandas as pd
 
+from proteolyzer.core.io import write_frame
 from proteolyzer.core.logging import Logged
+from proteolyzer.core.pipeline import record_run
 
 from .config import (
     CELLEONE_MAPPING,
@@ -313,6 +316,50 @@ class CoordinatesMapping(Logged):
         metastats = pd.concat(metastats)
 
         return metastats
+
+    def save(self, output_dir: str | Path) -> Path:
+        """Write the mapped metadata, the instrument stats and a run record.
+
+        The metadata frame is the artefact of a prep, but nothing about how it
+        was produced survives in it: which logs were picked up, what labelling
+        was configured, how many wells clashed. Those end up in
+        ``provenance.jsonl`` next to the data, so a results folder says what it
+        is. Returns the directory written to.
+        """
+        output_dir = Path(output_dir)
+        metadata = self.map_data()
+        if metadata is None:
+            raise ValueError(
+                f"Nothing to save: no metadata could be mapped from {self.root_dir}. "
+                "Geoprops and pickup or label files are needed."
+            )
+
+        write_frame(metadata, output_dir / "metadata")
+        if self.parsed_stats:
+            write_frame(self.map_stats(), output_dir / "instrument_stats")
+
+        clash_cols = [col for col in ("Well.Clash", "Label.Clash") if col in metadata]
+        record_run(
+            output_dir,
+            type(self).__name__,
+            params={
+                "root_dir": str(self.root_dir),
+                "label_type": self.label_type,
+                "plex": self.plex,
+            },
+            inputs={kind: sorted(paths) for kind, paths in self.file_paths.items()},
+            summary={
+                "cells": len(metadata),
+                "parsed_rows": {
+                    kind: len(frame) for kind, frame in self.parsed_data.items()
+                },
+                "clashes": {col: int(metadata[col].sum()) for col in clash_cols},
+            },
+        )
+        self.logger.info(
+            f"Wrote the mapped metadata for {len(metadata)} cells to {output_dir}"
+        )
+        return output_dir
 
     def xls_parse(self, file_paths: list):
         dispense_dfs = []

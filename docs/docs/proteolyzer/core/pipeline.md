@@ -85,10 +85,23 @@ def record_run(output_dir: Path) -> Path
 
 Append this stage&#x27;s parameters to the provenance log in `output_dir`.
 
+#### record\_run
+
+```python
+def record_run(output_dir: Path, name: str, params: dict,
+               **extra: dict) -> Path
+```
+
+Append a record of what just ran to the provenance log in `output_dir`.
+
 Outputs are usually keyed only by sample, so a re-run with different
-thresholds overwrites the previous results. This log is what makes an
-output folder self-describing: which stage ran, when, from which
-version, and with which resolved parameters.
+settings overwrites the previous results. This log is what makes an output
+folder self-describing: what ran, when, from which version, and with which
+settings. `extra` sections carry whatever else is worth recording — the
+inputs that were found, or a summary of the result.
+
+A free function rather than only a :class:`Stage` method, so anything that
+writes results can record them without having to be a Stage.
 
 #### package\_version
 

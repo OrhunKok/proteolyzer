@@ -7,13 +7,19 @@ title: proteolyzer.cellenone.cellenone
 
 ## re
 
+## Path
+
 ## Literal
 
 ## np
 
 ## pd
 
+## write\_frame
+
 ## Logged
+
+## record\_run
 
 ## CELLEONE\_MAPPING
 
@@ -122,6 +128,20 @@ def _stats_process(parsed_stats: dict)
 ```python
 def map_stats()
 ```
+
+#### save
+
+```python
+def save(output_dir: str | Path) -> Path
+```
+
+Write the mapped metadata, the instrument stats and a run record.
+
+The metadata frame is the artefact of a prep, but nothing about how it
+was produced survives in it: which logs were picked up, what labelling
+was configured, how many wells clashed. Those end up in
+``provenance.jsonl`` next to the data, so a results folder says what it
+is. Returns the directory written to.
 
 #### xls\_parse
 
