@@ -11,6 +11,8 @@ proteomics data. It reads DIA-NN and MaxQuant output, normalizes it into a
 consistent shape, and provides the domain pipelines used for single-cell
 sample preparation and amino acid substitution discovery.
 
+**Documentation:** <https://OrhunKok.github.io/proteolyzer/>
+
 ## Features
 
 - **Data loading** — Parquet, TSV/CSV, Excel and plaintext, with per-format
@@ -276,7 +278,7 @@ src/proteolyzer/
     core/             the base suite, imported eagerly
         formats.py    the input formats recognized, and their columns
         loader.py     read a described source into memory
-        models.py     Data, LoadedData, ProcessedData
+        models.py     Data (a described input) and Report (what comes back)
         processor.py  dtypes, derived columns, labelling information
         matrix.py     pivot to a quantitative matrix
         io.py         parquet interchange between pipeline stages
@@ -287,7 +289,7 @@ src/proteolyzer/
     unimod/           optional: UniMod SQL queries, built on demand
 tests/                pytest suite
 examples/             runnable notebooks per module
-docs/                 Docusaurus site; docs/docs is generated API reference
+docs/                 documentation pages; the API reference is generated at build
 ```
 
 The core and `reference` are imported with the package. Everything else loads
@@ -304,7 +306,7 @@ pytest                              # test suite
 ruff check .                        # lint
 ruff format src tests               # format
 mypy                                # type check (scope in pyproject.toml)
-pydoc-markdown pydoc-markdown.yml   # regenerate docs/docs API reference
+mkdocs serve                        # documentation, with live reload
 ```
 
 `make help` lists the same targets.

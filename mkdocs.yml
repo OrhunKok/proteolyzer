@@ -1,0 +1,120 @@
+site_name: Proteolyzer
+site_description: >-
+  A Python package for processing, analyzing and visualizing proteomics data.
+  Reads DIA-NN and MaxQuant output, normalizes it into a consistent shape, and
+  provides the domain pipelines used for single-cell sample preparation and
+  amino acid substitution discovery.
+site_url: https://OrhunKok.github.io/proteolyzer/
+repo_url: https://github.com/OrhunKok/proteolyzer
+repo_name: OrhunKok/proteolyzer
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  logo: assets/proteolyzer_logo.svg
+  favicon: assets/proteolyzer_logo.svg
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    # Follows the reader's system setting, with a manual override.
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Match my system
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  # The API reference is written into the build by scripts/gen_ref_pages.py
+  # rather than committed, so it cannot go stale against the source.
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            filters: ["!^_[^_]"]
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            docstring_section_style: table
+            inherited_members: false
+          # No external inventories: signature_crossrefs already links
+          # proteolyzer's own types, and pulling objects.inv from python.org,
+          # pandas and numpy would make a --strict build fail whenever the
+          # network is unavailable. Add them here if linking out to pandas is
+          # worth that.
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Guide:
+      - guide/core.md
+      - guide/memory.md
+      - guide/plots.md
+  - Plugins:
+      - plugins/cellenone.md
+      - plugins/aas.md
+      - plugins/unimod.md
+  - API reference: reference/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/OrhunKok/proteolyzer
+
+watch:
+  - src/proteolyzer
+  - README.md

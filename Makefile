@@ -1,4 +1,4 @@
-.PHONY: help install test lint types format docs clean
+.PHONY: help install test lint types format docs docs-serve clean
 
 help:
 	@echo "install  editable install with dev tooling"
@@ -6,7 +6,8 @@ help:
 	@echo "lint     ruff check + format check (what CI runs)"
 	@echo "types    mypy over the modules listed in pyproject"
 	@echo "format   apply ruff formatting and safe fixes"
-	@echo "docs     regenerate the API reference under docs/docs"
+	@echo "docs     build the documentation site (strict)"
+	@echo "docs-serve  serve the documentation with live reload"
 	@echo "clean    remove caches and build artefacts"
 
 install:
@@ -27,9 +28,12 @@ format:
 	ruff format src tests tools
 
 docs:
-	pydoc-markdown pydoc-markdown.yml
+	mkdocs build --strict
+
+docs-serve:
+	mkdocs serve
 
 clean:
-	rm -rf build dist .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage
+	rm -rf build dist site .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +
 	find src -name '*.egg-info' -type d -prune -exec rm -rf {} +
