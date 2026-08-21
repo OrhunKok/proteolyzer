@@ -5,20 +5,28 @@ title: proteolyzer
 
 Proteolyzer: processing, analysis and visualization of proteomics data.
 
-The core (``config``, ``utils``, ``transformers``) is imported eagerly. The
-optional subpackages listed in ``__lazy__`` are imported on first attribute
-access so that a missing extra (``pip install proteolyzer[aas]``) only fails
-for the module that needs it.
+The base suite is :mod:`proteolyzer.core` — recognizing search-engine output,
+reading it, and normalizing it into a consistent frame — with
+:mod:`proteolyzer.reference` holding the domain constants they share. Both are
+imported eagerly.
+
+Everything else is an optional subpackage, imported on first attribute access
+so that a missing extra (``pip install proteolyzer[aas]``) only fails for the
+module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
 
 ## importlib
 
-## config
+## core
 
-## transformers
-
-## utils
+## reference
 
 ## Data
+
+## DataLoader
+
+## DataProcessor
+
+## MatrixBuilder
 
 ## configure\_logging
 
@@ -27,6 +35,10 @@ for the module that needs it.
 #### \_\_lazy\_\_
 
 Subpackages imported on first attribute access, see :func:`__getattr__`.
+
+#### \_MOVED
+
+Modules that moved, kept importable so existing scripts keep working.
 
 #### \_\_getattr\_\_
 
@@ -39,3 +51,4 @@ def __getattr__(name: str)
 ```python
 def __dir__() -> list[str]
 ```
+

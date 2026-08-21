@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from proteolyzer.utils.models import Data, LoadedData, ProcessedData
+from proteolyzer.core.models import Data, LoadedData, ProcessedData
 
 
 def test_string_source_is_coerced_to_path(report_parquet):

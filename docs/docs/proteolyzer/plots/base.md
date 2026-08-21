@@ -118,7 +118,7 @@ to create the plot.
 - `plot_kws` _dict_ - A dictionary of keyword arguments to be passed to the plotting
   function. The dictionary should include a key &#x27;kwargs&#x27; containing additional
   arguments to be unpacked.
-
+  
 
 **Returns**:
 
@@ -158,3 +158,4 @@ This method checks if the `ax` attribute is not `None`. If a plot
 exists, it will render the plot using `matplotlib.pyplot.show()`.
 Otherwise, it will print a message indicating that no plot has
 been generated yet.
+

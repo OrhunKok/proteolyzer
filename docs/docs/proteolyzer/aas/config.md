@@ -11,8 +11,6 @@ Configuration for the AAS pipeline: input files, columns and label schemes.
 
 ## ClassVar
 
-## CONFIG
-
 ## DIANN Objects
 
 ```python
@@ -89,8 +87,4 @@ class Config()
 #### MaxQuant
 
 #### TMT
-
-#### Protease
-
-#### AminoAcids
 

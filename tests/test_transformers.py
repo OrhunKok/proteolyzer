@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from proteolyzer.transformers import MatrixBuilder
-from proteolyzer.utils.models import ProcessedData
+from proteolyzer.core.matrix import MatrixBuilder
+from proteolyzer.core.models import ProcessedData
 
 
 @pytest.fixture

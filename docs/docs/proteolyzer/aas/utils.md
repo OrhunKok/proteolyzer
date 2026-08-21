@@ -5,21 +5,15 @@ title: proteolyzer.aas.utils
 
 Reference tables and small helpers shared by the AAS pipeline stages.
 
-## resources
-
 ## Path
 
 ## np
 
 ## pd
 
-## Config
+## reference
 
 ## write\_frame
-
-#### CONFIG
-
-#### \_MODS\_FILE
 
 #### column\_mapping
 
@@ -35,7 +29,7 @@ Matching is case-insensitive, and the output column order follows
 #### aa\_subs\_ref
 
 ```python
-def aa_subs_ref(aa_subs_file: str = _MODS_FILE) -> dict
+def aa_subs_ref() -> dict
 ```
 
 Mass delta of every single amino acid substitution, keyed by origin residue.
@@ -45,7 +39,7 @@ Mass delta of every single amino acid substitution, keyed by origin residue.
 #### gen\_mod\_dict
 
 ```python
-def gen_mod_dict(mod_file: str = _MODS_FILE) -> dict
+def gen_mod_dict() -> dict
 ```
 
 Known modifications per residue as ``[full_name, position, mono_mass]`` rows.

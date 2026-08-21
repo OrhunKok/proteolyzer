@@ -13,10 +13,12 @@ import ahocorasick
 import numpy as np
 import pandas as pd
 
+from proteolyzer import reference
+from proteolyzer.core.io import read_frame, write_frame
+
 from . import utils
 from .base import Stage
 from .config import Config
-from .io import read_frame, write_frame
 
 CONFIG = Config()
 
@@ -293,10 +295,7 @@ class MaxQuant(Detection):
         """Find homologous peptides using the Aho-Corasick algorithm."""
         # A new list, not `+=`: CLEAVAGE_SITES is shared class-level state.
         # The stop codon is a valid preceding residue here too.
-        cleavage_sites = [
-            *getattr(CONFIG.Protease, self.protease).CLEAVAGE_SITES,
-            "*",
-        ]
+        cleavage_sites = [*reference.protease(self.protease).cleavage_sites, "*"]
         all_mtps = sample_df["mistranslated sequence"].dropna().unique()
         all_mtps = [prefix + seq for seq in all_mtps for prefix in cleavage_sites]
 

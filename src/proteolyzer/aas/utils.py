@@ -1,17 +1,12 @@
 """Reference tables and small helpers shared by the AAS pipeline stages."""
 
-from importlib import resources
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from .config import Config
-from .io import write_frame
-
-CONFIG = Config()
-
-_MODS_FILE = "unimod_modifications.csv"
+from proteolyzer import reference
+from proteolyzer.core.io import write_frame
 
 
 def column_mapping(df: pd.DataFrame, cols2keep: list) -> pd.DataFrame:
@@ -30,20 +25,18 @@ def column_mapping(df: pd.DataFrame, cols2keep: list) -> pd.DataFrame:
     return df
 
 
-def aa_subs_ref(aa_subs_file: str = _MODS_FILE) -> dict:
+def aa_subs_ref() -> dict:
     """Mass delta of every single amino acid substitution, keyed by origin residue.
 
     ``{"A": {"A to G": -14.0157, ...}, ...}``
     """
-    with resources.files("proteolyzer.resources").joinpath(aa_subs_file).open("r") as f:
-        aa_subs = pd.read_csv(f)
-
+    aa_subs = reference.modifications()
     aa_subs = aa_subs[aa_subs["classification"] == "AA substitution"].copy()
     aa_subs["code_name"] = aa_subs["code_name"].str.replace("2", "->")
     aa_subs["sub_aa"] = (
         aa_subs["code_name"].str.split(" ").str[0].str.split("->").str[1]
     )
-    aa_subs["sub_aa"] = aa_subs["sub_aa"].map(CONFIG.AminoAcids.CODE_TO_SYMBOL)
+    aa_subs["sub_aa"] = aa_subs["sub_aa"].map(reference.three_letter_to_one())
     aa_subs["compact_name"] = aa_subs["one_letter"] + " to " + aa_subs["sub_aa"]
     return (
         aa_subs[["one_letter", "compact_name", "mono_mass"]]
@@ -56,7 +49,7 @@ def aa_subs_ref(aa_subs_file: str = _MODS_FILE) -> dict:
     )
 
 
-def gen_mod_dict(mod_file: str = _MODS_FILE) -> dict:
+def gen_mod_dict() -> dict:
     """Known modifications per residue as ``[full_name, position, mono_mass]`` rows.
 
     Excludes the ``AA substitution`` class, which is what :func:`aa_subs_ref`
@@ -64,19 +57,7 @@ def gen_mod_dict(mod_file: str = _MODS_FILE) -> dict:
     explanation *other than* mistranslation, so leaving the substitutions in it
     would make every candidate substitution match itself as a modification.
     """
-    with resources.files("proteolyzer.resources").joinpath(mod_file).open("r") as f:
-        mod_df = pd.read_csv(
-            f,
-            sep=",",
-            usecols=[
-                "full_name",
-                "position",
-                "one_letter",
-                "mono_mass",
-                "classification",
-            ],
-        )
-
+    mod_df = reference.modifications()
     mod_df = mod_df[mod_df["classification"] != "AA substitution"]
 
     return {

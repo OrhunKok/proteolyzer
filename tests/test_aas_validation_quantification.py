@@ -14,9 +14,9 @@ import pytest
 pytest.importorskip("yaml")
 pytest.importorskip("fastparquet")
 
-from proteolyzer.aas.io import read_frame, write_frame  # noqa: E402
 from proteolyzer.aas.quantification import Quantification  # noqa: E402
 from proteolyzer.aas.validation import Validation  # noqa: E402
+from proteolyzer.core.io import read_frame, write_frame  # noqa: E402
 
 BASE, MTP_SEQ = "AAAK", "AGAK"
 

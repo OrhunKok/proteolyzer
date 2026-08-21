@@ -36,11 +36,6 @@ Repository = "https://github.com/OrhunKok/proteolyzer"
 Issues = "https://github.com/OrhunKok/proteolyzer/issues"
 
 [project.optional-dependencies]
-unimod = [
-    "requests",
-    "xml2db",
-    "sqlalchemy",
-]
 aas = [
     "pyahocorasick",
     "biopython",
@@ -68,9 +63,6 @@ docs = [
     "pydoc-markdown",
 ]
 
-[project.scripts]
-proteolyzer-unimod = "proteolyzer.unimod.main:main"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
@@ -79,18 +71,17 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["resources/*", "py.typed"]
+# The UniMod CSVs only; the database they are built from lives in tools/unimod.
+"*" = ["resources/*.csv", "py.typed"]
 
 [tool.setuptools_scm]
 
 [tool.mypy]
-# Checked so far: the core loading/processing path. The aas, cellenone, plots
-# and unimod subpackages are not annotated enough to pass yet; add them here as
-# they are typed.
+# Checked so far: the base suite. The aas, cellenone and plots subpackages are
+# not annotated enough to pass yet; add them here as they are typed.
 files = [
-    "src/proteolyzer/config.py",
-    "src/proteolyzer/utils",
-    "src/proteolyzer/transformers",
+    "src/proteolyzer/reference.py",
+    "src/proteolyzer/core",
 ]
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
@@ -99,7 +90,9 @@ ignore_missing_imports = true
 disable_error_code = ["prop-decorator"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# tools/ is not installed but is tested, so the repo root is importable.
+testpaths = ["tests", "tools"]
+pythonpath = ["."]
 addopts = "-ra --strict-markers --strict-config"
 filterwarnings = ["error::DeprecationWarning:proteolyzer.*"]
 

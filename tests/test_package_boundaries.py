@@ -55,7 +55,7 @@ def test_importing_the_package_does_not_pull_the_plotting_stack():
 def test_the_core_pipeline_pulls_no_optional_dependency():
     statement = (
         "import proteolyzer as pz; "
-        "d = pz.Data; p = pz.transformers.MatrixBuilder; c = pz.config.AminoAcids"
+        "d = pz.Data; m = pz.MatrixBuilder; r = pz.reference.amino_acid_masses()"
     )
     assert _imported_after(statement, OPTIONAL_DEPENDENCIES) == []
 
@@ -71,9 +71,7 @@ def test_the_core_pipeline_pulls_no_optional_dependency():
 def test_subpackages_are_imported_on_first_access(subpackage, expected):
     """The other side of the boundary: touching one does load its stack."""
     candidates = (*OPTIONAL_DEPENDENCIES, *DEFERRED_CORE_DEPENDENCIES)
-    loaded = _imported_after(
-        f"import proteolyzer as pz; pz.{subpackage}", candidates
-    )
+    loaded = _imported_after(f"import proteolyzer as pz; pz.{subpackage}", candidates)
     if expected is None:
         assert loaded == []
     else:
@@ -83,7 +81,7 @@ def test_subpackages_are_imported_on_first_access(subpackage, expected):
 def test_lazy_attributes_are_discoverable():
     import proteolyzer as pz
 
-    for name in ("aas", "cellenone", "plots", "unimod"):
+    for name in ("aas", "cellenone", "plots"):
         assert name in dir(pz)
         assert name in pz.__all__
 

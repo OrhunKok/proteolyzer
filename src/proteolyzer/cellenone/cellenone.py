@@ -5,7 +5,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
-from proteolyzer.utils.logging import Logged
+from proteolyzer.core.logging import Logged
 
 from .config import (
     CELLEONE_MAPPING,

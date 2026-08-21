@@ -3,8 +3,9 @@
 import numpy as np
 import pandas as pd
 
+from proteolyzer.core.io import frame_exists, read_frame, write_frame
+
 from .base import Stage
-from .io import frame_exists, read_frame, write_frame
 
 
 class Quantification(Stage):

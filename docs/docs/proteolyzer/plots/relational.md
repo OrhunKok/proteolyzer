@@ -109,3 +109,4 @@ def _add_delta_count_box(box_position=(0.675, 0.85),
                          box_width=0.3,
                          box_height=0.125) -> None
 ```
+

@@ -4,8 +4,8 @@ import pandas as pd
 import pyarrow
 import pytest
 
-from proteolyzer.utils.loader import DataLoader
-from proteolyzer.utils.models import Data
+from proteolyzer.core.loader import DataLoader
+from proteolyzer.core.models import Data
 
 
 def test_parquet_load_honours_the_column_subset(report_parquet):

@@ -17,9 +17,9 @@ pytest.importorskip("fastparquet")
 pytest.importorskip("ahocorasick")
 
 from proteolyzer.aas.detection import Detection  # noqa: E402
-from proteolyzer.aas.io import read_frame  # noqa: E402
 from proteolyzer.aas.preprocessing import Preprocessor  # noqa: E402
 from proteolyzer.aas.utils import aa_subs_ref  # noqa: E402
+from proteolyzer.core.io import read_frame  # noqa: E402
 
 #: Mass shift of the substitution the fixture encodes, and the peptides it maps.
 ALA_TO_GLY = aa_subs_ref()["A"]["A to G"]

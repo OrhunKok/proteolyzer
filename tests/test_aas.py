@@ -10,7 +10,6 @@ import pytest
 pytest.importorskip("yaml")
 
 from proteolyzer.aas.base import PROVENANCE_FILE, NullQueue, Stage  # noqa: E402
-from proteolyzer.aas.io import read_frame  # noqa: E402
 from proteolyzer.aas.utils import (  # noqa: E402
     aa_subs_ref,
     calculate_aa_substitution_matrix,
@@ -18,6 +17,7 @@ from proteolyzer.aas.utils import (  # noqa: E402
     gen_mod_dict,
     ptm_mtp_output,
 )
+from proteolyzer.core.io import read_frame  # noqa: E402
 
 
 class RecordingQueue:
@@ -43,10 +43,11 @@ def test_aa_subs_ref_is_keyed_by_origin_residue():
 
 
 def test_aa_subs_ref_masses_match_the_amino_acid_table():
-    from proteolyzer import config
+    from proteolyzer import reference
 
+    masses = reference.amino_acid_masses()
     subs = aa_subs_ref()
-    expected = config.AminoAcids.MASS["G"] - config.AminoAcids.MASS["A"]
+    expected = masses["G"] - masses["A"]
     assert subs["A"]["A to G"] == pytest.approx(expected, abs=1e-5)
 
 

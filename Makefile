@@ -17,14 +17,14 @@ test:
 
 lint:
 	ruff check .
-	ruff format --check src tests
+	ruff format --check src tests tools
 
 types:
 	mypy
 
 format:
-	ruff check --fix src tests
-	ruff format src tests
+	ruff check --fix src tests tools
+	ruff format src tests tools
 
 docs:
 	pydoc-markdown pydoc-markdown.yml

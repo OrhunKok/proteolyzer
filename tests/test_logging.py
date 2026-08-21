@@ -5,9 +5,9 @@ import logging
 
 import pytest
 
-from proteolyzer.transformers import MatrixBuilder
-from proteolyzer.utils.loader import DataLoader
-from proteolyzer.utils.logging import PACKAGE_LOGGER, MetaLogging, configure_logging
+from proteolyzer.core.loader import DataLoader
+from proteolyzer.core.logging import PACKAGE_LOGGER, MetaLogging, configure_logging
+from proteolyzer.core.matrix import MatrixBuilder
 
 
 @pytest.fixture(autouse=True)
@@ -65,7 +65,7 @@ def test_level_can_be_raised_to_silence_the_package():
 
 def test_class_loggers_are_namespaced_under_the_package():
     """Every class logger sits under `proteolyzer`, so one call re-levels them all."""
-    assert DataLoader.logger.name == "proteolyzer.utils.loader.DataLoader"
+    assert DataLoader.logger.name == "proteolyzer.core.loader.DataLoader"
     assert DataLoader.logger.name.startswith(f"{PACKAGE_LOGGER.name}.")
 
 

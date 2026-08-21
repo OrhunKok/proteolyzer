@@ -15,7 +15,7 @@ import inspect
 
 import matplotlib.pyplot as plt
 
-from ..utils.logging import Logged
+from ..core.logging import Logged
 
 try:  # Registers the "science" style family with matplotlib.
     import scienceplots  # noqa: F401

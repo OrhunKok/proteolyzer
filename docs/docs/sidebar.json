@@ -8,7 +8,6 @@
             "docs/proteolyzer/aas/base",
             "docs/proteolyzer/aas/config",
             "docs/proteolyzer/aas/detection",
-            "docs/proteolyzer/aas/io",
             "docs/proteolyzer/aas/params",
             "docs/proteolyzer/aas/preprocessing",
             "docs/proteolyzer/aas/quantification",
@@ -30,6 +29,22 @@
         },
         {
           "items": [
+            "docs/proteolyzer/core/__init__",
+            "docs/proteolyzer/core/formats",
+            "docs/proteolyzer/core/io",
+            "docs/proteolyzer/core/loader",
+            "docs/proteolyzer/core/logging",
+            "docs/proteolyzer/core/matrix",
+            "docs/proteolyzer/core/models",
+            "docs/proteolyzer/core/operations",
+            "docs/proteolyzer/core/pipeline",
+            "docs/proteolyzer/core/processor"
+          ],
+          "label": "proteolyzer.core",
+          "type": "category"
+        },
+        {
+          "items": [
             "docs/proteolyzer/plots/__init__",
             "docs/proteolyzer/plots/base",
             "docs/proteolyzer/plots/relational"
@@ -37,39 +52,8 @@
           "label": "proteolyzer.plots",
           "type": "category"
         },
-        {
-          "items": [
-            "docs/proteolyzer/transformers/__init__",
-            "docs/proteolyzer/transformers/matrix"
-          ],
-          "label": "proteolyzer.transformers",
-          "type": "category"
-        },
-        {
-          "items": [
-            "docs/proteolyzer/unimod/__init__",
-            "docs/proteolyzer/unimod/loader",
-            "docs/proteolyzer/unimod/main",
-            "docs/proteolyzer/unimod/processor"
-          ],
-          "label": "proteolyzer.unimod",
-          "type": "category"
-        },
-        {
-          "items": [
-            "docs/proteolyzer/utils/__init__",
-            "docs/proteolyzer/utils/config",
-            "docs/proteolyzer/utils/loader",
-            "docs/proteolyzer/utils/logging",
-            "docs/proteolyzer/utils/models",
-            "docs/proteolyzer/utils/operations",
-            "docs/proteolyzer/utils/processor"
-          ],
-          "label": "proteolyzer.utils",
-          "type": "category"
-        },
         "docs/proteolyzer/__init__",
-        "docs/proteolyzer/config"
+        "docs/proteolyzer/reference"
       ],
       "label": "proteolyzer",
       "type": "category"

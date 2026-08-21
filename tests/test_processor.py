@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from proteolyzer.utils.loader import DataLoader
-from proteolyzer.utils.models import Data
-from proteolyzer.utils.processor import DataProcessor
+from proteolyzer.core.loader import DataLoader
+from proteolyzer.core.models import Data
+from proteolyzer.core.processor import DataProcessor
 
 
 def _process(frame: pd.DataFrame, tmp_path, **kwargs):

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from proteolyzer.utils.operations import cv
+from proteolyzer.core.operations import cv
 
 
 def test_cv_matches_manual_calculation():

@@ -3,8 +3,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from proteolyzer import config as CONFIG
-
 
 @dataclass(frozen=True)
 class DIANN:
@@ -138,5 +136,3 @@ class Config:
     DIANN: DIANN = field(default_factory=DIANN)
     MaxQuant: MaxQuant = field(default_factory=MaxQuant)
     TMT: TMT = field(default_factory=TMT)
-    Protease: CONFIG.Protease = field(default_factory=CONFIG.Protease)
-    AminoAcids: CONFIG.AminoAcids = field(default_factory=CONFIG.AminoAcids)
