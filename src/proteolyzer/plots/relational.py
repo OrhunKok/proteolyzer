@@ -135,7 +135,8 @@ class VolcanoPlot(RelPlot):
         theme: str = "science",
         **kwargs,
     ):
-        """
+        """A volcano plot of effect size against significance.
+
         Parameters
         ----------
         signif
@@ -149,10 +150,14 @@ class VolcanoPlot(RelPlot):
             p-value is 0.5 from a transformed one whose best is 10^-0.5.
         symmetric_x
             Centre the x axis on zero.
+        **kwargs
+            Passed to ``seaborn.scatterplot``.
 
-        Remaining keyword arguments go to ``seaborn.scatterplot``. The options
-        above are named rather than read out of them, because anything left in
-        kwargs is forwarded to the plotting call.
+        Notes
+        -----
+        The options above are named parameters rather than read out of
+        ``kwargs``, because anything left in it is forwarded to the plotting
+        call.
         """
         super().__init__(theme=theme)
         self.orig_data = data
