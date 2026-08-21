@@ -121,7 +121,7 @@ def test_detection_identifies_the_substitution(aas_params, detection_inputs):
     assert saap["aa subs"].tolist() == ["A to G"]
     assert saap["SAAP sequence"].tolist() == [SAAP_SEQUENCE]
     assert saap["SAAP position"].tolist() == [1]
-    # No PTM explains the shift, and no frame contains the peptide.
+    # No known modification explains the shift, and no frame contains it.
     assert saap["ALT"].isna().all()
     assert not saap[[f"{i}-frame genome substring" for i in range(1, 7)]].any().any()
 

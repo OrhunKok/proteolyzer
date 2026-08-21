@@ -120,6 +120,191 @@ def test_processor_reports_an_absent_database(tmp_path):
         UniModProcessor(db_file=str(tmp_path / "missing.db"))
 
 
+# --------------------------------------------------------------- the builder
+
+#: The smallest schema xml2db will build a data model from that still has the
+#: shape the cleanup cares about: a versioned root, and rows in a `*_row` table.
+MINIMAL_XSD = """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="unimod">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="modifications" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="modifications_row" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="record_id" type="xs:integer"/>
+                  <xs:attribute name="full_name" type="xs:string"/>
+                  <xs:attribute name="mono_mass" type="xs:decimal"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="majorVersion" type="xs:integer"/>
+      <xs:attribute name="minorVersion" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+"""
+
+MINIMAL_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<unimod majorVersion="2" minorVersion="0">
+  <modifications>
+    <modifications_row record_id="1" full_name="Acetyl" mono_mass="42.010565"/>
+    <modifications_row record_id="2" full_name="Oxidation" mono_mass="15.994915"/>
+  </modifications>
+</unimod>
+"""
+
+
+def test_the_builder_runs_end_to_end_from_local_files(tmp_path):
+    """The whole build, without the network: both sources take a path."""
+    xsd = tmp_path / "unimod.xsd"
+    xsd.write_text(MINIMAL_XSD)
+    xml = tmp_path / "unimod.xml"
+    xml.write_text(MINIMAL_XML)
+    db = tmp_path / "built.db"
+
+    loader = UnimodDBLoader(db_output=str(db), xsd_source=str(xsd), xml_source=str(xml))
+    loader.load_and_clean()
+
+    assert _tables(db) == {"modifications"}
+    with sqlite3.connect(db) as conn:
+        rows = conn.execute(
+            "SELECT record_id, full_name, mono_mass FROM modifications ORDER BY record_id"
+        ).fetchall()
+    assert rows == [(1, "Acetyl", 42.010565), (2, "Oxidation", 15.994915)]
+
+
+def test_the_builder_defaults_to_the_published_sources(tmp_path, monkeypatch):
+    """Given no override, the UniMod URLs are what it fetches."""
+    fetched = []
+
+    def record(self, source):
+        fetched.append(source)
+        return MINIMAL_XSD
+
+    monkeypatch.setattr(UnimodDBLoader, "_fetch_content", record)
+    UnimodDBLoader(db_output=str(tmp_path / "x.db"))
+
+    assert fetched == [UnimodDBLoader.XSD_SOURCE]
+
+
+def test_content_can_be_fetched_over_http(monkeypatch):
+    class Response:
+        text = "<xs:schema/>"
+
+        def raise_for_status(self):
+            return None
+
+    monkeypatch.setattr(
+        "proteolyzer.unimod.build.requests.get", lambda url, timeout: Response()
+    )
+    loader = UnimodDBLoader.__new__(UnimodDBLoader)
+
+    assert loader._fetch_content("https://example.invalid/unimod.xsd") == "<xs:schema/>"
+
+
+def test_a_failed_download_is_reported_as_an_os_error(monkeypatch):
+    import requests
+
+    def refuse(url, timeout):
+        raise requests.exceptions.ConnectionError("no route to host")
+
+    monkeypatch.setattr("proteolyzer.unimod.build.requests.get", refuse)
+    loader = UnimodDBLoader.__new__(UnimodDBLoader)
+
+    with pytest.raises(OSError, match="Failed to fetch content"):
+        loader._fetch_content("https://example.invalid/unimod.xsd")
+
+
+def test_an_unusable_schema_is_reported(tmp_path):
+    """The XSD is what the data model is built from, so it fails loudly."""
+    xsd = tmp_path / "broken.xsd"
+    xsd.write_text("not a schema at all")
+
+    with pytest.raises(Exception):  # noqa: B017 - xml2db's own error type
+        UnimodDBLoader(db_output=str(tmp_path / "x.db"), xsd_source=str(xsd))
+
+
+# ----------------------------------------------------------------- the CLI
+
+
+def _run_cli(monkeypatch, *argv):
+    from proteolyzer.unimod import __main__ as cli
+
+    monkeypatch.setattr("sys.argv", ["proteolyzer.unimod", *argv])
+    return cli
+
+
+def test_cli_build_reports_where_it_wrote(monkeypatch, capsys, tmp_path):
+    cli = _run_cli(monkeypatch, "build", "--xml-source", "x.xml")
+    calls = {}
+
+    def refresh(xml, xsd):
+        calls["sources"] = (xml, xsd)
+        return tmp_path / "unimod.db"
+
+    monkeypatch.setattr(cli, "refresh", refresh)
+    cli.main()
+
+    assert calls["sources"] == ("x.xml", None)
+    assert "unimod.db" in capsys.readouterr().out
+
+
+def test_cli_export_writes_the_csvs(monkeypatch, tmp_path):
+    cli = _run_cli(
+        monkeypatch, "export", "--db-file", "db.sqlite", "--mods-output", "m.csv"
+    )
+    saved = {}
+
+    class Processor:
+        def __init__(self, **kwargs):
+            saved.update(kwargs)
+
+        def process_and_save(self):
+            saved["saved"] = True
+
+    monkeypatch.setattr(cli, "UniModProcessor", Processor)
+    cli.main()
+
+    assert saved["db_file"] == "db.sqlite"
+    assert saved["mods_output"] == "m.csv"
+    assert saved["saved"] is True
+
+
+def test_cli_export_defaults_to_the_cached_database(monkeypatch, tmp_path):
+    """Without --db-file it exports from the built cache, wherever that is."""
+    cli = _run_cli(monkeypatch, "export")
+    saved = {}
+
+    class Processor:
+        def __init__(self, **kwargs):
+            saved.update(kwargs)
+
+        def process_and_save(self):
+            return None
+
+    monkeypatch.setattr(cli, "database", lambda: tmp_path / "cached.db")
+    monkeypatch.setattr(cli, "UniModProcessor", Processor)
+    cli.main()
+
+    assert saved["db_file"] == str(tmp_path / "cached.db")
+
+
+def test_cli_without_a_command_prints_help(monkeypatch, capsys):
+    cli = _run_cli(monkeypatch)
+
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main()
+
+    assert exit_info.value.code == 2
+    assert "usage" in capsys.readouterr().out
+
+
 # ------------------------------------------------------------- the query API
 
 

@@ -30,7 +30,7 @@ sample preparation and amino acid substitution discovery.
 - **UniMod plugin** — query the full UniMod database with SQL; the database is
   built on first use rather than shipped.
 - **Alternate RNA decoding (AAS) module** — the pipeline used for discovery of
-  amino acid substitutions and PTMs ([paper](https://decode.slavovlab.net/)).
+  amino acid substitutions ([paper](https://decode.slavovlab.net/)).
 
 ## Installation
 

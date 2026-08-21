@@ -1,7 +1,8 @@
 """Amino acid substitution (AAS) discovery pipeline.
 
-Implements the pipeline used for discovery of amino acid substitutions and
-PTMs (https://decode.slavovlab.net/). The stages are meant to be run in order,
+Implements the pipeline used for discovery of amino acid substitutions
+(SAAP) and the modifications that would otherwise explain them (ALT); see
+https://decode.slavovlab.net/. The stages are meant to be run in order,
 each reading the same parameter file:
 
     Preprocessor -> FrameTranslator -> Detection -> Validation -> Quantification
