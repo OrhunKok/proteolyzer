@@ -18,16 +18,9 @@ acid substitution discovery.
 - **Matrix transformation** — pivot to a quantitative matrix, measure
   missingness, and normalize within column groups.
 - **Plotting** — publication-styled relational plots.
-- **[cellenONE][cellenone]** — map single cells prepared on a cellenONE to
-  well positions, and flag well and label clashes.
-- **[UniMod][unimod]** — query the full UniMod database with SQL; the database
-  is built on first use rather than shipped.
-- **[AAS][aas]** — the pipeline used for discovery of amino acid
-  substitutions, from [Slavov lab](https://decode.slavovlab.net/).
-
-  [cellenone]: plugins/cellenone.md
-  [unimod]: plugins/unimod.md
-  [aas]: plugins/aas.md
+- **[Reference data](guide/reference-data.md)** — amino acid masses, the
+  genetic code and protease rules, plus SQL access to the full UniMod database,
+  which is built on first use rather than shipped.
 
 ## Quickstart
 
@@ -55,7 +48,15 @@ Start with the [core guide](guide/core.md), or go straight to the
 ## Design
 
 The core — `proteolyzer.core` and `proteolyzer.reference` — is imported with
-the package and depends only on pandas, numpy and pyarrow. Everything else
-loads on first access, so a missing optional dependency only fails for the
-module that needs it. `tests/test_package_boundaries.py` enforces that,
+the package and depends only on pandas, numpy and pyarrow. `plots` and
+`unimod` load on first access, so a missing optional dependency only fails for
+the module that needs it. `tests/test_package_boundaries.py` enforces that,
 including that importing proteolyzer does not pull in matplotlib.
+
+Domain pipelines built on this core live in their own repositories, so an
+instrument or an assay does not become a dependency of everyone's install:
+
+- [proteolyzer-cellenone](https://github.com/OrhunKok/proteolyzer-cellenone) —
+  mapping single cells prepared on a cellenONE to well positions
+- [proteolyzer-aas](https://github.com/OrhunKok/proteolyzer-aas) — discovery of
+  amino acid substitutions

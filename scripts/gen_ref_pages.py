@@ -6,8 +6,8 @@ markdown with pydoc-markdown and kept it in the repository, which needed a CI
 job to catch the copy going stale.
 
 mkdocstrings reads the source statically through griffe rather than importing
-it, so the optional dependencies of the aas, cellenone and unimod plugins are
-not needed to document them.
+it, so the optional dependencies of the plots and unimod subpackages are not
+needed to document them.
 """
 
 from pathlib import Path

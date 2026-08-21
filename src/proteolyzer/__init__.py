@@ -6,8 +6,8 @@ reading it, and normalizing it into a consistent frame — with
 imported eagerly.
 
 Everything else is an optional subpackage, imported on first attribute access
-so that a missing extra (``pip install proteolyzer[aas]``) only fails for the
-module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
+so that a missing extra (``pip install proteolyzer[unimod]``) only fails for
+the module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
 """
 
 import importlib
@@ -29,8 +29,6 @@ __all__ = [
     "DataProcessor",
     "MatrixBuilder",
     "Report",
-    "aas",
-    "cellenone",
     "configure_logging",
     "core",
     "plots",
@@ -40,7 +38,7 @@ __all__ = [
 ]
 
 #: Subpackages imported on first attribute access, see :func:`__getattr__`.
-__lazy__ = ("aas", "cellenone", "plots", "unimod")
+__lazy__ = ("plots", "unimod")
 
 
 def __getattr__(name: str):
