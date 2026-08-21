@@ -63,8 +63,6 @@ def test_the_core_pipeline_pulls_no_optional_dependency():
 @pytest.mark.parametrize(
     ("subpackage", "expected"),
     [
-        ("aas", "yaml"),
-        ("cellenone", None),
         ("plots", "matplotlib"),
         # The build dependencies are imported by refresh(), not on import.
         ("unimod", None),
@@ -83,7 +81,7 @@ def test_subpackages_are_imported_on_first_access(subpackage, expected):
 def test_lazy_attributes_are_discoverable():
     import proteolyzer as pz
 
-    for name in ("aas", "cellenone", "plots", "unimod"):
+    for name in ("plots", "unimod"):
         assert name in dir(pz)
         assert name in pz.__all__
 

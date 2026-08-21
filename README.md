@@ -25,12 +25,8 @@ sample preparation and amino acid substitution discovery.
   missingness, and normalize within column groups.
 - **Plotting** — publication-styled relational plots (volcano plots with
   significance and effect-size thresholds, point labelling).
-- **cellenONE module** — maps single cells prepared on a cellenONE to well
-  positions, and flags well/label clashes.
 - **UniMod plugin** — query the full UniMod database with SQL; the database is
   built on first use rather than shipped.
-- **Alternate RNA decoding (AAS) module** — the pipeline used for discovery of
-  amino acid substitutions ([paper](https://decode.slavovlab.net/)).
 
 ## Installation
 
@@ -40,17 +36,12 @@ Python 3.14 or newer.
 git clone https://github.com/OrhunKok/proteolyzer
 cd proteolyzer
 pip install .                 # core
-pip install '.[aas]'          # amino acid substitution pipeline
 pip install '.[unimod]'       # only to *build* the UniMod cache; querying needs nothing
 pip install -e '.[dev]'       # editable install with test and lint tooling
 ```
 
 Notes on the optional extras:
 
-- `aas` pulls `quickdna` from a pinned wheel because PyPI has no build for the
-  supported interpreter. It is only needed by
-  `proteolyzer.aas.translation.FrameTranslator`; the rest of the AAS pipeline
-  imports and runs without it.
 - The plotting module defaults to the `science`
   ([scienceplots](https://github.com/garrettj403/SciencePlots)) theme, which
   renders text with LaTeX. Without a LaTeX installation, pass another theme:
@@ -135,95 +126,6 @@ pz.configure_logging(level=logging.DEBUG)            # more detail
 logging.getLogger("proteolyzer").setLevel("WARNING")  # quieter
 ```
 
-### cellenONE: map cells to wells
-
-```python
-import proteolyzer as pz
-
-mapper = pz.cellenone.CoordinatesMapping(
-    root_dir="cellenone_files", label_type="mTRAQ", plex=2
-)
-metadata = mapper.map_data()   # one row per isolated cell, with pickup well and label
-stats = mapper.map_stats()     # environment readings from the instrument logs
-
-mapper.save("prep_results/")   # both frames plus a record of how they were made
-```
-
-`save` writes `metadata.parquet`, `instrument_stats.parquet` and a
-`provenance.jsonl` entry naming the package version, the configuration, which
-logs were classified as what, and how many wells clashed. The metadata frame
-on its own says none of that, and the classification in particular is worth
-keeping: operators name labelling logs inconsistently, so it is the record of
-what was actually picked up.
-
-### AAS: substitution discovery
-
-Every stage reads the same parameter file (see `examples/aas/params.yaml`) and
-is run in order:
-
-There is a manual database search in the middle: detection writes a FASTA
-that has to be searched against the raw files before validation has anything
-to read. So the pipeline runs in two phases:
-
-```python
-import proteolyzer.aas as aas
-
-pipeline = aas.Pipeline("params.yaml")
-
-pipeline.run_detection()    # preprocess -> translate -> detect
-#   ... search the raw files against <output>/<sample>_validation.fasta ...
-pipeline.run_validation()   # preprocess -> validate -> quantify
-
-pipeline.status()           # what has run, and what can run now
-```
-
-`Pipeline` exists for the ordering: the preprocessor runs again in phase two
-to convert the validation searches, the six-frame translation is skipped when
-its frames are already on disk, and phase two refuses to start before the
-searches exist. The stages can still be driven individually:
-
-```python
-aas.Preprocessor.MaxQuant(params).run()
-aas.FrameTranslator(params).run()
-aas.Detection(params).run()
-aas.Validation(params).run()
-aas.Quantification(params).run()
-```
-
-Stages exchange frames as parquet under the output folder, and each run
-appends its resolved parameters, timestamp and package version to
-`<output folder>/provenance.jsonl`.
-
-To read a run back without knowing the stage-internal file names:
-
-```python
-results = aas.Results.from_params(params)   # or aas.Results("out/")
-
-results.samples                             # what is in there
-results.summary()                           # rows per sample per step; NA where
-                                            # a step did not run, so reading down
-                                            # a column shows where it stopped
-results.combined("quantified")              # every sample in one frame, with a
-                                            # Sample column
-results.provenance()                        # what produced it
-```
-
-The steps are named for their result rather than the file that holds it:
-`candidates`, `alt`, `filtered`, `fasta_entries`, `validated`, `evidence`,
-`quantified`.
-
-### Nomenclature
-
-| term | meaning |
-|---|---|
-| **SAAP** | a peptide carrying an amino acid substitution |
-| **BASE** | the unmodified peptide a SAAP is measured against |
-| **ALT** | a mass shift with an alternative explanation: a known modification |
-
-Outputs live under `SAAP/` and `ALT/`, and the quantification columns are
-`SAAP.Sum`, `BASE.Sum`, `SAAP.Plex.<n>`, `BASE.Plex.<n>`. The mass tolerance
-for matching a known modification is `ALT ppm`.
-
 ### Reference data
 
 Masses, the genetic code and protease rules live in one place, as immutable
@@ -284,18 +186,31 @@ src/proteolyzer/
         io.py         parquet interchange between pipeline stages
         pipeline.py   stage plumbing: parameters, progress, provenance
     plots/            optional: plotting base class and relational plots
-    cellenone/        optional: cellenONE export parsing and well mapping
-    aas/              optional: amino acid substitution pipeline
     unimod/           optional: UniMod SQL queries, built on demand
 tests/                pytest suite
 examples/             runnable notebooks per module
 docs/                 documentation pages; the API reference is generated at build
 ```
 
-The core and `reference` are imported with the package. Everything else loads
-on first access, so a missing extra only fails for the module that needs it —
-`tests/test_package_boundaries.py` enforces that, including that importing
+The core and `reference` are imported with the package. `plots` and `unimod`
+load on first access, so a missing extra only fails for the module that needs
+it — `tests/test_package_boundaries.py` enforces that, including that importing
 proteolyzer does not pull in matplotlib.
+
+## Domain pipelines
+
+Pipelines for a particular instrument or assay live in their own repositories,
+built on this core, so that neither their dependencies nor their release
+cadence lands on everyone installing it:
+
+| repository | what it does |
+|---|---|
+| [proteolyzer-cellenone](https://github.com/OrhunKok/proteolyzer-cellenone) | maps single cells prepared on a cellenONE to well positions, and flags well/label clashes |
+| [proteolyzer-aas](https://github.com/OrhunKok/proteolyzer-aas) | discovery of amino acid substitutions ([paper](https://decode.slavovlab.net/)) |
+
+Each uses `core.io` for the parquet interchange, `core.logging` for the logger,
+and `core.pipeline` for stage plumbing and provenance. That surface is what to
+keep stable.
 
 ## Development
 

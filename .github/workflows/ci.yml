@@ -58,13 +58,9 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Install proteolyzer
-        # quickdna (in the aas extra) is only needed by the translation stage
-        # and ships as a platform-specific wheel, so it is installed separately
-        # and allowed to fail; the tests that need it skip themselves.
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[dev,unimod]'
-          pip install pyahocorasick biopython pyyaml fastparquet openpyxl
       - name: Test
         run: pytest -q
 

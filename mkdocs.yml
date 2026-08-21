@@ -108,10 +108,7 @@ nav:
       - guide/core.md
       - guide/memory.md
       - guide/plots.md
-  - Plugins:
-      - plugins/cellenone.md
-      - plugins/aas.md
-      - plugins/unimod.md
+      - guide/reference-data.md
   - API reference: reference/
 
 extra:
