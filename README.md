@@ -14,10 +14,12 @@ sample preparation and amino acid substitution discovery.
 ## Features
 
 - **Data loading** — Parquet, TSV/CSV, Excel and plaintext, with per-format
-  column subsetting so only the columns you need are read.
+  column subsetting so only the columns you need are read, through pyarrow's
+  multithreaded parser where it can be used.
 - **Data processing** — dtype narrowing, derived columns, missed-cleavage
-  flags, and automatic detection of labelled (mTRAQ/SILAC/TMT) precursors.
-- **Matrix transformation** — pivot to a quantitative matrix, report
+  flags, per-run identification counts, and automatic detection of labelled
+  (mTRAQ/SILAC/TMT) precursors.
+- **Matrix transformation** — pivot to a quantitative matrix, measure
   missingness, and normalize within column groups.
 - **Plotting** — publication-styled relational plots (volcano plots with
   significance and effect-size thresholds, point labelling).
@@ -65,6 +67,7 @@ processed = report.process()         # dtypes, derived columns, labelling info
 
 processed.runs                       # {'run1', 'run2', ...}
 processed.n_identifications          # distinct precursors
+processed.summary()                  # precursors/peptides/proteins per run
 processed.processing.label_free      # what processing found
 processed.frame                      # the pandas DataFrame
 

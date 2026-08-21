@@ -40,6 +40,16 @@ def _report_frame(precursor_ids: list[str], runs: list[str]) -> pd.DataFrame:
 
 
 @pytest.fixture
+def report_frame():
+    """Build a report frame from explicit precursor ids and runs.
+
+    For tests that need a shape the fixtures below do not have -- a precursor
+    repeated across runs, say.
+    """
+    return _report_frame
+
+
+@pytest.fixture
 def label_free_report() -> pd.DataFrame:
     ids = ["AAAKPEPTIDER2", "MYSEQK2", "VLDATRK3", "GGGGR2", "SAMPLEK2", "TESTKR3"]
     runs = ["run1", "run2", "run1", "run2", "run1", "run2"]

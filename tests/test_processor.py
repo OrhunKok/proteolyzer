@@ -56,6 +56,43 @@ def test_unlabelled_precursor_does_not_break_channel_generation(
     assert pd.isna(full["UNLABELLEDPEPTIDEK2"])
 
 
+def test_a_precursor_measured_in_many_runs_is_labelled_in_every_row(
+    tmp_path, report_frame
+):
+    """Label columns are derived per distinct identifier and gathered back out.
+
+    Every row of a repeated precursor has to come back with that precursor's
+    channel, not just the first one.
+    """
+    ids = ["MYSEQK(mTRAQ-K-8)2", "GGGGR(mTRAQ-R-0)2"] * 4
+    runs = ["run1", "run1", "run2", "run2", "run3", "run3", "run4", "run4"]
+    frame = report_frame(ids, runs)
+
+    processed = _process(frame, tmp_path)
+
+    by_id = processed.groupby("Precursor.Id", observed=True)
+    assert by_id["mTRAQ.Channel"].nunique().eq(1).all()
+    channels = processed.set_index(["Precursor.Id", "Run"])["mTRAQ.Channel"]
+    assert channels["MYSEQK(mTRAQ-K-8)2"].eq("8").all()
+    assert channels["GGGGR(mTRAQ-R-0)2"].eq("0").all()
+    # And the run-specific column still varies with the run.
+    assert processed["Run.mTRAQ.Channel"].nunique() == 8
+
+
+def test_derived_columns_survive_repeated_values(tmp_path, report_frame):
+    """Columns derived per distinct value must line up row by row."""
+    ids = ["AKAK2", "MYSEQK2", "AKAK2", "VLDATRK3"]
+    frame = report_frame(ids, ["run1", "run1", "run2", "run2"])
+    frame["Protein.Group"] = ["P1;P2", "Q9", "P1;P2", "R4;R5"]
+    frame["Stripped.Sequence"] = ["AKAK", "MYSEQK", "AKAK", "VLDATRK"]
+
+    processed = _process(frame, tmp_path)
+
+    assert processed["Leading.Razor.Protein"].tolist() == ["P1", "Q9", "P1", "R4"]
+    # AKAK has an internal K; the other two end on their only cleavage residue.
+    assert processed["Trypsin.Miscleavages"].tolist() == [True, False, True, False]
+
+
 def test_missing_id_column_is_reported(label_free_report, tmp_path):
     with pytest.raises(ValueError, match="id_col 'Nope' is not a column"):
         _process(label_free_report, tmp_path, id_col="Nope")
@@ -92,6 +129,25 @@ def test_constant_columns_are_dropped(label_free_report, tmp_path):
     frame["Constant"] = "same"
     processed = _process(frame, tmp_path)
     assert "Constant" not in processed.columns
+
+
+def test_an_entirely_empty_column_is_dropped(label_free_report, tmp_path):
+    """nunique() ignores NA, so an all-NA column used to count 0 and survive."""
+    frame = label_free_report.copy()
+    frame["Empty"] = pd.NA
+    assert "Empty" not in _process(frame, tmp_path).columns
+
+
+def test_a_sparsely_populated_column_is_kept(label_free_report, tmp_path):
+    """One value plus gaps is not an identical column: which rows have it is data."""
+    frame = label_free_report.copy()
+    frame["Flag"] = pd.NA
+    frame.loc[0, "Flag"] = "seen"
+
+    processed = _process(frame, tmp_path)
+
+    assert "Flag" in processed.columns
+    assert processed["Flag"].notna().sum() == 1
 
 
 def test_integer_like_floats_are_narrowed(label_free_report, tmp_path):
@@ -186,13 +242,18 @@ def test_the_processor_can_be_driven_directly(report_parquet):
 
 
 def test_all_nan_float_columns_are_left_alone(label_free_report, tmp_path):
-    """Regression: narrowing an empty slice warned and produced a pointless Int64."""
+    """Regression: narrowing an empty slice warned and produced a pointless Int64.
+
+    Driven through the method rather than the pipeline, which now drops an
+    entirely empty column before the narrowing ever sees it.
+    """
     frame = label_free_report.copy()
     frame["Empty"] = np.nan
+    processor = DataProcessor(_report(frame, tmp_path))
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        processed = _process(frame, tmp_path)
+        narrowed = processor.convert_float_columns_to_int(frame)
 
-    assert processed["Empty"].dtype == "float64"
-    assert processed["Empty"].isna().all()
+    assert narrowed["Empty"].dtype == "float64"
+    assert narrowed["Empty"].isna().all()

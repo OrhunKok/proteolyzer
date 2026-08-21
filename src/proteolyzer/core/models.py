@@ -1,8 +1,9 @@
 """Typed models describing proteolyzer inputs and outputs.
 
 :class:`Data` describes *where* data comes from and *what* should be read from
-it; :class:`LoadedData` and :class:`ProcessedData` are thin ``DataFrame``
-subclasses that carry the metadata needed by the next pipeline stage.
+it. :class:`Report` is what comes back: a frame, the source it was read from,
+and -- once :meth:`Report.process` has run -- a :class:`Processing` record of
+what was done to it.
 """
 
 import datetime
@@ -290,6 +291,39 @@ class Report:
         if "Run" not in self.frame.columns:
             return set()
         return set(self.frame["Run"].unique())
+
+    def summary(self) -> pd.DataFrame:
+        """Identification counts per run.
+
+        The first table to look at for a new report: what each run
+        contributed, and how evenly. Counts are of *distinct* values, so a
+        precursor seen in two channels of one run counts once. Levels the
+        frame does not carry are left out, and a frame with no ``Run`` column
+        is summarized as a single group.
+        """
+        proteins = (
+            "Leading.Razor.Protein"
+            if "Leading.Razor.Protein" in self.frame.columns
+            else "Protein.Group"
+        )
+        levels = {
+            "Precursors": self.processing.id_col if self.processing else "Precursor.Id",
+            "Peptides": "Stripped.Sequence",
+            "Proteins": proteins,
+        }
+
+        run = (
+            self.frame["Run"]
+            if "Run" in self.frame.columns
+            else pd.Series("all", index=self.frame.index, name="Run")
+        )
+        grouped = self.frame.groupby(run, observed=True)
+
+        summary = pd.DataFrame({"Rows": grouped.size()})
+        for name, column in levels.items():
+            if column in self.frame.columns:
+                summary[name] = grouped[column].nunique()
+        return summary
 
     @property
     def n_identifications(self) -> int:

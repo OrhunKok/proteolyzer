@@ -137,10 +137,47 @@ class DataLoader(Logged):
             df = pd.read_csv(self.source, delimiter=delimiter, nrows=0)
             cols_to_load = self._cols_to_load(df.columns)
             self._rewind()
-            return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
+            return self._read_delimited(delimiter, cols_to_load)
         except Exception as e:
             self.logger.error(f"Error loading CSV: {self.source}, {e}")
             raise
+
+    def _read_delimited(self, delimiter: str, cols_to_load: list) -> pd.DataFrame:
+        """Read the body, preferring pyarrow's multithreaded CSV reader.
+
+        A search report is the largest thing proteolyzer reads, and on a
+        million-row report pyarrow is ~4x faster than the stock parser whole,
+        ~11x when reading a subset of the columns, for identical dtypes and
+        values. It is stricter, though -- it rejects ragged rows the stock
+        parser pads -- so that one stays as a fallback.
+
+        The two parsers agree on column order only because
+        :meth:`_cols_to_load` hands over the columns in the order the file has
+        them: pyarrow returns them in the order asked for, the stock parser
+        always in file order.
+        """
+        try:
+            df = pd.read_csv(
+                self.source,
+                delimiter=delimiter,
+                usecols=cols_to_load,
+                engine="pyarrow",
+            )
+        except Exception as exc:
+            reason = f"pyarrow could not parse it ({exc})"
+        else:
+            # A column pyarrow cannot decode as UTF-8 comes back as raw bytes
+            # rather than raising, which would leave bytes where the rest of
+            # proteolyzer expects text. Decoded text arrives as str dtype, so
+            # an object column means something was left undecoded.
+            undecoded = [col for col in df.columns if df[col].dtype == object]
+            if not undecoded:
+                return df
+            reason = f"pyarrow left {undecoded} undecoded"
+
+        self.logger.info(f"{reason}; re-reading with the default parser.")
+        self._rewind()
+        return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
 
     def _get_delimiter(
         self, default_delimiter="\t", sample_size=524288, sample_percent=0.01

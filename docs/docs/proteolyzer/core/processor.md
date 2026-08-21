@@ -28,6 +28,8 @@ reusable processing functions and light-weight pipelines.
 
 ## Report
 
+## per\_distinct
+
 #### CONFIG
 
 ## DataProcessor Objects
@@ -91,7 +93,13 @@ Checks if the data is label-free.
 def drop_identical_cols(df: pd.DataFrame) -> pd.DataFrame
 ```
 
-Drops columns with identical values.
+Drops columns holding the same value in every row.
+
+Missing counts as a value, which reverses two cases that ``nunique``
+alone gets backwards: it ignores NA, so a column that is entirely
+empty counts 0 distinct values and survives, while one holding a
+single value in a handful of rows counts 1 and is dropped -- losing
+which rows those were.
 
 #### convert\_float\_columns\_to\_int
 
@@ -182,6 +190,13 @@ class _LabelGenerator(Logged)
 
 Generates label information for DIA-NN data.
 
+Every column derived here is a function of the precursor identifier alone,
+so the regex extraction and the pivots that follow it run over the
+*distinct* identifiers and the result is gathered back out. A report holds
+one row per identifier per run per channel, so on a 40-run experiment the
+regex extraction -- which pandas applies element by element in Python, on
+categorical columns too -- does a fortieth of the work.
+
 #### \_\_slots\_\_
 
 #### \_\_init\_\_
@@ -191,6 +206,20 @@ def __init__(processed_data: DataProcessor)
 ```
 
 Initializes the LabelGenerator.
+
+#### \_distinct\_ids
+
+```python
+def _distinct_ids() -> tuple[pd.Series, np.ndarray]
+```
+
+The distinct identifiers, and which one each row holds.
+
+Keyed by position rather than by the identifier itself: the frames
+derived from these get a plain integer index, so the pivots below sort
+a few thousand integers instead of a few hundred thousand long
+strings, and attaching the result is a positional gather rather than a
+join on those strings.
 
 #### \_validate\_matrix\_shape
 
@@ -244,7 +273,10 @@ def _add_label_info(df: pd.DataFrame,
                     sorted_matches: pd.DataFrame) -> pd.DataFrame
 ```
 
-Adds label information to the DataFrame.
+Attaches the per-identifier label information to the data.
+
+The offsets are derived last: they need the counts to average over,
+and they convert a column of `sorted_matches` in place.
 
 #### \_generate\_run\_channels
 

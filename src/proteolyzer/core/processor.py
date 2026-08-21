@@ -16,6 +16,7 @@ from proteolyzer import reference
 from .formats import Config
 from .logging import Logged
 from .models import Processing, Report
+from .operations import per_distinct
 
 CONFIG = Config()
 
@@ -142,8 +143,15 @@ class DataProcessor(Logged):
             )
 
     def drop_identical_cols(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Drops columns with identical values."""
-        cols_to_drop = [col for col in df.columns if df[col].nunique() == 1]
+        """Drops columns holding the same value in every row.
+
+        Missing counts as a value, which reverses two cases that ``nunique``
+        alone gets backwards: it ignores NA, so a column that is entirely
+        empty counts 0 distinct values and survives, while one holding a
+        single value in a handful of rows counts 1 and is dropped -- losing
+        which rows those were.
+        """
+        cols_to_drop = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
         if cols_to_drop:
             self.logger.info(
                 f"Columns dropped for having identical values in all rows: {cols_to_drop}."
@@ -272,7 +280,11 @@ class DataProcessor(Logged):
         transformations: dict[str, tuple[list[str], Callable[..., pd.Series]]] = {
             "Leading.Razor.Protein": (
                 ["Protein.Group"],
-                lambda x: x.str.split(";").str[0],
+                # A regex split, which pandas runs per element, on a column
+                # that repeats. Of the rest, RT.Width and Peptide.Length are
+                # vectorized already, and Label.Free spans two columns, where
+                # factorizing the combination costs about what it saves.
+                per_distinct(lambda x: x.str.split(";").str[0]),
             ),
             "Peptide.Length": (["Stripped.Sequence"], lambda x: x.str.len()),
             "Label.Free": (
@@ -297,24 +309,36 @@ class DataProcessor(Logged):
         """Flags peptides whose residue counts are inconsistent with full cleavage."""
         rules = reference.protease(protease).allowed_counts
 
-        seqs = np.asarray(df[seq_col], dtype=str)
-        terminal_aa = np.array([seq[-1] if seq else "" for seq in seqs])
+        def flag(seqs: pd.Series) -> pd.Series:
+            terminal_aa = seqs.str[-1]
+            fully_cleaved = pd.Series(False, index=seqs.index)
+            for aa, count in rules.items():
+                fully_cleaved |= (terminal_aa == aa) & (seqs.str.count(aa) == count)
+            return ~fully_cleaved
 
-        fully_cleaved = np.zeros(len(seqs), dtype=bool)
-        for aa, count in rules.items():
-            fully_cleaved |= (terminal_aa == aa) & (np.char.count(seqs, aa) == count)
-
-        df[f"{protease}.Miscleavages"] = ~fully_cleaved
+        # Counting residues is per-element work in pandas and a peptide recurs
+        # once per run per charge per channel, so this runs on the distinct
+        # sequences: an order of magnitude less work on a multi-run report.
+        df[f"{protease}.Miscleavages"] = per_distinct(flag)(df[seq_col])
 
         return df
 
 
 class _LabelGenerator(Logged):
-    """Generates label information for DIA-NN data."""
+    """Generates label information for DIA-NN data.
+
+    Every column derived here is a function of the precursor identifier alone,
+    so the regex extraction and the pivots that follow it run over the
+    *distinct* identifiers and the result is gathered back out. A report holds
+    one row per identifier per run per channel, so on a 40-run experiment the
+    regex extraction -- which pandas applies element by element in Python, on
+    categorical columns too -- does a fortieth of the work.
+    """
 
     __slots__ = (
         "data",
         "id_col",
+        "id_codes",
         "label_group_capture",
         "extracted_matches",
         "sorted_matches",
@@ -337,9 +361,8 @@ class _LabelGenerator(Logged):
                 f"available columns: {sorted(self.data.columns)}"
             )
 
-        self.extracted_matches = self.data[self.id_col].str.extractall(
-            self.label_group_capture
-        )
+        distinct_ids, self.id_codes = self._distinct_ids()
+        self.extracted_matches = distinct_ids.str.extractall(self.label_group_capture)
         self.UNIQUE_LABELS = sorted(
             self.extracted_matches[0].str.split("-").str[0].unique()
         )
@@ -348,6 +371,18 @@ class _LabelGenerator(Logged):
         labelled_data = self._add_label_info(self.data, sorted_matches)
         self.data = self._generate_run_channels(labelled_data)
         self.logger.info("Data overwritten to include labelling information.")
+
+    def _distinct_ids(self) -> tuple[pd.Series, np.ndarray]:
+        """The distinct identifiers, and which one each row holds.
+
+        Keyed by position rather than by the identifier itself: the frames
+        derived from these get a plain integer index, so the pivots below sort
+        a few thousand integers instead of a few hundred thousand long
+        strings, and attaching the result is a positional gather rather than a
+        join on those strings.
+        """
+        codes, uniques = pd.factorize(self.data[self.id_col])
+        return pd.Series(pd.Index(uniques).astype(str)), codes
 
     def _validate_matrix_shape(
         self, matrix: pd.DataFrame | None, categorical: bool = True
@@ -460,20 +495,26 @@ class _LabelGenerator(Logged):
     def _add_label_info(
         self, df: pd.DataFrame, sorted_matches: pd.DataFrame
     ) -> pd.DataFrame:
-        """Adds label information to the DataFrame."""
-        label_matrix = self._label_matrix(sorted_matches)
-        if label_matrix is not None:
-            df = pd.concat([df, label_matrix], axis=1)
+        """Attaches the per-identifier label information to the data.
 
-        label_counts = self._label_counts(sorted_matches)
-        if label_counts is not None:
-            df = pd.concat([df, label_counts], axis=1)
+        The offsets are derived last: they need the counts to average over,
+        and they convert a column of `sorted_matches` in place.
+        """
+        matrix = self._label_matrix(sorted_matches)
+        counts = self._label_counts(sorted_matches)
+        offsets = self._label_offset(sorted_matches, counts)
 
-        label_offsets = self._label_offset(sorted_matches, label_counts)
-        if label_offsets is not None:
-            df = pd.concat([df, label_offsets], axis=1)
+        blocks = [block for block in (matrix, counts, offsets) if block is not None]
+        if not blocks:
+            return df
 
-        return df
+        # One row per distinct identifier, gathered back out to one row per
+        # data row. Identifiers with no group for a given label are absent
+        # from the block and come through as NA, as they did when the blocks
+        # were built per row and aligned on the index.
+        info = pd.concat(blocks, axis=1).reindex(self.id_codes)
+        info.index = df.index
+        return pd.concat([df, info], axis=1)
 
     def _generate_run_channels(self, df: pd.DataFrame) -> pd.DataFrame:
         """Generates run channel information."""

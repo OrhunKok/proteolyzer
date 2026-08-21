@@ -124,6 +124,55 @@ def test_summaries_tolerate_missing_columns(report_parquet):
     assert report.n_identifications == 0
 
 
+def test_summary_counts_identifications_per_run(report_parquet):
+    frame = pd.DataFrame(
+        {
+            "Run": ["a", "a", "a", "b"],
+            "Precursor.Id": ["p1", "p1", "p2", "p1"],
+            "Stripped.Sequence": ["PEPK", "PEPK", "SEQR", "PEPK"],
+            "Leading.Razor.Protein": ["P1", "P1", "P1", "P1"],
+        }
+    )
+    summary = _report(frame, Data(source=report_parquet)).summary()
+
+    assert summary.index.tolist() == ["a", "b"]
+    assert summary.loc["a"].to_dict() == {
+        "Rows": 3,
+        # p1 appears twice in run a -- distinct values, so it counts once.
+        "Precursors": 2,
+        "Peptides": 2,
+        "Proteins": 1,
+    }
+    assert summary.loc["b", "Rows"] == 1
+
+
+def test_summary_leaves_out_levels_the_frame_lacks(report_parquet):
+    frame = pd.DataFrame({"Run": ["a", "b"], "Precursor.Id": ["p1", "p2"]})
+    summary = _report(frame, Data(source=report_parquet)).summary()
+    assert summary.columns.tolist() == ["Rows", "Precursors"]
+
+
+def test_summary_falls_back_to_the_protein_group(report_parquet):
+    """An unprocessed report has no razor protein yet."""
+    frame = pd.DataFrame({"Run": ["a"], "Protein.Group": ["P1;P2"]})
+    assert _report(frame, Data(source=report_parquet)).summary()[
+        "Proteins"
+    ].tolist() == [1]
+
+
+def test_summary_of_a_frame_without_runs_is_a_single_group(report_parquet):
+    frame = pd.DataFrame({"Precursor.Id": ["p1", "p2"]})
+    summary = _report(frame, Data(source=report_parquet)).summary()
+    assert summary.index.tolist() == ["all"]
+    assert summary.loc["all", "Precursors"] == 2
+
+
+def test_an_unprocessed_report_can_still_be_summarised(report_parquet):
+    """Before processing, the identifier column falls back to the DIA-NN name."""
+    summary = Data(source=report_parquet).load().summary()
+    assert summary["Precursors"].sum() == 6
+
+
 def test_an_unprocessed_report_has_no_identification_count(report_parquet):
     report = Data(source=report_parquet).load()
     assert not report.is_processed

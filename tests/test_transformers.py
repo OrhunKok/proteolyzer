@@ -31,21 +31,60 @@ def test_matrix_generation_pivots(long_data):
 def test_duplicate_combinations_are_refused(long_data):
     duplicated = pd.concat([long_data, long_data.head(1)], ignore_index=True)
     builder = MatrixBuilder(duplicated)
-    with pytest.raises(ValueError, match="Duplicate combinations"):
+    with pytest.raises(ValueError, match="2 Duplicate combinations"):
         builder.matrix_generation("Ms1.Area", ["Precursor.Id"], ["Run"])
+
+
+def test_a_pivot_failure_that_is_not_duplication_is_passed_through(long_data):
+    """The duplicate count only runs after a failure; other errors survive it."""
+    with pytest.raises(KeyError):
+        MatrixBuilder(long_data).matrix_generation("Ms1.Area", ["Nope"], ["Run"])
 
 
 def test_missingness_is_reported(long_data, caplog):
     caplog.set_level(logging.INFO)
     matrix = pd.DataFrame({"r1": [1.0, np.nan], "r2": [0.0, np.nan]})
-    MatrixBuilder(long_data).missingness_check(matrix)
+    MatrixBuilder(long_data).missingness(matrix)
     assert "Missing At Random" in caplog.text
     assert "Missing Not At Random" in caplog.text
     assert "recommend dropping" in caplog.text
 
 
+def test_missingness_returns_the_numbers_it_logs(long_data):
+    """The figures are usable, not just readable."""
+    matrix = pd.DataFrame({"r1": [1.0, np.nan], "r2": [0.0, np.nan]})
+
+    result = MatrixBuilder(long_data).missingness(matrix)
+
+    assert result.mar == 50.0  # two of four cells are NA
+    assert result.mnar == 25.0  # one of four is an explicit zero
+    # r1 is half absent, r2 entirely so, counting gaps and zeros alike.
+    assert result.per_column.tolist() == [0.5, 1.0]
+    assert result.sparse_columns(0.75) == ["r2"]
+    assert result.sparse_columns(1.0) == []
+
+
+def test_missingness_defaults_to_the_generated_matrix(long_data):
+    builder = MatrixBuilder(long_data).matrix_generation(
+        "Ms1.Area", ["Precursor.Id"], ["Run"]
+    )
+    assert builder.missingness().mnar == 25.0
+
+
+def test_missingness_before_generation_is_refused(long_data):
+    with pytest.raises(ValueError, match="Call matrix_generation"):
+        MatrixBuilder(long_data).missingness()
+
+
+def test_missingness_of_an_empty_matrix_is_not_a_division_by_zero(long_data, caplog):
+    result = MatrixBuilder(long_data).missingness(pd.DataFrame())
+    assert np.isnan(result.mar) and np.isnan(result.mnar)
+    assert result.sparse_columns() == []
+    assert "empty" in caplog.text
+
+
 def test_missingness_rejects_out_of_range_threshold(long_data, caplog):
-    MatrixBuilder(long_data).missingness_check(
+    MatrixBuilder(long_data).missingness(
         pd.DataFrame({"r1": [1.0]}), warning_threshold=7
     )
     assert "must be between 0 and 1" in caplog.text

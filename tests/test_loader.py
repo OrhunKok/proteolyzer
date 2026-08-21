@@ -34,6 +34,62 @@ def test_tsv_load_and_subset(tmp_path, label_free_report):
     assert len(loaded) == len(label_free_report)
 
 
+def test_tsv_load_keeps_file_column_order(tmp_path, label_free_report):
+    """The fast parser returns columns in the order asked for, not file order.
+
+    They agree only because the subset is built in file order; this pins that.
+    """
+    path = tmp_path / "report.tsv"
+    label_free_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path).load()
+
+    expected = [c for c in label_free_report.columns if c in set(loaded.columns)]
+    assert list(loaded.columns) == expected
+
+
+def test_tsv_load_matches_the_stock_parser(tmp_path, label_free_report):
+    """The fast parser is an optimization, so it must not change the frame."""
+    path = tmp_path / "report.tsv"
+    label_free_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path, load_all_columns=True).load()
+    expected = pd.read_csv(path, delimiter="\t")
+
+    pd.testing.assert_frame_equal(loaded.frame, expected)
+
+
+def test_ragged_rows_fall_back_to_the_stock_parser(tmp_path, caplog):
+    """pyarrow rejects a short row; the stock parser pads it, as before."""
+    path = tmp_path / "report.tsv"
+    path.write_text("Run\tPrecursor.Id\nrun1\tp1\nrun2\n")
+
+    loaded = Data(source=path, load_all_columns=True).load()
+
+    assert loaded["Run"].tolist() == ["run1", "run2"]
+    assert pd.isna(loaded["Precursor.Id"].iloc[1])
+    assert "re-reading with the default parser" in caplog.text
+
+
+def test_undecodable_bytes_are_not_passed_off_as_data(tmp_path, caplog):
+    """pyarrow reads what it cannot decode as bytes instead of failing.
+
+    Falling back means the caller gets the stock parser's error rather than a
+    column of bytes objects. The bad byte has to sit beyond the header peek,
+    which is where it would be in a real file.
+    """
+    path = tmp_path / "report.tsv"
+    padding = b"".join(b"run1\tPEPTIDEK%d\n" % i for i in range(60_000))
+    path.write_bytes(
+        b"Run\tPrecursor.Id\n" + padding + "run1\tcaf\xe9\n".encode("latin-1")
+    )
+
+    with pytest.raises(UnicodeDecodeError):
+        Data(source=path, load_all_columns=True).load()
+
+    assert "undecoded" in caplog.text
+
+
 def test_csv_delimiter_is_sniffed(tmp_path, label_free_report):
     path = tmp_path / "unknown_export.csv"
     label_free_report.to_csv(path, index=False)

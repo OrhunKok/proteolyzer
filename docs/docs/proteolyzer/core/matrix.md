@@ -18,6 +18,8 @@ Example
 
 ## Callable
 
+## dataclass
+
 ## np
 
 ## pd
@@ -25,6 +27,40 @@ Example
 ## Logged
 
 ## Report
+
+## Missingness Objects
+
+```python
+@dataclass(frozen=True)
+class Missingness()
+```
+
+How much of a matrix is absent, and from where.
+
+Gaps and zeros are counted apart because they mean different things: an NA
+is a measurement that was never made (missing at random), a zero is one
+that came back empty (missing not at random), and imputation has to treat
+them differently.
+
+#### mar
+
+Percentage of cells that are NA.
+
+#### mnar
+
+Percentage of cells that are exactly zero.
+
+#### per\_column
+
+Fraction of each column that is absent, counting both gaps and zeros.
+
+#### sparse\_columns
+
+```python
+def sparse_columns(threshold: float = 0.75) -> list
+```
+
+Columns more than `threshold` absent, as candidates for dropping.
 
 ## MatrixBuilder Objects
 
@@ -48,18 +84,29 @@ def __init__(data: Report | pd.DataFrame)
 
 Takes a :class:`Report` or a plain frame.
 
-#### missingness\_check
+#### missingness
 
 ```python
-def missingness_check(matrix: pd.DataFrame,
-                      warning_threshold: float = 0.75) -> None
+def missingness(matrix: pd.DataFrame | None = None,
+                warning_threshold: float = 0.75) -> Missingness
 ```
+
+Measure how much of the matrix is absent, logging the headline numbers.
+
+Defaults to the generated matrix. Returns the numbers as well as
+logging them, so a caller can act on them rather than read them.
 
 #### matrix\_generation
 
 ```python
 def matrix_generation(values: str, index: list[str],
                       columns: list[str]) -> MatrixBuilder
+```
+
+#### \_require\_matrix
+
+```python
+def _require_matrix() -> pd.DataFrame
 ```
 
 #### normalize\_matrix

@@ -6,8 +6,9 @@ title: proteolyzer.core.models
 Typed models describing proteolyzer inputs and outputs.
 
 :class:`Data` describes *where* data comes from and *what* should be read from
-it; :class:`LoadedData` and :class:`ProcessedData` are thin ``DataFrame``
-subclasses that carry the metadata needed by the next pipeline stage.
+it. :class:`Report` is what comes back: a frame, the source it was read from,
+and -- once :meth:`Report.process` has run -- a :class:`Processing` record of
+what was done to it.
 
 ## datetime
 
@@ -283,6 +284,20 @@ def runs() -> set
 ```
 
 The distinct runs present, empty if the frame has no Run column.
+
+#### summary
+
+```python
+def summary() -> pd.DataFrame
+```
+
+Identification counts per run.
+
+The first table to look at for a new report: what each run
+contributed, and how evenly. Counts are of *distinct* values, so a
+precursor seen in two channels of one run counts once. Levels the
+frame does not carry are left out, and a frame with no ``Run`` column
+is summarized as a single group.
 
 #### n\_identifications
 

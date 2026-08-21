@@ -154,6 +154,25 @@ same file always produce the same column order.
 def _load_csv(delimiter: str | None = None) -> pd.DataFrame
 ```
 
+#### \_read\_delimited
+
+```python
+def _read_delimited(delimiter: str, cols_to_load: list) -> pd.DataFrame
+```
+
+Read the body, preferring pyarrow&#x27;s multithreaded CSV reader.
+
+A search report is the largest thing proteolyzer reads, and on a
+million-row report pyarrow is ~4x faster than the stock parser whole,
+~11x when reading a subset of the columns, for identical dtypes and
+values. It is stricter, though -- it rejects ragged rows the stock
+parser pads -- so that one stays as a fallback.
+
+The two parsers agree on column order only because
+:meth:`_cols_to_load` hands over the columns in the order the file has
+them: pyarrow returns them in the order asked for, the stock parser
+always in file order.
+
 #### \_get\_delimiter
 
 ```python
