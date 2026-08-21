@@ -9,6 +9,10 @@ repo_url: https://github.com/OrhunKok/proteolyzer
 repo_name: OrhunKok/proteolyzer
 edit_uri: edit/master/docs/
 
+# A broken link or an unresolvable reference fails the build, so authoring
+# locally behaves the same as CI rather than warning where nobody looks.
+strict: true
+
 theme:
   name: material
   logo: assets/proteolyzer_logo.svg
