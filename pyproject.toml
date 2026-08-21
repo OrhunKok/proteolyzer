@@ -36,6 +36,13 @@ Repository = "https://github.com/OrhunKok/proteolyzer"
 Issues = "https://github.com/OrhunKok/proteolyzer/issues"
 
 [project.optional-dependencies]
+# Only needed to *build* the UniMod cache; querying an existing one uses the
+# standard library. See proteolyzer.unimod.
+unimod = [
+    "requests",
+    "sqlalchemy",
+    "xml2db",
+]
 aas = [
     "pyahocorasick",
     "biopython",
@@ -90,9 +97,7 @@ ignore_missing_imports = true
 disable_error_code = ["prop-decorator"]
 
 [tool.pytest.ini_options]
-# tools/ is not installed but is tested, so the repo root is importable.
-testpaths = ["tests", "tools"]
-pythonpath = ["."]
+testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 filterwarnings = ["error::DeprecationWarning:proteolyzer.*"]
 

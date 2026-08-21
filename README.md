@@ -22,6 +22,8 @@ sample preparation and amino acid substitution discovery.
 - **Plotting** — publication-styled relational plots (e.g. volcano plots).
 - **cellenONE module** — maps single cells prepared on a cellenONE to well
   positions, and flags well/label clashes.
+- **UniMod plugin** — query the full UniMod database with SQL; the database is
+  built on first use rather than shipped.
 - **Alternate RNA decoding (AAS) module** — the pipeline used for discovery of
   amino acid substitutions and PTMs ([paper](https://decode.slavovlab.net/)).
 
@@ -34,6 +36,7 @@ git clone https://github.com/OrhunKok/proteolyzer
 cd proteolyzer
 pip install .                 # core
 pip install '.[aas]'          # amino acid substitution pipeline
+pip install '.[unimod]'       # only to *build* the UniMod cache; querying needs nothing
 pip install -e '.[dev]'       # editable install with test and lint tooling
 ```
 
@@ -139,14 +142,35 @@ reference.protease("Trypsin").allowed_counts
 reference.CODON_TABLE["AUG"]              # "M"
 ```
 
-They come from the UniMod CSVs in `proteolyzer/resources`. Regenerating those
-is a maintainer job, so it lives outside the package and keeps its
-dependencies out of the install:
+They are exported from UniMod. For anything the two exported tables cannot
+answer, query the database itself:
+
+```python
+from proteolyzer import unimod
+
+unimod.tables()                                    # built on first use
+unimod.table("modifications")
+unimod.query(
+    """
+    SELECT m.full_name, s.one_letter, m.mono_mass
+    FROM specificity AS s
+    JOIN modifications AS m ON s.mod_key = m.record_id
+    WHERE m.mono_mass BETWEEN ? AND ?
+    """,
+    (15.9, 16.1),
+)
+```
+
+The database is 5 MB against 221 KB of CSVs, so it is not shipped: it is built
+once into `$PROTEOLYZER_CACHE_DIR` (else `$XDG_CACHE_HOME`, else `~/.cache`)
+and reused. Querying uses only the standard library; building downloads the
+UniMod XML and needs `pip install '.[unimod]'`.
+
+Regenerating the bundled CSVs after a new UniMod release is a maintainer step:
 
 ```bash
-pip install -r tools/unimod/requirements.txt
-python -m tools.unimod load    --db-output tools/unimod/unimod.db
-python -m tools.unimod process --db-file   tools/unimod/unimod.db \
+python -m proteolyzer.unimod build
+python -m proteolyzer.unimod export \
     --mods-output src/proteolyzer/resources/unimod_modifications.csv \
     --aa-output   src/proteolyzer/resources/unimod_amino_acids.csv
 ```
@@ -167,7 +191,7 @@ src/proteolyzer/
     plots/            optional: plotting base class and relational plots
     cellenone/        optional: cellenONE export parsing and well mapping
     aas/              optional: amino acid substitution pipeline
-tools/unimod/         maintainer script that regenerates resources/*.csv
+    unimod/           optional: UniMod SQL queries, built on demand
 tests/                pytest suite
 examples/             runnable notebooks per module
 docs/                 Docusaurus site; docs/docs is generated API reference

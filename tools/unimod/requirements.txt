@@ -1,5 +1,0 @@
-# Only needed to regenerate the bundled UniMod tables.
-requests
-sqlalchemy
-xml2db
-pandas

@@ -26,10 +26,11 @@ __all__ = [
     "core",
     "plots",
     "reference",
+    "unimod",
 ]
 
 #: Subpackages imported on first attribute access, see :func:`__getattr__`.
-__lazy__ = ("aas", "cellenone", "plots")
+__lazy__ = ("aas", "cellenone", "plots", "unimod")
 
 #: Modules that moved, kept importable so existing scripts keep working.
 _MOVED = {

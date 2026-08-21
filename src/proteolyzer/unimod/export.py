@@ -1,4 +1,3 @@
-import argparse
 import os
 import sqlite3
 
@@ -7,9 +6,10 @@ import pandas as pd
 
 
 class UniModProcessor:
-    """
-    A class to extract, process, and save modification and amino acid data
-    from a UniMod SQLite database.
+    """Exports the reference CSVs that ship in ``proteolyzer/resources``.
+
+    A maintainer step: run it after :func:`proteolyzer.unimod.refresh` to pick
+    up a new UniMod release.
     """
 
     MODS_OUTPUT: str = "unimod_modifications.csv"
@@ -162,39 +162,3 @@ class UniModProcessor:
         processed_aa_df.to_csv(self.aa_output, index=False)
 
         print(f"Results saved:\n- {self.mods_output}\n- {self.aa_output}")
-
-
-def main() -> None:
-    """Handles command-line arguments and orchestrates the execution of data processing."""
-    parser = argparse.ArgumentParser(
-        description="Extracts and processes modification and amino acid data from a UniMod SQLite database."
-    )
-
-    parser.add_argument(
-        "--db-file",
-        required=True,
-        type=str,
-        help="Path to the UniMod SQLite database file. (Required)",
-    )
-
-    parser.add_argument(
-        "--mods-output",
-        type=str,
-        help="Output file for the modifications data. If not specified, defaults to the same location as the database file.",
-    )
-
-    parser.add_argument(
-        "--aa-output",
-        type=str,
-        help="Output file for the amino acids data. If not specified, defaults to the same location as the database file.",
-    )
-
-    args = parser.parse_args()
-    processor = UniModProcessor(
-        db_file=args.db_file, mods_output=args.mods_output, aa_output=args.aa_output
-    )
-    processor.process_and_save()
-
-
-if __name__ == "__main__":
-    main()

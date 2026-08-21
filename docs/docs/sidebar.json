@@ -52,6 +52,16 @@
           "label": "proteolyzer.plots",
           "type": "category"
         },
+        {
+          "items": [
+            "docs/proteolyzer/unimod/__init__",
+            "docs/proteolyzer/unimod/__main__",
+            "docs/proteolyzer/unimod/build",
+            "docs/proteolyzer/unimod/export"
+          ],
+          "label": "proteolyzer.unimod",
+          "type": "category"
+        },
         "docs/proteolyzer/__init__",
         "docs/proteolyzer/reference"
       ],
