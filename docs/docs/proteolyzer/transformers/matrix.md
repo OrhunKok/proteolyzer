@@ -10,26 +10,35 @@ operations required by the analysis pipeline, including normalization,
 scaling and basic imputations.
 
 Example
-    &gt;&gt;&gt; from proteolyzer.transformers.matrix import normalize_rows
-    &gt;&gt;&gt; norm = normalize_rows(matrix, method=&quot;zscore&quot;)
-
-## pd
-
-## np
+    &gt;&gt;&gt; import numpy as np
+    &gt;&gt;&gt; builder = MatrixBuilder(processed_data)  # doctest: +SKIP
+    &gt;&gt;&gt; builder.matrix_generation(
+    ...     &quot;Ms1.Area&quot;, index=[&quot;Precursor.Id&quot;], columns=[&quot;Run&quot;]
+    ... ).normalize_matrix(within_groups=[&quot;Run&quot;], agg_func=np.nansum).matrix
 
 ## Callable
 
-## MetaLogging
+## np
+
+## pd
+
+## Logged
 
 ## ProcessedData
 
 ## MatrixBuilder Objects
 
 ```python
-class MatrixBuilder(metaclass=MetaLogging)
+class MatrixBuilder(Logged)
 ```
 
+Pivots long-form processed data into a quantitative matrix.
+
 #### \_\_slots\_\_
+
+#### matrix
+
+Set by :meth:`matrix_generation`.
 
 #### \_\_init\_\_
 
@@ -37,18 +46,18 @@ class MatrixBuilder(metaclass=MetaLogging)
 def __init__(processed_data: ProcessedData)
 ```
 
-#### \_missingness\_check
+#### missingness\_check
 
 ```python
-def _missingness_check(matrix: pd.DataFrame,
-                       warning_threshold: float = 0.75) -> None
+def missingness_check(matrix: pd.DataFrame,
+                      warning_threshold: float = 0.75) -> None
 ```
 
 #### matrix\_generation
 
 ```python
 def matrix_generation(values: str, index: list[str],
-                      columns: list[str]) -> pd.DataFrame
+                      columns: list[str]) -> "MatrixBuilder"
 ```
 
 #### normalize\_matrix
@@ -56,6 +65,17 @@ def matrix_generation(values: str, index: list[str],
 ```python
 def normalize_matrix(within_groups: list[str],
                      agg_func: Callable,
-                     replace_zeros: bool = True) -> pd.DataFrame
+                     replace_zeros: bool = True) -> "MatrixBuilder"
 ```
 
+Divide each value by an aggregate of its row within each column group.
+
+Parameters
+----------
+within_groups
+    Column-index level(s) defining the groups aggregated over.
+agg_func
+    Row-wise aggregation, called as ``agg_func(block, axis=1)`` (e.g.
+    ``np.nansum``, ``np.nanmedian``).
+replace_zeros
+    Treat zeros as missing before normalizing.

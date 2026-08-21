@@ -13,19 +13,17 @@ Example
     &gt;&gt;&gt; from proteolyzer.plots.relational import scatter_plot
     &gt;&gt;&gt; ax = scatter_plot(df, x=&quot;intensity&quot;, y=&quot;ratio&quot;)
 
-## np
+## Literal
 
-## sns
+## np
 
 ## pd
 
-## Literal
-
-## List
-
-## Rectangle
+## sns
 
 ## adjust\_text
+
+## Rectangle
 
 ## PlotBase
 
@@ -35,10 +33,12 @@ Example
 class RelPlot(PlotBase)
 ```
 
+Shared annotation helpers for relational (x/y) plots.
+
 #### \_\_init\_\_
 
 ```python
-def __init__(**kwargs)
+def __init__(theme: str = "science", **kwargs)
 ```
 
 #### \_symmetric\_xaxis
@@ -83,9 +83,10 @@ def __init__(data: pd.DataFrame,
              x: str,
              y: str,
              hue: Literal["Regulation", "Significance", str] = "Regulation",
-             hue_order: List = None,
+             hue_order: list = None,
              label: str = None,
              signif: float = 0.05,
+             theme: str = "science",
              **kwargs)
 ```
 
@@ -108,4 +109,3 @@ def _add_delta_count_box(box_position=(0.675, 0.85),
                          box_width=0.3,
                          box_height=0.125) -> None
 ```
-

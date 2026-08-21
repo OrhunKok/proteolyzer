@@ -4,8 +4,26 @@
       "items": [
         {
           "items": [
+            "docs/proteolyzer/aas/__init__",
+            "docs/proteolyzer/aas/base",
+            "docs/proteolyzer/aas/config",
+            "docs/proteolyzer/aas/detection",
+            "docs/proteolyzer/aas/io",
+            "docs/proteolyzer/aas/params",
+            "docs/proteolyzer/aas/preprocessing",
+            "docs/proteolyzer/aas/quantification",
+            "docs/proteolyzer/aas/translation",
+            "docs/proteolyzer/aas/utils",
+            "docs/proteolyzer/aas/validation"
+          ],
+          "label": "proteolyzer.aas",
+          "type": "category"
+        },
+        {
+          "items": [
             "docs/proteolyzer/cellenone/__init__",
-            "docs/proteolyzer/cellenone/cellenone"
+            "docs/proteolyzer/cellenone/cellenone",
+            "docs/proteolyzer/cellenone/config"
           ],
           "label": "proteolyzer.cellenone",
           "type": "category"
@@ -29,8 +47,18 @@
         },
         {
           "items": [
+            "docs/proteolyzer/unimod/__init__",
+            "docs/proteolyzer/unimod/loader",
+            "docs/proteolyzer/unimod/main",
+            "docs/proteolyzer/unimod/processor"
+          ],
+          "label": "proteolyzer.unimod",
+          "type": "category"
+        },
+        {
+          "items": [
             "docs/proteolyzer/utils/__init__",
-            "docs/proteolyzer/utils/constants",
+            "docs/proteolyzer/utils/config",
             "docs/proteolyzer/utils/loader",
             "docs/proteolyzer/utils/logging",
             "docs/proteolyzer/utils/models",
@@ -40,7 +68,8 @@
           "label": "proteolyzer.utils",
           "type": "category"
         },
-        "docs/proteolyzer/__init__"
+        "docs/proteolyzer/__init__",
+        "docs/proteolyzer/config"
       ],
       "label": "proteolyzer",
       "type": "category"

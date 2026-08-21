@@ -9,39 +9,108 @@ This module implements robust, documented helpers to read CSV/TSV, Excel,
 and other domain-specific export formats. Helpers validate required
 columns and return pandas DataFrame objects.
 
-## pd
+## csv
+
+## Callable
 
 ## partial
 
-## csv
-
-## magic
+## Path
 
 ## chardet
 
+## pd
+
 ## pq
+
+## Config
+
+## Logged
 
 ## Data
 
-## MetaLogging
+#### CONFIG
 
 ## DataLoader Objects
 
 ```python
-class DataLoader(metaclass=MetaLogging)
+class DataLoader(Logged)
 ```
 
-Loads data from various file formats.
+Loads data from various file formats with robust handling.
 
 #### \_\_slots\_\_
 
 #### \_\_init\_\_
 
 ```python
-def __init__(file: Data)
+def __init__(file: Data, verbose: bool = False)
 ```
 
-Initializes the DataLoader.
+Initializes DataLoader.
+
+Parameters
+----------
+file : Data
+    The source descriptor. `file.source` may be a Path, string path,
+    or file-like object. It is held rather than copied field by field,
+    so the two cannot drift apart.
+verbose : bool, default False
+    If True, run optional diagnostic steps after loading (currently:
+    log the in-memory size of the loaded data). Off by default because
+    memory_usage(deep=True) walks every cell of every object column,
+    which is expensive on large frames.
+
+#### source
+
+```python
+@property
+def source()
+```
+
+#### INPUT\_TYPE
+
+```python
+@property
+def INPUT_TYPE() -> str
+```
+
+#### cols\_rename\_mapping
+
+```python
+@property
+def cols_rename_mapping() -> dict
+```
+
+#### cols\_subset
+
+```python
+@property
+def cols_subset()
+```
+
+#### file\_name
+
+```python
+@property
+def file_name() -> str
+```
+
+#### file\_extension
+
+```python
+@property
+def file_extension() -> str
+```
+
+Lower-cased suffix; taken from Data so named streams dispatch too.
+
+#### is\_path
+
+```python
+@property
+def is_path() -> bool
+```
 
 #### \_auto\_load
 
@@ -49,42 +118,51 @@ Initializes the DataLoader.
 def _auto_load() -> pd.DataFrame
 ```
 
-Automatically loads data based on file extension.
+Automatically dispatch to the correct loader based on file extension.
+
+#### \_rewind
+
+```python
+def _rewind() -> None
+```
+
+Return a file-like source to the start so it can be read again.
+
+Peeking at the header and then reading the body means the source is read
+twice; paths reopen transparently but streams have to be rewound.
 
 #### \_rename\_cols
 
 ```python
-def _rename_cols() -> pd.DataFrame
+def _rename_cols(df: pd.DataFrame | None = None) -> pd.DataFrame
 ```
-
-Renames columns based on the mapping.
-
-#### \_get\_delimiter
-
-```python
-def _get_delimiter(default_delimiter: str = "\t",
-                   encoding: str = "utf-8",
-                   min_sample_size: int = 524288,
-                   sample_percent: float = 0.01) -> str
-```
-
-Detects the delimiter of a CSV-like file.
 
 #### \_cols\_to\_load
 
 ```python
-def _cols_to_load(all_cols: set) -> list
+def _cols_to_load(all_cols) -> list
 ```
 
-Determines columns to load based on settings.
+Intersect the file&#x27;s columns with the configured subset.
+
+Keeps the order the columns appear in the file, so repeated loads of the
+same file always produce the same column order.
 
 #### \_load\_csv
 
 ```python
-def _load_csv(delimiter: str = None) -> pd.DataFrame
+def _load_csv(delimiter: str | None = None) -> pd.DataFrame
 ```
 
-Loads a CSV or TSV file.
+#### \_get\_delimiter
+
+```python
+def _get_delimiter(default_delimiter="\t",
+                   sample_size=524288,
+                   sample_percent=0.01) -> str
+```
+
+Detect delimiter for CSV-like files.
 
 #### \_load\_excel
 
@@ -92,15 +170,11 @@ Loads a CSV or TSV file.
 def _load_excel() -> pd.DataFrame
 ```
 
-Loads an Excel file.
-
 #### \_load\_parquet
 
 ```python
 def _load_parquet() -> pd.DataFrame
 ```
-
-Loads a Parquet file.
 
 #### \_load\_txt
 
@@ -108,13 +182,12 @@ Loads a Parquet file.
 def _load_txt() -> pd.DataFrame
 ```
 
-Loads a plaintext file with detected MIME type and encoding.
+Load a text file. Detect encoding and MIME type if Path.
 
-#### \_detect\_file\_type\_and\_encoding
+#### \_detect\_encoding
 
 ```python
-def _detect_file_type_and_encoding()
+def _detect_encoding(sample_size: int = 100_000) -> str
 ```
 
-Strictly detects MIME type and text encoding for the file. Raises if undetectable.
-
+Detect the character encoding of a file path.

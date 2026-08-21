@@ -3,41 +3,41 @@ sidebar_label: models
 title: proteolyzer.utils.models
 ---
 
-Lightweight data models and type hints used across the project.
+Typed models describing proteolyzer inputs and outputs.
 
-Define small dataclasses or TypedDicts that represent the common data
-structures (for example, sample metadata, experiment descriptors, and
-loader return types).
-
-## pd
-
-## List
-
-## Union
-
-## Set
-
-## Path
+:class:`Data` describes *where* data comes from and *what* should be read from
+it; :class:`LoadedData` and :class:`ProcessedData` are thin ``DataFrame``
+subclasses that carry the metadata needed by the next pipeline stage.
 
 ## datetime
 
 ## logging
 
-## re
+## cached\_property
+
+## Path
+
+## IO
+
+## pd
 
 ## BaseModel
 
-## Field
+## ConfigDict
 
-## field\_validator
+## Field
 
 ## computed\_field
 
-## Optional
+## field\_validator
 
-## cached\_property
+## Config
 
-## Constants
+#### CONFIG
+
+#### logger
+
+#### SourceType
 
 ## Data Objects
 
@@ -45,27 +45,55 @@ loader return types).
 class Data(BaseModel)
 ```
 
-#### file\_path
+A description of a single input file (or file-like object).
+
+#### model\_config
+
+#### source
 
 #### load\_all\_columns
 
 #### extra\_cols\_to\_load
+
+#### INPUT\_TYPE
+
+#### is\_path
+
+```python
+@property
+def is_path() -> bool
+```
+
+#### is\_file\_like
+
+```python
+@property
+def is_file_like() -> bool
+```
+
+#### \_path
+
+```python
+@property
+def _path() -> Path
+```
+
+The source as a Path. Only meaningful when :attr:`is_path`.
+
+#### \_validate\_source
+
+```python
+@field_validator("source", mode="after")
+@classmethod
+def _validate_source(cls, value: SourceType) -> SourceType
+```
 
 #### \_validate\_extra\_cols\_to\_load
 
 ```python
 @field_validator("extra_cols_to_load", mode="before")
 @classmethod
-def _validate_extra_cols_to_load(
-        cls, value: Union[str, List[str], Set[str]]) -> set
-```
-
-#### \_validate\_path
-
-```python
-@field_validator("file_path", mode="after")
-@classmethod
-def _validate_path(cls, value: Path) -> Path
+def _validate_extra_cols_to_load(cls, value: object) -> set[str] | None
 ```
 
 #### file\_name
@@ -76,12 +104,22 @@ def _validate_path(cls, value: Path) -> Path
 def file_name() -> str
 ```
 
+Stem of the source file, used to recognize known input formats.
+
 #### file\_extension
 
 ```python
 @computed_field
 @cached_property
 def file_extension() -> str
+```
+
+#### file\_stats
+
+```python
+@computed_field
+@cached_property
+def file_stats() -> dict | None
 ```
 
 #### input\_type
@@ -92,13 +130,17 @@ def file_extension() -> str
 def input_type() -> str
 ```
 
+The search engine that produced this file: DIANN, MaxQuant or Unknown.
+
 #### cols\_subset
 
 ```python
 @computed_field
 @cached_property
-def cols_subset() -> dict
+def cols_subset() -> set[str] | None
 ```
+
+Columns to read, or ``None`` to read everything.
 
 #### cols\_rename\_mapping
 
@@ -108,59 +150,80 @@ def cols_subset() -> dict
 def cols_rename_mapping() -> dict
 ```
 
-#### file\_stats
+#### load
 
 ```python
-@computed_field
-@cached_property
-def file_stats() -> dict
+def load() -> "LoadedData"
 ```
+
+Read the source into memory.
 
 ## ProcessedData Objects
 
 ```python
-class ProcessedData(BaseModel)
+class ProcessedData(pd.DataFrame)
 ```
 
-#### data
+A specialized DataFrame to hold processed data and its metadata.
+Inherits all pandas DataFrame methods and attributes.
 
-#### ID\_COL
+#### \_metadata
 
-#### LABEL\_FREE
-
-#### LABEL\_GROUP\_CAPTURE
-
-#### PROTEASE
-
-## Config Objects
+#### \_constructor
 
 ```python
-class Config()
+@property
+def _constructor()
 ```
-
-#### arbitrary\_types\_allowed
-
-Allow Pandas DataFrames
 
 #### \_\_init\_\_
 
 ```python
-def __init__(processor: "DataProcessor", **kwargs)
+def __init__(data=None,
+             ID_COL=None,
+             LABEL_FREE=None,
+             LABELS_COMPLETE=None,
+             LABEL_GROUP_CAPTURE=None,
+             PROTEASE=None,
+             **kwargs)
 ```
 
 #### unique\_runs
 
 ```python
-@computed_field
-@cached_property
+@property
 def unique_runs() -> set
 ```
 
 #### unique\_ids
 
 ```python
-@computed_field
-@cached_property
+@property
 def unique_ids() -> int
 ```
 
+## LoadedData Objects
+
+```python
+class LoadedData(pd.DataFrame)
+```
+
+Raw data as read from disk, plus the loader that produced it.
+
+#### \_metadata
+
+#### \_\_init\_\_
+
+```python
+def __init__(loader)
+```
+
+#### process
+
+```python
+def process(**kwargs) -> ProcessedData
+```
+
+Initiates processing.
+Any kwargs passed here are forwarded
+to the DataProcessor constructor.

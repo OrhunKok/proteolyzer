@@ -10,22 +10,25 @@ project, such as configuration/constants, data loaders, logging helpers,
 and small processing utilities.
 
 Submodules
-    - constants: project-wide constants and default values
+    - config: recognized input formats and their column handling
     - loader: functions to load common file types
     - logging: logging configuration and helpers
     - models: small data classes and typed models
     - operations: small pure functions operating on core data structures
     - processor: higher-level processing pipelines
 
+## DataLoader
+
+## configure\_logging
+
 ## Data
+
+## LoadedData
 
 ## ProcessedData
 
-## DataLoader
+## cv
 
 ## DataProcessor
 
-## cv
-
 #### \_\_all\_\_
-

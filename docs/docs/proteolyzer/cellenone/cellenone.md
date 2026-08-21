@@ -3,34 +3,44 @@ sidebar_label: cellenone
 title: proteolyzer.cellenone.cellenone
 ---
 
-## pd
-
-## np
-
 ## os
-
-## Literal
-
-## Optional
 
 ## re
 
-## MetaLogging
+## Literal
 
-#### CELLEONE\_MAPPING
+## np
+
+## pd
+
+## Logged
+
+## CELLEONE\_MAPPING
+
+## DROPLET\_COLS
+
+## MERGE\_COLS
+
+## NOZZLE\_WELL\_MAPPING
+
+## PICKUP\_NOZZLE\_ID
+
+## PICKUP\_NOZZLE\_XPOS\_OFFSET
+
+## TEMP\_STATS\_COLS
 
 ## CoordinatesMapping Objects
 
 ```python
-class CoordinatesMapping(metaclass=MetaLogging)
+class CoordinatesMapping(Logged)
 ```
 
 #### \_\_init\_\_
 
 ```python
 def __init__(root_dir: str,
-             label_type: Optional[Literal["mTRAQ", "TMT"]] = None,
-             plex: Optional[int] = None)
+             label_type: Literal["mTRAQ", "TMT"] | None = None,
+             plex: int | None = None)
 ```
 
 #### \_output\_file\_paths
@@ -96,9 +106,17 @@ def label_well_plex(label_df: pd.DataFrame)
 #### \_map\_coords
 
 ```python
-def _map_coords(geo_df,
-                map_df,
-                coord_cols=["XPos", "YPos"],
-                group_cols=["Target", "Field"])
+def _map_coords(
+    geo_df,
+    map_df,
+    coord_cols=("XPos", "YPos"),
+    group_cols=("Target", "Field")
+) -> tuple[pd.Series, pd.Series]
 ```
 
+Match each row of `map_df` to its nearest `plex` rows in `geo_df`.
+
+Returns the matched geoprops indices and their distances, both as
+Series of arrays indexed like `map_df` so they can be assigned straight
+back onto it. With `plex` unset every candidate is kept, and the caller
+resolves cells claimed more than once by distance.

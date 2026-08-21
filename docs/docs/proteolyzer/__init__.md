@@ -3,26 +3,39 @@ sidebar_label: proteolyzer
 title: proteolyzer
 ---
 
-Top-level package for proteolyzer.
+Proteolyzer: processing, analysis and visualization of proteomics data.
 
-This package collects subpackages that handle data loading, transformations,
-visualizations and utilities used throughout the proteolyzer project.
+The core (``config``, ``utils``, ``transformers``) is imported eagerly. The
+optional subpackages listed in ``__lazy__`` are imported on first attribute
+access so that a missing extra (``pip install proteolyzer[aas]``) only fails
+for the module that needs it.
 
-Docstring style
-    Google-style docstrings are used across the project to maximize
-    compatibility with pydoc-markdown and other documentation tools.
+## importlib
 
-Package contents
-    - cellenone: I/O and processing specific to CellenONE data
-    - plots: visualization helpers and plotting abstractions
-    - transformers: matrix and tensor transformations
-    - utils: constants, helpers, and core processors
-
-## utils
-
-## plots
+## config
 
 ## transformers
 
+## utils
+
+## Data
+
+## configure\_logging
+
 #### \_\_all\_\_
 
+#### \_\_lazy\_\_
+
+Subpackages imported on first attribute access, see :func:`__getattr__`.
+
+#### \_\_getattr\_\_
+
+```python
+def __getattr__(name: str)
+```
+
+#### \_\_dir\_\_
+
+```python
+def __dir__() -> list[str]
+```

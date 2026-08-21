@@ -14,20 +14,18 @@ Key concepts
     - PlotBase: common API for creating figures and axes
     - style helpers: functions that standardize color palettes and fonts
 
-## plt
+## contextlib
 
 ## inspect
 
-## contextlib
+## plt
 
-## scienceplots
-
-## MetaLogging
+## Logged
 
 ## PlotBase Objects
 
 ```python
-class PlotBase(metaclass=MetaLogging)
+class PlotBase(Logged)
 ```
 
 PlotBase is a base class for creating and managing plots with customizable themes.
@@ -53,6 +51,11 @@ PlotBase is a base class for creating and managing plots with customizable theme
   Saves the current figure to a file and closes it.
   show():
   Displays the current plot using `plt.show()`.
+
+#### ax
+
+Set by :meth:`plot`; declared here so attribute access never recurses
+into :meth:`__getattr__`.
 
 #### \_\_init\_\_
 
@@ -83,6 +86,8 @@ Filters a dictionary of keyword arguments to include only those accepted by a gi
 def __getattr__(name)
 ```
 
+Delegate unknown attributes to the underlying Axes.
+
 #### plot\_theme
 
 ```python
@@ -91,6 +96,9 @@ def plot_theme()
 ```
 
 A context manager that sets a specified plot theme.
+
+An unknown or unavailable theme is reported and skipped rather than
+failing the plot. Exceptions raised by the wrapped block propagate.
 
 #### plot
 
@@ -110,7 +118,7 @@ to create the plot.
 - `plot_kws` _dict_ - A dictionary of keyword arguments to be passed to the plotting
   function. The dictionary should include a key &#x27;kwargs&#x27; containing additional
   arguments to be unpacked.
-  
+
 
 **Returns**:
 
@@ -150,4 +158,3 @@ This method checks if the `ax` attribute is not `None`. If a plot
 exists, it will render the plot using `matplotlib.pyplot.show()`.
 Otherwise, it will print a message indicating that no plot has
 been generated yet.
-
