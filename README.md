@@ -19,7 +19,8 @@ sample preparation and amino acid substitution discovery.
   flags, and automatic detection of labelled (mTRAQ/SILAC/TMT) precursors.
 - **Matrix transformation** — pivot to a quantitative matrix, report
   missingness, and normalize within column groups.
-- **Plotting** — publication-styled relational plots (e.g. volcano plots).
+- **Plotting** — publication-styled relational plots (volcano plots with
+  significance and effect-size thresholds, point labelling).
 - **cellenONE module** — maps single cells prepared on a cellenONE to well
   positions, and flags well/label clashes.
 - **UniMod plugin** — query the full UniMod database with SQL; the database is

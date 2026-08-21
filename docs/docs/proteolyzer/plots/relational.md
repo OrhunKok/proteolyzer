@@ -86,15 +86,49 @@ def __init__(data: pd.DataFrame,
              hue_order: list = None,
              label: str = None,
              signif: float = 0.05,
+             effect_threshold: float = 0.0,
+             transformed: bool | None = None,
+             symmetric_x: bool = False,
+             delta_text_size: int = 6,
              theme: str = "science",
              **kwargs)
 ```
+
+Parameters
+----------
+signif
+    Significance threshold, as a p-value.
+effect_threshold
+    Minimum absolute value of `x` for a point to count as regulated.
+    Zero, the default, classifies on significance alone.
+transformed
+    Whether `y` already holds -log10 p-values. Inferred from the data
+    when None, which cannot tell an untransformed column whose best
+    p-value is 0.5 from a transformed one whose best is 10^-0.5.
+symmetric_x
+    Centre the x axis on zero.
+
+Remaining keyword arguments go to ``seaborn.scatterplot``. The options
+above are named rather than read out of them, because anything left in
+kwargs is forwarded to the plotting call.
 
 #### \_prepare\_data
 
 ```python
 def _prepare_data() -> pd.DataFrame
 ```
+
+#### \_minus\_log10
+
+```python
+def _minus_log10(p_values: pd.Series) -> pd.Series
+```
+
+-log10 of `p_values`, with exact zeros held just off the top.
+
+A p-value of exactly 0 (permutation tests, or underflow) gives inf,
+which matplotlib drops from the axes while still counting the point as
+significant: it would be tallied in the box but invisible in the plot.
 
 #### \_add\_threshold\_lines
 

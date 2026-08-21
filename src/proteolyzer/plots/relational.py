@@ -98,6 +98,12 @@ class RelPlot(PlotBase):
         color="black",
         **kwargs,
     ):
+        if not self.ax.collections:
+            self.logger.warning(
+                "No plotted points to count; add_data_point_count needs a "
+                "scatter on the axes."
+            )
+            return
         text = f"$\\textit{{n}}$  = {len(self.ax.collections[0].get_offsets())}"
         self.ax.text(
             x_pos,
@@ -122,9 +128,32 @@ class VolcanoPlot(RelPlot):
         hue_order: list = None,
         label: str = None,
         signif: float = 0.05,
+        effect_threshold: float = 0.0,
+        transformed: bool | None = None,
+        symmetric_x: bool = False,
+        delta_text_size: int = 6,
         theme: str = "science",
         **kwargs,
     ):
+        """
+        Parameters
+        ----------
+        signif
+            Significance threshold, as a p-value.
+        effect_threshold
+            Minimum absolute value of `x` for a point to count as regulated.
+            Zero, the default, classifies on significance alone.
+        transformed
+            Whether `y` already holds -log10 p-values. Inferred from the data
+            when None, which cannot tell an untransformed column whose best
+            p-value is 0.5 from a transformed one whose best is 10^-0.5.
+        symmetric_x
+            Centre the x axis on zero.
+
+        Remaining keyword arguments go to ``seaborn.scatterplot``. The options
+        above are named rather than read out of them, because anything left in
+        kwargs is forwarded to the plotting call.
+        """
         super().__init__(theme=theme)
         self.orig_data = data
         self.x = x
@@ -133,7 +162,9 @@ class VolcanoPlot(RelPlot):
         self.hue_order = hue_order
         self.label = label
         self.signif = -np.log10(signif)
-        self.delta_text_size = kwargs.get("delta_text_size", 6)
+        self.effect_threshold = abs(effect_threshold)
+        self.transformed = transformed
+        self.delta_text_size = delta_text_size
 
         if self.hue == "Significance":
             hue_order = [False, True]
@@ -146,22 +177,28 @@ class VolcanoPlot(RelPlot):
         plot_kws["hue_order"] = hue_order
 
         self.ax = self.plot(sns.scatterplot, plot_kws)
-        # self._symmetric_xaxis()
+        if symmetric_x:
+            self._symmetric_xaxis()
         self._add_threshold_lines()
         self._add_delta_count_box()
         self.ax.set_ylim(bottom=0)
 
     def _prepare_data(self) -> pd.DataFrame:
         data = self.orig_data.copy()
-        if data[self.y].max() <= 1:
-            self.logger.info(f"-Log10 normalizing {self.y}")
-            data[self.y] = -np.log10(data[self.y])
-            data["Significance"] = data[self.y] > self.signif
-        elif data[self.y].max() > 1:
+
+        transformed = self.transformed
+        if transformed is None:
+            transformed = data[self.y].max() > 1
             self.logger.info(
-                f"{self.y} already -Log10 transformed. Skipping transform..."
+                f"{self.y} looks {'already' if transformed else 'not yet'} "
+                "-Log10 transformed. Pass transformed= to say so explicitly."
             )
-            data["Significance"] = data[self.y] > self.signif
+        if not transformed:
+            data[self.y] = self._minus_log10(data[self.y])
+
+        data["Significance"] = data[self.y] > self.signif
+        if self.effect_threshold:
+            data["Significance"] &= data[self.x].abs() >= self.effect_threshold
 
         data["Regulation"] = "notsig"
         data.loc[(data["Significance"] == True) & (data[self.x] > 0), "Regulation"] = (
@@ -172,11 +209,40 @@ class VolcanoPlot(RelPlot):
         )
         return data
 
+    def _minus_log10(self, p_values: pd.Series) -> pd.Series:
+        """-log10 of `p_values`, with exact zeros held just off the top.
+
+        A p-value of exactly 0 (permutation tests, or underflow) gives inf,
+        which matplotlib drops from the axes while still counting the point as
+        significant: it would be tallied in the box but invisible in the plot.
+        """
+        transformed = -np.log10(p_values.where(p_values > 0))
+        zeros = p_values.eq(0)
+        if zeros.any():
+            ceiling = transformed.max(skipna=True)
+            ceiling = 1.0 if not np.isfinite(ceiling) else ceiling
+            self.logger.warning(
+                f"{int(zeros.sum())} p-value(s) of exactly 0 in {self.y}; drawing "
+                f"them at {ceiling:.3g} rather than at infinity, where they would "
+                "be counted but not shown."
+            )
+            transformed = transformed.fillna(ceiling)
+        return transformed
+
     def _add_threshold_lines(self) -> None:
         self.ax.axhline(
             y=self.signif, color="black", linestyle="--", linewidth=0.5, dashes=(1, 5)
         )
         self.ax.axvline(x=0, color="black", linewidth=0.5)
+        for edge in (-self.effect_threshold, self.effect_threshold):
+            if edge:
+                self.ax.axvline(
+                    x=edge,
+                    color="black",
+                    linestyle="--",
+                    linewidth=0.5,
+                    dashes=(1, 5),
+                )
 
     def _add_delta_count_box(
         self, box_position=(0.675, 0.85), box_width=0.3, box_height=0.125
@@ -197,7 +263,7 @@ class VolcanoPlot(RelPlot):
         text_y_greater = box_position[1] + box_height * 0.9
         text_y_less = box_position[1] + box_height * 0.35
 
-        text_x_text = box_position[0] + ((box_position[1] - box_position[0]) * 0.1)
+        text_x_text = box_position[0] + box_width * 0.1
         text_x_num = box_position[0] + box_width * 0.9
 
         self.ax.add_patch(
