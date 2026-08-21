@@ -4,7 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proteolyzer"
+description = "Processing, analysis and visualization of proteomics data."
+readme = "README.md"
 requires-python = ">=3.14"
+authors = [{ name = "Orhun Kok", email = "kok.o@northeastern.edu" }]
+keywords = ["proteomics", "mass-spectrometry", "single-cell", "DIA-NN", "MaxQuant"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
 dependencies = [
     "pandas",
     "numpy",
@@ -15,11 +26,14 @@ dependencies = [
     "scienceplots",
     "adjusttext",
     "chardet",
-    'python-magic-bin ; platform_system == "Windows"',
-    'python-magic ; platform_system != "Windows"'
 ]
 
 dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/OrhunKok/proteolyzer"
+Repository = "https://github.com/OrhunKok/proteolyzer"
+Issues = "https://github.com/OrhunKok/proteolyzer/issues"
 
 [project.optional-dependencies]
 unimod = [
@@ -33,6 +47,8 @@ aas = [
     "pyyaml",
     "fastparquet",
     "openpyxl",
+    # quickdna has no wheels for this interpreter on PyPI, so pinned builds are
+    # published alongside the fork. Only needed by proteolyzer.aas.translation.
     # Windows
     "quickdna @ https://github.com/OrhunKok/quickdna/releases/download/v0.6.0/quickdna-0.6.0-cp314-cp314-win_amd64.whl ; sys_platform == 'win32'",
     # Linux
@@ -40,6 +56,20 @@ aas = [
     # Apple Silicon macOS
     "quickdna @ https://github.com/OrhunKok/quickdna/releases/download/v0.6.0/quickdna-0.6.0-cp314-cp314-macosx_11_0_arm64.whl ; sys_platform == 'darwin' and platform_machine == 'arm64'"
 ]
+dev = [
+    "mypy",
+    "pandas-stubs",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+docs = [
+    "pydoc-markdown",
+]
+
+[project.scripts]
+proteolyzer-unimod = "proteolyzer.unimod.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -49,55 +79,41 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["resources/*"]
+"*" = ["resources/*", "py.typed"]
 
 [tool.setuptools_scm]
 
+[tool.mypy]
+# Checked so far: the core loading/processing path. The aas, cellenone, plots
+# and unimod subpackages are not annotated enough to pass yet; add them here as
+# they are typed.
+files = [
+    "src/proteolyzer/config.py",
+    "src/proteolyzer/utils",
+    "src/proteolyzer/transformers",
+]
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+# mypy cannot see through @computed_field stacked on @cached_property, which is
+# how pydantic exposes derived fields.
+disable_error_code = ["prop-decorator"]
 
-
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+filterwarnings = ["error::DeprecationWarning:proteolyzer.*"]
 
 [tool.ruff]
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".ipynb_checkpoints",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pyenv",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "site-packages",
-    "venv",
-]
-
-# Same as Black.
 line-length = 88
 indent-width = 4
-
 target-version = "py314"
+extend-exclude = ["docs", "examples"]
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity (`C901`) by default.
-select = ["E4", "E7", "E9", "F"]
+# Pyflakes (F), a subset of pycodestyle (E4/E7/E9 + W), isort (I),
+# pyupgrade (UP), flake8-bugbear (B) and flake8-comprehensions (C4).
+select = ["E4", "E7", "E9", "F", "W", "I", "UP", "B", "C4"]
+# `== True` is meaningful on object/nullable-boolean pandas columns.
 ignore = ["E712"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -108,28 +124,9 @@ unfixable = ["E712"]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.format]
-# Like Black, use double quotes for strings.
 quote-style = "double"
-
-# Like Black, indent with spaces, rather than tabs.
 indent-style = "space"
-
-# Like Black, respect magic trailing commas.
 skip-magic-trailing-comma = false
-
-# Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
-
-# Enable auto-formatting of code examples in docstrings. Markdown,
-# reStructuredText code/literal blocks and doctests are all supported.
-#
-# This is currently disabled by default, but it is planned for this
-# to be opt-out in the future.
 docstring-code-format = true
-
-# Set the line length limit used when formatting code snippets in
-# docstrings.
-#
-# This only has an effect when the `docstring-code-format` setting is
-# enabled.
 docstring-code-line-length = "dynamic"
