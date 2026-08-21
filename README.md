@@ -59,23 +59,32 @@ Notes on the optional extras:
 import numpy as np
 import proteolyzer as pz
 
-report = pz.Data(source="report.parquet").load()   # DIA-NN report, recognized by name
-processed = report.process()                       # dtypes, derived columns, labels
+report = pz.read("report.parquet")   # DIA-NN report, recognized by name
+processed = report.process()         # dtypes, derived columns, labelling info
 
-processed.unique_runs                              # {'run1', 'run2', ...}
-processed.unique_ids                               # number of distinct precursors
+processed.runs                       # {'run1', 'run2', ...}
+processed.n_identifications          # distinct precursors
+processed.processing.label_free      # what processing found
+processed.frame                      # the pandas DataFrame
 
 matrix = (
-    pz.MatrixBuilder(processed)
-    .matrix_generation("Ms1.Area", index=["Precursor.Id"], columns=["Run"])
+    processed.matrix("Ms1.Area", index=["Precursor.Id"], columns=["Run"])
     .normalize_matrix(within_groups=["Run"], agg_func=np.nansum)
     .matrix
 )
 ```
 
-`Data` recognizes known DIA-NN/MaxQuant file names and reads only the columns
+`read` recognizes known DIA-NN/MaxQuant file names and reads only the columns
 configured for them. Use `load_all_columns=True` for everything, or
 `extra_cols_to_load=[...]` to add to the default set.
+
+A `Report` is a frozen wrapper around three things: the `frame`, the `source`
+it was read from, and the `processing` that produced it (`None` until
+`process()` runs). It deliberately is *not* a DataFrame subclass — pandas
+returns plain frames from most operations, so a subclass loses its metadata
+the first time anyone slices it. `len()`, `report["Run"]` and `.columns` work
+for interactive use; everything else goes through `.frame`, which is always a
+plain `DataFrame`.
 
 `process()` narrows float columns that already hold whole numbers to the
 smallest exact integer dtype. Columns with a real fractional part are left

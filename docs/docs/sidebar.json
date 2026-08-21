@@ -38,7 +38,8 @@
             "docs/proteolyzer/core/models",
             "docs/proteolyzer/core/operations",
             "docs/proteolyzer/core/pipeline",
-            "docs/proteolyzer/core/processor"
+            "docs/proteolyzer/core/processor",
+            "docs/proteolyzer/core/reader"
           ],
           "label": "proteolyzer.core",
           "type": "category"

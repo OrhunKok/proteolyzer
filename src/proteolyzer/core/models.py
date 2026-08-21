@@ -7,6 +7,7 @@ subclasses that carry the metadata needed by the next pipeline stage.
 
 import datetime
 import logging
+from dataclasses import dataclass, replace
 from functools import cached_property
 from pathlib import Path
 from typing import IO
@@ -199,81 +200,107 @@ class Data(BaseModel):
         config_block = getattr(CONFIG, self.input_type, None)
         return getattr(config_block, "COLS_RENAME_MAPPING", {})
 
-    def load(self) -> LoadedData:
+    def load(self) -> Report:
         """Read the source into memory."""
         from .loader import DataLoader
 
-        return LoadedData(DataLoader(self))
+        return Report(frame=DataLoader(self).data, source=self)
 
 
-class ProcessedData(pd.DataFrame):
+@dataclass(frozen=True)
+class Processing:
+    """How a frame was processed, and what that revealed about it."""
+
+    #: Column identifying a precursor, used for the identification count.
+    id_col: str
+    #: No labelling groups were found in the identifiers.
+    label_free: bool
+    #: Regex capturing a labelling group out of an identifier.
+    label_group_capture: str
+    #: Protease the missed-cleavage flag was computed for.
+    protease: str
+    #: False when channel information could not be derived in full.
+    labels_complete: bool = True
+    #: Large-magnitude float columns were rounded to integers.
+    rounded_large_floats: bool = False
+
+
+@dataclass(frozen=True)
+class Report:
+    """A frame of proteomics data, with where it came from and what was done.
+
+    Composition rather than a ``DataFrame`` subclass: pandas returns plain
+    frames from most operations, so a subclass silently loses its metadata the
+    first time anyone slices it, and the pandas internals it has to hook into
+    are not a stable API. Use :attr:`frame` for anything pandas; the few
+    pass-throughs below are for interactive work.
     """
-    A specialized DataFrame to hold processed data and its metadata.
-    Inherits all pandas DataFrame methods and attributes.
-    """
 
-    _metadata = [
-        "ID_COL",
-        "LABEL_FREE",
-        "LABELS_COMPLETE",
-        "LABEL_GROUP_CAPTURE",
-        "PROTEASE",
-    ]
+    #: The data. Anything pandas goes through here.
+    frame: pd.DataFrame
+    #: What the frame was read from.
+    source: Data
+    #: Set once :meth:`process` has run.
+    processing: Processing | None = None
 
     @property
-    def _constructor(self):
-        return ProcessedData
-
-    def __init__(
-        self,
-        data=None,
-        ID_COL=None,
-        LABEL_FREE=None,
-        LABELS_COMPLETE=None,
-        LABEL_GROUP_CAPTURE=None,
-        PROTEASE=None,
-        **kwargs,
-    ):
-        super().__init__(data, **kwargs)
-
-        self.ID_COL = ID_COL
-        self.LABEL_FREE = LABEL_FREE
-        #: False when channel information could not be derived in full.
-        self.LABELS_COMPLETE = LABELS_COMPLETE
-        self.LABEL_GROUP_CAPTURE = LABEL_GROUP_CAPTURE
-        self.PROTEASE = PROTEASE
+    def is_processed(self) -> bool:
+        return self.processing is not None
 
     @property
-    def unique_runs(self) -> set:
-        if "Run" not in self.columns:
-            return set()
-        return set(self["Run"].unique())
+    def columns(self) -> pd.Index:
+        return self.frame.columns
 
-    @property
-    def unique_ids(self) -> int:
-        if self.ID_COL is None or self.ID_COL not in self.columns:
-            return 0
-        return self[self.ID_COL].nunique()
+    def __len__(self) -> int:
+        return len(self.frame)
 
+    def __getitem__(self, key):
+        """Column access, for interactive use. Returns a plain pandas object."""
+        return self.frame[key]
 
-class LoadedData(pd.DataFrame):
-    """Raw data as read from disk, plus the loader that produced it."""
+    def _repr_html_(self) -> str:  # pragma: no cover - notebook display
+        state = "processed" if self.is_processed else "raw"
+        return (
+            f"<p><code>Report</code> ({state}), {len(self)} rows "
+            f"from <code>{self.source.file_name}</code></p>"
+            # Delegated so the frame is truncated as pandas would truncate it;
+            # pandas-stubs does not declare this one.
+            f"{self.frame._repr_html_()}"  # type: ignore[operator]
+        )
 
-    # Deliberately no ``_constructor`` override: slicing a LoadedData yields a
-    # plain DataFrame, because this class' constructor takes a loader, not data.
-    _metadata = ["loader"]
+    def process(self, **kwargs) -> Report:
+        """Normalize the frame: dtypes, derived columns, labelling information.
 
-    def __init__(self, loader):
-        super().__init__(loader.data.copy())
-        self.loader = loader
-
-    def process(self, **kwargs) -> ProcessedData:
-        """
-        Initiates processing.
-        Any kwargs passed here are forwarded
-        to the DataProcessor constructor.
+        Keyword arguments are passed to :class:`~proteolyzer.core.processor
+        .DataProcessor`. Returns a new Report; this one is unchanged.
         """
         from .processor import DataProcessor
 
-        processor = DataProcessor(self.loader, **kwargs)
-        return processor.process()
+        return DataProcessor(self, **kwargs).process()
+
+    def matrix(self, values: str, index: list[str], columns: list[str]):
+        """Pivot to a quantitative matrix. Returns a MatrixBuilder to chain on."""
+        from .matrix import MatrixBuilder
+
+        return MatrixBuilder(self).matrix_generation(values, index, columns)
+
+    @property
+    def runs(self) -> set:
+        """The distinct runs present, empty if the frame has no Run column."""
+        if "Run" not in self.frame.columns:
+            return set()
+        return set(self.frame["Run"].unique())
+
+    @property
+    def n_identifications(self) -> int:
+        """Distinct precursors, or 0 before processing."""
+        if self.processing is None:
+            return 0
+        id_col = self.processing.id_col
+        if id_col not in self.frame.columns:
+            return 0
+        return int(self.frame[id_col].nunique())
+
+    def with_frame(self, frame: pd.DataFrame) -> Report:
+        """The same report around a different frame, keeping its metadata."""
+        return replace(self, frame=frame)

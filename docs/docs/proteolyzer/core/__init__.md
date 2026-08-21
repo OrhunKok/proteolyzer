@@ -8,7 +8,7 @@ The base suite: read search-engine output into a consistent frame.
 Submodules
     formats: the input formats recognized, and how their columns are handled
     loader: read a described source into memory
-    models: Data, LoadedData and ProcessedData
+    models: Data, Report and the processing metadata
     processor: dtype narrowing, derived columns, labelling information
     matrix: pivot processed data into a quantitative matrix
     operations: small pure functions
@@ -32,9 +32,9 @@ Submodules
 
 ## Data
 
-## LoadedData
+## Processing
 
-## ProcessedData
+## Report
 
 ## cv
 
@@ -43,6 +43,8 @@ Submodules
 ## Stage
 
 ## DataProcessor
+
+## read
 
 #### \_\_all\_\_
 

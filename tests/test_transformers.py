@@ -5,20 +5,16 @@ import pandas as pd
 import pytest
 
 from proteolyzer.core.matrix import MatrixBuilder
-from proteolyzer.core.models import ProcessedData
 
 
 @pytest.fixture
-def long_data() -> ProcessedData:
-    return ProcessedData(
-        pd.DataFrame(
-            {
-                "Precursor.Id": ["p1", "p1", "p2", "p2"],
-                "Run": ["r1", "r2", "r1", "r2"],
-                "Ms1.Area": [10.0, 20.0, 30.0, 0.0],
-            }
-        ),
-        ID_COL="Precursor.Id",
+def long_data() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Precursor.Id": ["p1", "p1", "p2", "p2"],
+            "Run": ["r1", "r2", "r1", "r2"],
+            "Ms1.Area": [10.0, 20.0, 30.0, 0.0],
+        }
     )
 
 
@@ -33,9 +29,7 @@ def test_matrix_generation_pivots(long_data):
 
 
 def test_duplicate_combinations_are_refused(long_data):
-    duplicated = ProcessedData(
-        pd.concat([long_data, long_data.head(1)], ignore_index=True)
-    )
+    duplicated = pd.concat([long_data, long_data.head(1)], ignore_index=True)
     builder = MatrixBuilder(duplicated)
     with pytest.raises(ValueError, match="Duplicate combinations"):
         builder.matrix_generation("Ms1.Area", ["Precursor.Id"], ["Run"])
@@ -100,8 +94,8 @@ def test_normalize_matrix_zero_handling(long_data, replace_zeros, expected):
 
 def test_normalize_matrix_handles_nullable_integer_matrices(long_data):
     """Regression: nullable dtypes made numpy raise on pd.NA."""
-    integer_data = ProcessedData(
-        long_data.assign(**{"Ms1.Area": long_data["Ms1.Area"].astype("Int64")})
+    integer_data = long_data.assign(
+        **{"Ms1.Area": long_data["Ms1.Area"].astype("Int64")}
     )
     builder = MatrixBuilder(integer_data).matrix_generation(
         "Ms1.Area", ["Precursor.Id"], ["Run"]
@@ -115,3 +109,15 @@ def test_normalize_before_generation_is_refused(long_data):
         MatrixBuilder(long_data).normalize_matrix(
             within_groups=["Run"], agg_func=np.nansum
         )
+
+
+def test_a_report_can_be_given_directly(report_parquet):
+    """MatrixBuilder takes a Report or a plain frame."""
+    import proteolyzer as pz
+
+    report = pz.read(report_parquet).process()
+    builder = MatrixBuilder(report)
+    assert builder.data is report.frame
+
+    matrix = report.matrix("Ms1.Area", ["Precursor.Id"], ["Run"]).matrix
+    assert matrix.shape == (6, 2)

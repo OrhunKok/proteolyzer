@@ -28,7 +28,11 @@ module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
 
 ## MatrixBuilder
 
+## Report
+
 ## configure\_logging
+
+## read
 
 #### \_\_all\_\_
 

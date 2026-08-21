@@ -13,6 +13,10 @@ subclasses that carry the metadata needed by the next pipeline stage.
 
 ## logging
 
+## dataclass
+
+## replace
+
 ## cached\_property
 
 ## Path
@@ -153,78 +157,147 @@ def cols_rename_mapping() -> dict
 #### load
 
 ```python
-def load() -> LoadedData
+def load() -> Report
 ```
 
 Read the source into memory.
 
-## ProcessedData Objects
+## Processing Objects
 
 ```python
-class ProcessedData(pd.DataFrame)
+@dataclass(frozen=True)
+class Processing()
 ```
 
-A specialized DataFrame to hold processed data and its metadata.
-Inherits all pandas DataFrame methods and attributes.
+How a frame was processed, and what that revealed about it.
 
-#### \_metadata
+#### id\_col
 
-#### \_constructor
+Column identifying a precursor, used for the identification count.
+
+#### label\_free
+
+No labelling groups were found in the identifiers.
+
+#### label\_group\_capture
+
+Regex capturing a labelling group out of an identifier.
+
+#### protease
+
+Protease the missed-cleavage flag was computed for.
+
+#### labels\_complete
+
+False when channel information could not be derived in full.
+
+#### rounded\_large\_floats
+
+Large-magnitude float columns were rounded to integers.
+
+## Report Objects
+
+```python
+@dataclass(frozen=True)
+class Report()
+```
+
+A frame of proteomics data, with where it came from and what was done.
+
+Composition rather than a ``DataFrame`` subclass: pandas returns plain
+frames from most operations, so a subclass silently loses its metadata the
+first time anyone slices it, and the pandas internals it has to hook into
+are not a stable API. Use :attr:`frame` for anything pandas; the few
+pass-throughs below are for interactive work.
+
+#### frame
+
+The data. Anything pandas goes through here.
+
+#### source
+
+What the frame was read from.
+
+#### processing
+
+Set once :meth:`process` has run.
+
+#### is\_processed
 
 ```python
 @property
-def _constructor()
+def is_processed() -> bool
 ```
 
-#### \_\_init\_\_
-
-```python
-def __init__(data=None,
-             ID_COL=None,
-             LABEL_FREE=None,
-             LABELS_COMPLETE=None,
-             LABEL_GROUP_CAPTURE=None,
-             PROTEASE=None,
-             **kwargs)
-```
-
-#### unique\_runs
+#### columns
 
 ```python
 @property
-def unique_runs() -> set
+def columns() -> pd.Index
 ```
 
-#### unique\_ids
+#### \_\_len\_\_
 
 ```python
-@property
-def unique_ids() -> int
+def __len__() -> int
 ```
 
-## LoadedData Objects
+#### \_\_getitem\_\_
 
 ```python
-class LoadedData(pd.DataFrame)
+def __getitem__(key)
 ```
 
-Raw data as read from disk, plus the loader that produced it.
+Column access, for interactive use. Returns a plain pandas object.
 
-#### \_metadata
-
-#### \_\_init\_\_
+#### \_repr\_html\_
 
 ```python
-def __init__(loader)
+def _repr_html_() -> str
 ```
 
 #### process
 
 ```python
-def process(**kwargs) -> ProcessedData
+def process(**kwargs) -> Report
 ```
 
-Initiates processing.
-Any kwargs passed here are forwarded
-to the DataProcessor constructor.
+Normalize the frame: dtypes, derived columns, labelling information.
+
+Keyword arguments are passed to :class:`~proteolyzer.core.processor
+.DataProcessor`. Returns a new Report; this one is unchanged.
+
+#### matrix
+
+```python
+def matrix(values: str, index: list[str], columns: list[str])
+```
+
+Pivot to a quantitative matrix. Returns a MatrixBuilder to chain on.
+
+#### runs
+
+```python
+@property
+def runs() -> set
+```
+
+The distinct runs present, empty if the frame has no Run column.
+
+#### n\_identifications
+
+```python
+@property
+def n_identifications() -> int
+```
+
+Distinct precursors, or 0 before processing.
+
+#### with\_frame
+
+```python
+def with_frame(frame: pd.DataFrame) -> Report
+```
+
+The same report around a different frame, keeping its metadata.
 

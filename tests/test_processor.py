@@ -4,20 +4,28 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from proteolyzer.core.loader import DataLoader
 from proteolyzer.core.models import Data
 from proteolyzer.core.processor import DataProcessor
 
 
 def _process(frame: pd.DataFrame, tmp_path, **kwargs):
+    """Process `frame` as if it had been read as a DIA-NN report."""
+    path = tmp_path / "report.parquet"
+    frame.to_parquet(path)
+    report = Data(source=path, load_all_columns=True).load().process(**kwargs)
+    return report.frame
+
+
+def _report(frame: pd.DataFrame, tmp_path, **kwargs):
+    """As `_process`, but keeping the Report so its metadata can be checked."""
     path = tmp_path / "report.parquet"
     frame.to_parquet(path)
     return Data(source=path, load_all_columns=True).load().process(**kwargs)
 
 
 def test_label_free_data_is_detected(label_free_report, tmp_path):
-    processed = _process(label_free_report, tmp_path)
-    assert processed.LABEL_FREE is True
+    processed = _report(label_free_report, tmp_path)
+    assert processed.processing.label_free is True
     assert not [c for c in processed.columns if c.endswith(".Channel")]
 
 
@@ -30,8 +38,8 @@ def test_derived_columns_are_added(label_free_report, tmp_path):
 
 
 def test_labelled_data_gets_channel_columns(labelled_report, tmp_path):
-    processed = _process(labelled_report, tmp_path)
-    assert processed.LABEL_FREE is False
+    processed = _report(labelled_report, tmp_path)
+    assert processed.processing.label_free is False
     assert "mTRAQ.Channel" in processed.columns
     assert "Run.mTRAQ.Channel" in processed.columns
     assert "Run.Full.Channel" in processed.columns
@@ -49,8 +57,8 @@ def test_unlabelled_precursor_does_not_break_channel_generation(
 
 
 def test_missing_id_column_is_reported(label_free_report, tmp_path):
-    with pytest.raises(ValueError, match="ID_COL 'Nope' is not a column"):
-        _process(label_free_report, tmp_path, ID_COL="Nope")
+    with pytest.raises(ValueError, match="id_col 'Nope' is not a column"):
+        _process(label_free_report, tmp_path, id_col="Nope")
 
 
 @pytest.mark.parametrize(
@@ -76,7 +84,7 @@ def test_unknown_protease_lists_the_valid_ones(label_free_report, tmp_path):
     with pytest.raises(
         ValueError, match=r"Must be one of: \['ArgC', 'LysC', 'Trypsin'\]"
     ):
-        _process(label_free_report, tmp_path, PROTEASE="Chymotrypsin")
+        _process(label_free_report, tmp_path, protease="Chymotrypsin")
 
 
 def test_constant_columns_are_dropped(label_free_report, tmp_path):
@@ -121,7 +129,7 @@ def test_fractional_columns_keep_their_precision(label_free_report, tmp_path):
 def test_rounding_large_floats_is_opt_in(label_free_report, tmp_path, caplog):
     frame = label_free_report.copy()
     frame["Ms1.Area"] = np.linspace(150.5, 1e7, len(frame), dtype="float64")
-    processed = _process(frame, tmp_path, ROUND_LARGE_FLOATS=True)
+    processed = _process(frame, tmp_path, round_large_floats=True)
 
     assert pd.api.types.is_integer_dtype(processed["Ms1.Area"])
     assert processed.loc[0, "Ms1.Area"] == 150
@@ -138,7 +146,7 @@ def test_numeric_columns_are_never_categorical(label_free_report, tmp_path, colu
 
 
 def test_low_cardinality_strings_are_categorical(report_parquet):
-    processor = DataProcessor(DataLoader(Data(source=report_parquet)))
+    processor = DataProcessor(Data(source=report_parquet).load())
     frame = pd.DataFrame(
         {
             "Condition": ["a", "b"] * 25,
@@ -161,17 +169,20 @@ def test_label_counts_stay_numeric(labelled_report, tmp_path):
     assert counts.sum() == 6  # five labelled precursors, one carrying two labels
 
 
-def test_processed_metadata_is_propagated(label_free_report, tmp_path):
-    processed = _process(label_free_report, tmp_path)
-    assert processed.ID_COL == "Precursor.Id"
-    assert processed.PROTEASE == "Trypsin"
-    assert processed.unique_runs == {"run1", "run2"}
+def test_processing_metadata_is_recorded(label_free_report, tmp_path):
+    report = _report(label_free_report, tmp_path)
+    assert report.processing.id_col == "Precursor.Id"
+    assert report.processing.protease == "Trypsin"
+    assert report.processing.labels_complete is True
+    assert report.runs == {"run1", "run2"}
 
 
-def test_processor_accepts_a_loader_directly(report_parquet):
-    loader = DataLoader(Data(source=report_parquet))
-    processed = DataProcessor(loader).process()
+def test_the_processor_can_be_driven_directly(report_parquet):
+    report = Data(source=report_parquet).load()
+    processed = DataProcessor(report).process()
     assert len(processed) == 6
+    # The input report is untouched.
+    assert not report.is_processed
 
 
 def test_all_nan_float_columns_are_left_alone(label_free_report, tmp_path):

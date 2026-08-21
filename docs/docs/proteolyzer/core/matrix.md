@@ -24,7 +24,7 @@ Example
 
 ## Logged
 
-## ProcessedData
+## Report
 
 ## MatrixBuilder Objects
 
@@ -43,8 +43,10 @@ Set by :meth:`matrix_generation`.
 #### \_\_init\_\_
 
 ```python
-def __init__(processed_data: ProcessedData)
+def __init__(data: Report | pd.DataFrame)
 ```
+
+Takes a :class:`Report` or a plain frame.
 
 #### missingness\_check
 

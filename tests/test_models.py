@@ -1,10 +1,11 @@
+import dataclasses
 import io
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
-from proteolyzer.core.models import Data, LoadedData, ProcessedData
+from proteolyzer.core.models import Data, Processing, Report
 
 
 def test_string_source_is_coerced_to_path(report_parquet):
@@ -91,26 +92,70 @@ def test_manual_input_type_wins(report_parquet, caplog):
     assert "conflicts with file type" in caplog.text
 
 
-def test_processed_data_keeps_metadata_and_summarises():
-    frame = pd.DataFrame(
-        {"Run": ["a", "a", "b"], "Precursor.Id": ["x", "x", "y"]},
+def _report(frame, source, processed=True) -> Report:
+    processing = (
+        Processing(
+            id_col="Precursor.Id",
+            label_free=True,
+            label_group_capture="",
+            protease="Trypsin",
+        )
+        if processed
+        else None
     )
-    processed = ProcessedData(frame, ID_COL="Precursor.Id", PROTEASE="Trypsin")
-
-    assert processed.unique_runs == {"a", "b"}
-    assert processed.unique_ids == 2
-    assert processed.PROTEASE == "Trypsin"
-    # Metadata survives operations that go through _constructor.
-    assert processed.head(2).ID_COL == "Precursor.Id"
+    return Report(frame=frame, source=source, processing=processing)
 
 
-def test_processed_data_summaries_tolerate_missing_columns():
-    processed = ProcessedData(pd.DataFrame({"other": [1, 2]}), ID_COL="Precursor.Id")
-    assert processed.unique_runs == set()
-    assert processed.unique_ids == 0
+def test_a_report_summarises_its_frame(report_parquet):
+    frame = pd.DataFrame({"Run": ["a", "a", "b"], "Precursor.Id": ["x", "x", "y"]})
+    report = _report(frame, Data(source=report_parquet))
+
+    assert report.runs == {"a", "b"}
+    assert report.n_identifications == 2
+    assert report.processing.protease == "Trypsin"
+    assert len(report) == 3
+    assert list(report.columns) == ["Run", "Precursor.Id"]
+    assert report["Run"].tolist() == ["a", "a", "b"]
 
 
-def test_loaded_data_exposes_its_loader(report_parquet):
-    loaded = Data(source=report_parquet).load()
-    assert isinstance(loaded, LoadedData)
-    assert loaded.loader.INPUT_TYPE == "DIANN"
+def test_summaries_tolerate_missing_columns(report_parquet):
+    report = _report(pd.DataFrame({"other": [1, 2]}), Data(source=report_parquet))
+    assert report.runs == set()
+    assert report.n_identifications == 0
+
+
+def test_an_unprocessed_report_has_no_identification_count(report_parquet):
+    report = Data(source=report_parquet).load()
+    assert not report.is_processed
+    assert report.processing is None
+    assert report.n_identifications == 0
+
+
+def test_a_report_is_immutable_and_replaceable(report_parquet):
+    """The metadata cannot drift away from the frame it describes."""
+    report = Data(source=report_parquet).load()
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        report.frame = pd.DataFrame()
+
+    swapped = report.with_frame(report.frame.head(2))
+    assert len(swapped) == 2
+    assert len(report) == 6
+    assert swapped.source is report.source
+
+
+def test_load_returns_a_report(report_parquet):
+    report = Data(source=report_parquet).load()
+    assert isinstance(report, Report)
+    assert isinstance(report.frame, pd.DataFrame)
+    assert type(report.frame) is pd.DataFrame
+    assert report.source.input_type == "DIANN"
+
+
+def test_read_is_the_entry_point(report_parquet):
+    import proteolyzer as pz
+
+    assert isinstance(pz.read(report_parquet), Report)
+    assert len(pz.read(report_parquet, load_all_columns=True).columns) > len(
+        pz.read(report_parquet).columns
+    )

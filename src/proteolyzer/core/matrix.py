@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from .logging import Logged
-from .models import ProcessedData
+from .models import Report
 
 
 class MatrixBuilder(Logged):
@@ -29,8 +29,9 @@ class MatrixBuilder(Logged):
     #: Set by :meth:`matrix_generation`.
     matrix: pd.DataFrame | None
 
-    def __init__(self, processed_data: ProcessedData):
-        self.data = processed_data
+    def __init__(self, data: Report | pd.DataFrame):
+        """Takes a :class:`Report` or a plain frame."""
+        self.data = data.frame if isinstance(data, Report) else data
         self.matrix = None
 
     def missingness_check(

@@ -14,9 +14,8 @@ import pandas as pd
 from proteolyzer import reference
 
 from .formats import Config
-from .loader import DataLoader
 from .logging import Logged
-from .models import ProcessedData
+from .models import Processing, Report
 
 CONFIG = Config()
 
@@ -25,48 +24,51 @@ class DataProcessor(Logged):
     """Processes raw data into a structured DataFrame."""
 
     __slots__ = (
-        "data_loader",
+        "report",
         "data",
-        "INPUT_TYPE",
-        "logger",
-        "ID_COL",
-        "LABEL_GROUP_CAPTURE",
-        "LABEL_FREE",
-        "LABELS_COMPLETE",
-        "PROTEASE",
-        "ROUND_LARGE_FLOATS",
+        "input_type",
+        "id_col",
+        "label_group_capture",
+        "label_free",
+        "labels_complete",
+        "protease",
+        "round_large_floats",
     )
 
     def __init__(
         self,
-        data_loader: DataLoader,
-        ID_COL: str = "Precursor.Id",
-        LABEL_GROUP_CAPTURE: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
-        PROTEASE: str = "Trypsin",
-        ROUND_LARGE_FLOATS: bool = False,
+        report: Report,
+        id_col: str = "Precursor.Id",
+        label_group_capture: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
+        protease: str = "Trypsin",
+        round_large_floats: bool = False,
     ):
         """Initializes the DataProcessor.
 
         Parameters
         ----------
-        ROUND_LARGE_FLOATS : bool, default False
+        report
+            The report to process. Its frame is copied, so the input is
+            untouched.
+        round_large_floats : bool, default False
             Round float columns whose median exceeds
             ``Config.COL_MEDIAN_THRESHOLD`` to integers, discarding their
             fractional part. Off by default because it loses real precision in
             the low range of quantitative columns.
         """
-        self.data = data_loader.data
-        self.INPUT_TYPE = data_loader.INPUT_TYPE
-        self.ID_COL = ID_COL
-        self.LABEL_GROUP_CAPTURE = LABEL_GROUP_CAPTURE
-        self.PROTEASE = PROTEASE
-        self.ROUND_LARGE_FLOATS = ROUND_LARGE_FLOATS
+        self.report = report
+        self.data = report.frame.copy()
+        self.input_type = report.source.input_type
+        self.id_col = id_col
+        self.label_group_capture = label_group_capture
+        self.protease = protease
+        self.round_large_floats = round_large_floats
         # True unless a label matrix has to be skipped; see _LabelGenerator.
-        self.LABELS_COMPLETE = True
+        self.labels_complete = True
         self._check_labelfree()
 
-    def process(self, verbose: bool = False) -> ProcessedData:
-        """Processes the data and returns a ProcessedData object.
+    def process(self, verbose: bool = False) -> Report:
+        """Processes the data and returns a new :class:`Report`.
 
         Parameters
         ----------
@@ -83,50 +85,58 @@ class DataProcessor(Logged):
 
         self.data = self.convert_columns_to_categorical(self.data)
 
-        if not self.LABEL_FREE and self.INPUT_TYPE == "DIANN":
+        if not self.label_free and self.input_type == "DIANN":
             labels = _LabelGenerator(self)
             self.data = labels.data
-            self.LABELS_COMPLETE = labels.labels_complete
-            if not self.LABELS_COMPLETE:
+            self.labels_complete = labels.labels_complete
+            if not self.labels_complete:
                 self.logger.warning(
                     "Labelling information is incomplete; some channel columns "
-                    "are missing. Check ProcessedData.LABELS_COMPLETE before "
-                    "using channel-level results."
+                    "are missing. Check Report.processing.labels_complete "
+                    "before using channel-level results."
                 )
 
-        self.data = self.miscleavages(self.data, protease=self.PROTEASE)
+        self.data = self.miscleavages(self.data, protease=self.protease)
 
         if verbose:
             self._memory_check(self.data)
 
-        return ProcessedData(
-            data=self.data,
-            **{key: getattr(self, key) for key in ProcessedData._metadata},
+        return Report(
+            frame=self.data,
+            source=self.report.source,
+            processing=Processing(
+                id_col=self.id_col,
+                label_free=self.label_free,
+                label_group_capture=self.label_group_capture,
+                protease=self.protease,
+                labels_complete=self.labels_complete,
+                rounded_large_floats=self.round_large_floats,
+            ),
         )
 
     def _check_labelfree(self) -> None:
         """Checks if the data is label-free."""
-        if self.ID_COL not in self.data.columns:
+        if self.id_col not in self.data.columns:
             raise ValueError(
-                f"ID_COL '{self.ID_COL}' is not a column of the loaded data. "
+                f"id_col '{self.id_col}' is not a column of the loaded data. "
                 f"Available columns: {sorted(self.data.columns)}"
             )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             extracted_matches = (
-                self.data[self.ID_COL]
-                .str.contains(self.LABEL_GROUP_CAPTURE, regex=True)
+                self.data[self.id_col]
+                .str.contains(self.label_group_capture, regex=True)
                 .any()
             )
 
         if extracted_matches:
-            self.LABEL_FREE = False
+            self.label_free = False
             self.logger.info(
                 "Data appears to be labelled. Proceeding with generating labelling information..."
             )
         else:
-            self.LABEL_FREE = True
+            self.label_free = True
             self.logger.info(
                 "No labelling groups found in data. Data appears to be label-free or labels are in a custom format that is not recognized."
             )
@@ -200,7 +210,7 @@ class DataProcessor(Logged):
         below float32 resolution only above ~1.7e7, and the resulting nullable
         integer dtype is wider than the float32 it replaces.
         """
-        if not self.ROUND_LARGE_FLOATS:
+        if not self.round_large_floats:
             return df
 
         rounded = []
@@ -231,7 +241,7 @@ class DataProcessor(Logged):
         cat_cols = list(cardinality[cardinality < CONFIG.CARDINALITY_THRESHOLD].index)
 
         try:
-            config_block = getattr(CONFIG, self.INPUT_TYPE)
+            config_block = getattr(CONFIG, self.input_type)
             exclude_from_conversion = config_block.EXCLUDE_CAT_CONVERSION
         except AttributeError:
             exclude_from_conversion = set()
@@ -247,7 +257,7 @@ class DataProcessor(Logged):
     def rename_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Renames columns based on given alias mapping."""
         try:
-            config_block = getattr(CONFIG, self.INPUT_TYPE)
+            config_block = getattr(CONFIG, self.input_type)
             rename_mapping = config_block.COLS_RENAME_MAPPING
         except AttributeError:
             rename_mapping = {}
@@ -304,8 +314,8 @@ class _LabelGenerator(Logged):
 
     __slots__ = (
         "data",
-        "ID_COL",
-        "LABEL_GROUP_CAPTURE",
+        "id_col",
+        "label_group_capture",
         "extracted_matches",
         "sorted_matches",
         "UNIQUE_LABELS",
@@ -317,8 +327,8 @@ class _LabelGenerator(Logged):
     def __init__(self, processed_data: DataProcessor):
         """Initializes the LabelGenerator."""
         self.data = processed_data.data
-        self.ID_COL = processed_data.ID_COL
-        self.LABEL_GROUP_CAPTURE = processed_data.LABEL_GROUP_CAPTURE
+        self.id_col = processed_data.id_col
+        self.label_group_capture = processed_data.label_group_capture
         self.labels_complete = True
 
         if "Run" not in self.data.columns:
@@ -327,8 +337,8 @@ class _LabelGenerator(Logged):
                 f"available columns: {sorted(self.data.columns)}"
             )
 
-        self.extracted_matches = self.data[self.ID_COL].str.extractall(
-            self.LABEL_GROUP_CAPTURE
+        self.extracted_matches = self.data[self.id_col].str.extractall(
+            self.label_group_capture
         )
         self.UNIQUE_LABELS = sorted(
             self.extracted_matches[0].str.split("-").str[0].unique()

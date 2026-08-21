@@ -13,18 +13,28 @@ module that needs it. ``tests/test_package_boundaries.py`` keeps that true.
 import importlib
 
 from . import core, reference
-from .core import Data, DataLoader, DataProcessor, MatrixBuilder, configure_logging
+from .core import (
+    Data,
+    DataLoader,
+    DataProcessor,
+    MatrixBuilder,
+    Report,
+    configure_logging,
+    read,
+)
 
 __all__ = [
     "Data",
     "DataLoader",
     "DataProcessor",
     "MatrixBuilder",
+    "Report",
     "aas",
     "cellenone",
     "configure_logging",
     "core",
     "plots",
+    "read",
     "reference",
     "unimod",
 ]

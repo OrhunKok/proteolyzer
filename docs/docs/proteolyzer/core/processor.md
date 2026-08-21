@@ -22,11 +22,11 @@ reusable processing functions and light-weight pipelines.
 
 ## Config
 
-## DataLoader
-
 ## Logged
 
-## ProcessedData
+## Processing
+
+## Report
 
 #### CONFIG
 
@@ -43,18 +43,21 @@ Processes raw data into a structured DataFrame.
 #### \_\_init\_\_
 
 ```python
-def __init__(data_loader: DataLoader,
-             ID_COL: str = "Precursor.Id",
-             LABEL_GROUP_CAPTURE: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
-             PROTEASE: str = "Trypsin",
-             ROUND_LARGE_FLOATS: bool = False)
+def __init__(report: Report,
+             id_col: str = "Precursor.Id",
+             label_group_capture: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
+             protease: str = "Trypsin",
+             round_large_floats: bool = False)
 ```
 
 Initializes the DataProcessor.
 
 Parameters
 ----------
-ROUND_LARGE_FLOATS : bool, default False
+report
+    The report to process. Its frame is copied, so the input is
+    untouched.
+round_large_floats : bool, default False
     Round float columns whose median exceeds
     ``Config.COL_MEDIAN_THRESHOLD`` to integers, discarding their
     fractional part. Off by default because it loses real precision in
@@ -63,10 +66,10 @@ ROUND_LARGE_FLOATS : bool, default False
 #### process
 
 ```python
-def process(verbose: bool = False) -> ProcessedData
+def process(verbose: bool = False) -> Report
 ```
 
-Processes the data and returns a ProcessedData object.
+Processes the data and returns a new :class:`Report`.
 
 Parameters
 ----------

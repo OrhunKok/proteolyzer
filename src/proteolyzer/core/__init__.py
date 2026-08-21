@@ -3,7 +3,7 @@
 Submodules
     formats: the input formats recognized, and how their columns are handled
     loader: read a described source into memory
-    models: Data, LoadedData and ProcessedData
+    models: Data, Report and the processing metadata
     processor: dtype narrowing, derived columns, labelling information
     matrix: pivot processed data into a quantitative matrix
     operations: small pure functions
@@ -16,24 +16,26 @@ from .io import frame_exists, read_frame, write_frame
 from .loader import DataLoader
 from .logging import Logged, configure_logging
 from .matrix import MatrixBuilder
-from .models import Data, LoadedData, ProcessedData
+from .models import Data, Processing, Report
 from .operations import cv
 from .pipeline import NullQueue, Stage
 from .processor import DataProcessor
+from .reader import read
 
 __all__ = [
     "Data",
     "DataLoader",
     "DataProcessor",
-    "LoadedData",
     "Logged",
     "MatrixBuilder",
     "NullQueue",
-    "ProcessedData",
+    "Processing",
+    "Report",
     "Stage",
     "configure_logging",
     "cv",
     "frame_exists",
+    "read",
     "read_frame",
     "write_frame",
 ]
