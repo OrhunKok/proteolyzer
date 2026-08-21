@@ -41,7 +41,14 @@ jobs:
         run: mypy
 
   test:
-    runs-on: ubuntu-latest
+    # pyproject carries a quickdna wheel per platform, so the suite is run on
+    # each of them: a path or dtype difference on Windows or macOS is exactly
+    # what a Linux-only run cannot see.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - name: Install Python

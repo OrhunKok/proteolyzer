@@ -92,11 +92,20 @@ def test_a_stream_is_already_in_memory(label_free_report):
     assert DataLoader(data)._fast_read_fits() is True
 
 
-def test_unknown_available_memory_falls_back_to_an_assumption(monkeypatch):
+def test_available_memory_falls_back_where_there_is_no_sysconf(monkeypatch):
+    """Windows has no os.sysconf at all, which is what the guard is for."""
+    monkeypatch.delattr(loader.os, "sysconf", raising=False)
+    assert loader._available_memory() == loader.ASSUMED_AVAILABLE_MEMORY
+
+
+def test_available_memory_falls_back_when_sysconf_refuses(monkeypatch):
+    """Present but without the keys asked for, as on some BSDs."""
+
     def unavailable(name):
         raise ValueError(name)
 
-    monkeypatch.setattr(loader.os, "sysconf", unavailable)
+    # raising=False: on a platform with no sysconf there is nothing to replace.
+    monkeypatch.setattr(loader.os, "sysconf", unavailable, raising=False)
     assert loader._available_memory() == loader.ASSUMED_AVAILABLE_MEMORY
 
 

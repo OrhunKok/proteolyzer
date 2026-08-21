@@ -1,6 +1,6 @@
 """End-to-end tests for the last two stages.
 
-Detection leaves an MTP frame behind; validation checks it against fragment
+Detection leaves a SAAP frame behind; validation checks it against fragment
 ions and quantification turns what survives into ratios. Both are driven here
 from hand-built stage inputs so the assertions stay readable.
 """
@@ -23,7 +23,7 @@ BASE, SAAP_SEQ = "AAAK", "AGAK"
 
 @pytest.fixture
 def validation_inputs(aas_params):
-    """The evidence/msms parquet pair and the stage-1 MTP frame."""
+    """The evidence/msms parquet pair and the stage-1 SAAP frame."""
     val_dir = Path(aas_params["Utils"]["Data Folder"]) / "sample_a_val"
 
     pd.DataFrame(
@@ -74,9 +74,9 @@ def validation_inputs(aas_params):
 def test_validation_writes_both_stage_two_frames(aas_params, validation_inputs):
     Validation(aas_params).run()
 
-    mtp_dir = Path(aas_params["Utils"]["Output Folder"]) / "SAAP"
-    assert (mtp_dir / "sample_a_SAAP_Filtered_Stage_2.parquet").exists()
-    assert (mtp_dir / "sample_a_Val_Evidence_Filtered_Stage_2.parquet").exists()
+    saap_dir = Path(aas_params["Utils"]["Output Folder"]) / "SAAP"
+    assert (saap_dir / "sample_a_SAAP_Filtered_Stage_2.parquet").exists()
+    assert (saap_dir / "sample_a_Val_Evidence_Filtered_Stage_2.parquet").exists()
 
 
 def test_validation_keeps_candidates_with_fragment_support(
@@ -280,6 +280,98 @@ def test_quantification_ratio_is_finite_only(aas_params, quantification_inputs):
         )
     assert np.isinf(quant["Ratio"]).any()
     assert len(quant[np.isfinite(quant["Ratio"])]) == 1
+
+
+def _tmt_frames():
+    """A SAAP/BASE pair with two reporter channels each.
+
+    The normalised columns carry values that would wreck the channel
+    proportions if the reporter regex let them into the row sums, which is
+    what its negative lookahead is for.
+    """
+    saap = pd.DataFrame(
+        {
+            "Intensity": [300.0],
+            "Reporter intensity corrected 1": [30.0],
+            "Reporter intensity corrected 2": [70.0],
+            "Normalised Reporter intensity corrected 1": [9000.0],
+            "Normalised Reporter intensity corrected 2": [11000.0],
+        }
+    )
+    base = pd.DataFrame(
+        {
+            "Intensity": [1200.0],
+            "Reporter intensity corrected 1": [25.0],
+            "Reporter intensity corrected 2": [75.0],
+            "Normalised Reporter intensity corrected 1": [4000.0],
+            "Normalised Reporter intensity corrected 2": [6000.0],
+        }
+    )
+    saap_ids = pd.DataFrame(
+        {
+            "DP Base Sequence": [BASE],
+            "SAAP sequence": [SAAP_SEQ],
+            "aa subs": ["A to G"],
+        }
+    )
+    return saap_ids, saap, base
+
+
+def test_tmt_quantification_distributes_intensity_across_channels(aas_params):
+    """Each channel gets the share of the total its reporter ion accounts for."""
+    saap_ids, saap, base = _tmt_frames()
+    metadata = pd.DataFrame({"MQ": [1.0, 2.0]})
+
+    quant = Quantification(aas_params)._raas(saap_ids, saap, base, metadata, "TMT")
+
+    # 30 of 100 reporter counts, so 30% of the 300 total.
+    assert quant["SAAP.Plex.1"].tolist() == [pytest.approx(90.0)]
+    assert quant["SAAP.Plex.2"].tolist() == [pytest.approx(210.0)]
+    assert quant["BASE.Plex.1"].tolist() == [pytest.approx(300.0)]
+    assert quant["BASE.Plex.2"].tolist() == [pytest.approx(900.0)]
+    # The distributed intensities sum back to the total they came from.
+    assert quant["SAAP.Plex.1"][0] + quant["SAAP.Plex.2"][0] == pytest.approx(300.0)
+
+
+def test_tmt_ratios_are_log10_per_channel_and_overall(aas_params):
+    saap_ids, saap, base = _tmt_frames()
+    metadata = pd.DataFrame({"MQ": [1.0, 2.0]})
+
+    quant = Quantification(aas_params)._raas(saap_ids, saap, base, metadata, "TMT")
+
+    assert quant["Ratio"].tolist() == [pytest.approx(np.log10(300 / 1200))]
+    assert quant["Ratio.Plex.1"].tolist() == [pytest.approx(np.log10(90 / 300))]
+    assert quant["Ratio.Plex.2"].tolist() == [pytest.approx(np.log10(210 / 900))]
+
+
+def test_tmt_normalised_reporters_are_passed_through(aas_params):
+    """They are already normalised, so they are reported, not redistributed."""
+    saap_ids, saap, base = _tmt_frames()
+    metadata = pd.DataFrame({"MQ": [1.0, 2.0]})
+
+    quant = Quantification(aas_params)._raas(saap_ids, saap, base, metadata, "TMT")
+
+    assert quant["SAAP.Plex.1.Norm.Sum"].tolist() == [pytest.approx(9000.0)]
+    assert quant["BASE.Plex.2.Norm.Sum"].tolist() == [pytest.approx(6000.0)]
+
+
+def test_tmt_only_reports_the_channels_the_metadata_names(aas_params):
+    """A plex the sample was not labelled with gets no columns."""
+    saap_ids, saap, base = _tmt_frames()
+    metadata = pd.DataFrame({"MQ": [2.0, np.nan]})
+
+    quant = Quantification(aas_params)._raas(saap_ids, saap, base, metadata, "TMT")
+
+    assert "SAAP.Plex.2" in quant.columns
+    assert "SAAP.Plex.1" not in quant.columns
+
+
+def test_an_unknown_label_designation_is_refused(aas_params):
+    saap_ids, saap, base = _tmt_frames()
+    with pytest.raises(ValueError, match="Unknown label designation"):
+        Quantification(aas_params)._raas(
+            saap_ids, saap, base, pd.DataFrame({"MQ": [1.0]}), "iTRAQ"
+        )
 
 
 def test_results_read_back_a_real_run(aas_params, quantification_inputs):

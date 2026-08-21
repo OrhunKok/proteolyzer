@@ -1,4 +1,4 @@
-"""Detection of candidate amino acid substitutions and PTMs.
+"""Detection of candidate substitutions (SAAP) and their alternatives (ALT).
 
 :class:`Detection` is a thin dispatcher: it reads the ``Utils.Workflow``
 parameter and delegates to the matching subclass (currently only
@@ -296,8 +296,8 @@ class MaxQuant(Detection):
         # A new list, not `+=`: CLEAVAGE_SITES is shared class-level state.
         # The stop codon is a valid preceding residue here too.
         cleavage_sites = [*reference.protease(self.protease).cleavage_sites, "*"]
-        all_mtps = sample_df["SAAP sequence"].dropna().unique()
-        all_mtps = [prefix + seq for seq in all_mtps for prefix in cleavage_sites]
+        all_saaps = sample_df["SAAP sequence"].dropna().unique()
+        all_saaps = [prefix + seq for seq in all_saaps for prefix in cleavage_sites]
 
         for frame in range(1, 7):
             with open(
@@ -306,8 +306,8 @@ class MaxQuant(Detection):
                 w_aa = pickle.load(wf)
             with open(self.translated_frames / f"frame_{frame}.p", "rb") as sf:
                 s_aa = pickle.load(sf)
-            w_aa_out = self.aho_corasick_search(w_aa, all_mtps)
-            s_aa_out = self.aho_corasick_search(s_aa, all_mtps)
+            w_aa_out = self.aho_corasick_search(w_aa, all_saaps)
+            s_aa_out = self.aho_corasick_search(s_aa, all_saaps)
             matched = self.aho_corasick_output_organize(
                 w_aa_out
             ) + self.aho_corasick_output_organize(s_aa_out)

@@ -60,10 +60,11 @@ def test_gen_mod_dict_rows_are_name_position_mass():
 
 
 def test_gen_mod_dict_excludes_amino_acid_substitutions():
-    """The PTM reference must not contain the substitutions it is compared against.
+    """The modification reference must not contain the substitutions it is
+    compared against.
 
-    Otherwise every candidate substitution matches itself as a modification and
-    is dropped from the MTP output.
+    Otherwise every candidate substitution matches itself as a modification,
+    is written off as an ALT, and never reaches the SAAP output.
     """
     mods = gen_mod_dict()
     substitutions = {
@@ -71,7 +72,7 @@ def test_gen_mod_dict_excludes_amino_acid_substitutions():
     }
     assert substitutions == set()
 
-    # Concretely: the Ala->Gly delta must have no PTM explanation on alanine.
+    # Concretely: the Ala->Gly delta must have no ALT explanation on alanine.
     delta = aa_subs_ref()["A"]["A to G"]
     assert not [row for row in mods["A"] if row[2] == pytest.approx(delta)]
 
@@ -107,7 +108,7 @@ def test_column_mapping_skips_absent_columns():
     assert list(column_mapping(df, ["Charge", "Missing"]).columns) == ["Charge"]
 
 
-# ----------------------------------------------------------------- ptm/mtp split
+# ---------------------------------------------------------------- alt/saap split
 
 
 def test_saap_alt_output_splits_the_candidates(tmp_path):
@@ -124,7 +125,7 @@ def test_saap_alt_output_splits_the_candidates(tmp_path):
             },
         }
     )
-    # The third candidate is explained by the genome, so it is not an MTP.
+    # The third candidate is explained by the genome, so it is not a SAAP.
     frame.loc[2, "3-frame genome substring"] = True
 
     saap_alt_output(frame, "sample_a", tmp_path)
