@@ -47,7 +47,14 @@
   "remoteUser": "node",
   "mounts": [
     "source=claude-code-bashhistory-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
-    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume"
+    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
+
+    // claude-shared, read-only: the capability index, the membership list, the
+    // session hook and the gh wrapper. Expects it cloned next to this
+    // repository on the host; if it is not there, install.sh falls back to the
+    // copy inside the workspace, so the container still comes up wired.
+    // https://github.com/OrhunKok/claude-shared
+    "source=${localWorkspaceFolder}/../claude-shared,target=/workspace-shared,type=bind,readonly"
   ],
   "containerEnv": {
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true",
@@ -58,6 +65,11 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
+  // Registers the SessionStart hook, makes gh usable, creates the two labels
+  // the cross-repo bus runs on, and refreshes the membership cache. Idempotent.
+  // Tries the mount first, then the in-workspace checkout, so it works whether
+  // or not claude-shared is a sibling on the host.
+  "postCreateCommand": "for d in /workspace-shared /workspace/claude-shared; do if [ -f $d/install.sh ]; then bash $d/install.sh; exit 0; fi; done; echo 'claude-shared not found; see https://github.com/OrhunKok/claude-shared'",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
 }
