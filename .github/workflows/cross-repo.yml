@@ -84,7 +84,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUMBER: ${{ github.event.issue.number || inputs.issue }}
         run: |
-          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file - <<'BODY'
+          # An issue that has been deleted since the event cannot be commented
+          # on, and that is not a failure of this workflow. Two runs went red
+          # that way while the credential was being set up.
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file - <<'BODY' || \
+            echo "could not comment on #$NUMBER — deleted, or moved"
           No Claude credential is configured in this repository, so this was not
           worked automatically. It stays open, which is the correct state: the next
           session opened here will find it in the inbox that the session-start hook
@@ -129,6 +133,19 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Without this the agent is denied its tools and finishes having done
+          # nothing: the first live run spent 36 turns and hit twenty permission
+          # denials, because it could not run the gate or reach gh. Documented in
+          # the action's docs/custom-automations.md.
+          claude_args: |
+            --allowedTools Read,Glob,Grep,Edit,Write,Bash
+            --max-turns 50
+
+          # So it can read the CI result on the pull request it opens.
+          additional_permissions: |
+            actions: read
+
           prompt: |
             Issue #${{ github.event.issue.number || inputs.issue }} in this
             repository is a message from another project in the network. Read it,
