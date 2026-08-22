@@ -25,8 +25,12 @@ name: Cross-repo
 # Claude Code is already signed in, so the job inherits that authentication.
 # Change `runs-on` if you go that way.
 on:
+  # labeled only, not [opened, labeled]: an issue created *with* a label emits
+  # both, so the first live run answered one message twice. Anything opened
+  # without a label and labelled later still arrives here, which is every case
+  # that matters.
   issues:
-    types: [opened, labeled]
+    types: [labeled]
   workflow_dispatch:
     inputs:
       issue:
@@ -44,8 +48,8 @@ jobs:
     # itself: an agent that answers its own messages is a loop with a bill.
     if: >
       github.event_name == 'workflow_dispatch' ||
-      ((contains(github.event.issue.labels.*.name, 'from-upstream') ||
-        contains(github.event.issue.labels.*.name, 'cross-repo-question')) &&
+      ((github.event.label.name == 'from-upstream' ||
+        github.event.label.name == 'cross-repo-question') &&
        !contains(github.event.issue.labels.*.name, 'agent-filed') &&
        github.event.issue.user.type != 'Bot')
 
