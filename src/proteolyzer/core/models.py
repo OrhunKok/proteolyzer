@@ -8,7 +8,7 @@ what was done to it.
 
 import datetime
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from functools import cached_property
 from pathlib import Path
 from typing import IO
@@ -19,6 +19,15 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 from .formats import Config
 
 CONFIG = Config()
+
+#: The search engines the config describes, in the order it lists them. A format
+#: is a block on Config with FILES and FILE_EXTENSIONS; nothing else has to know
+#: its name.
+_ENGINES: tuple[str, ...] = tuple(
+    field.name
+    for field in fields(CONFIG)
+    if hasattr(getattr(CONFIG, field.name), "FILES")
+)
 logger = logging.getLogger(__name__)
 
 SourceType = Path | IO[str] | IO[bytes]
@@ -132,30 +141,29 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def input_type(self) -> str:
-        """The search engine that produced this file: DIANN, MaxQuant or Unknown."""
+        """The search engine that produced this file, or Unknown.
+
+        Whichever of the engines on :class:`~proteolyzer.core.formats.Config`
+        claims the file name and extension.
+        """
         user_override = self.INPUT_TYPE
 
-        is_diann = (
-            self.file_name in CONFIG.DIANN.FILES
-            and self.file_extension in CONFIG.DIANN.FILE_EXTENSIONS
-        )
-        is_maxquant = (
-            self.file_name in CONFIG.MaxQuant.FILES
-            and self.file_extension in CONFIG.MaxQuant.FILE_EXTENSIONS
-        )
+        # Over the engines the config carries, rather than naming two of them:
+        # adding a format is then a block in formats.py and nothing else.
+        matched = [
+            name
+            for name in _ENGINES
+            if self.file_name in getattr(CONFIG, name).FILES
+            and self.file_extension in getattr(CONFIG, name).FILE_EXTENSIONS
+        ]
 
-        if is_diann and is_maxquant:
+        if len(matched) > 1:
             raise ValueError(
                 f"File {self.file_name} with extension {self.file_extension} "
-                "matches multiple categories."
+                f"matches multiple categories: {matched}."
             )
 
-        if is_diann:
-            auto_type = "DIANN"
-        elif is_maxquant:
-            auto_type = "MaxQuant"
-        else:
-            auto_type = "Unknown"
+        auto_type = matched[0] if matched else "Unknown"
 
         if user_override not in (None, "Unknown"):
             if auto_type != "Unknown" and user_override != auto_type:

@@ -1,10 +1,11 @@
 import io
+from dataclasses import replace
 
 import pandas as pd
 import pyarrow
 import pytest
 
-from proteolyzer.core import loader
+from proteolyzer.core import loader, models
 from proteolyzer.core.loader import DataLoader
 from proteolyzer.core.models import Data
 
@@ -210,3 +211,79 @@ def test_loader_reports_unreadable_files(tmp_path, caplog):
     with pytest.raises(pyarrow.ArrowInvalid):
         Data(source=path).load()
     assert "Error loading Parquet" in caplog.text
+
+
+def test_a_jmod_table_is_recognised_and_subset(tmp_path, jmod_ids):
+    """A format is a block on the config; nothing else has to know its name."""
+    path = tmp_path / "filtered_IDs.csv"
+    jmod_ids.to_csv(path, index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "JMod"
+
+    loaded = data.load()
+    assert "unused_column" not in loaded.columns
+    # Onto the canonical names, as every other engine is.
+    assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
+    assert len(loaded) == len(jmod_ids)
+
+
+def test_a_jmod_parquet_reads_the_same_way(tmp_path, jmod_ids):
+    path = tmp_path / "filtered_IDs.parquet"
+    jmod_ids.to_parquet(path, index=False)
+
+    loaded = Data(source=path).load()
+    assert loaded.source.input_type == "JMod"
+    assert "unused_column" not in loaded.columns
+
+
+def test_a_fragpipe_psm_table_is_recognised_and_subset(tmp_path, fragpipe_psms):
+    path = tmp_path / "psm.tsv"
+    fragpipe_psms.to_csv(path, sep="\t", index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "FragPipe"
+
+    loaded = data.load()
+    assert "Unused Column" not in loaded.columns
+    assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
+
+
+def test_the_maxquant_tables_besides_evidence_are_subset(tmp_path):
+    """Regression: with no subset configured, every column was read."""
+    frame = pd.DataFrame(
+        {
+            "Raw file": ["run1", "run2"],
+            "Retention time": [10.0, 20.0],
+            "MS/MS count": [1, 2],
+            "Total ion current": [1e6, 2e6],
+            "Ion injection time": [10.0, 12.0],
+            **{f"Unused {n}": [1.0, 2.0] for n in range(20)},
+        }
+    )
+    path = tmp_path / "msScans.txt"
+    frame.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path).load()
+    assert not [column for column in loaded.columns if column.startswith("Unused")]
+    assert "Run" in loaded.columns
+
+
+def test_a_file_matching_two_engines_says_which(tmp_path, monkeypatch):
+    """The two-engine clash is general now, not a hand-written pair."""
+    frame = pd.DataFrame({"Raw file": ["run1"]})
+    path = tmp_path / "psm.tsv"
+    frame.to_csv(path, sep="\t", index=False)
+
+    clashing = replace(
+        models.CONFIG,
+        DIANN=replace(
+            models.CONFIG.DIANN,
+            FILES=[*models.CONFIG.DIANN.FILES, "psm"],
+            FILE_EXTENSIONS=[*models.CONFIG.DIANN.FILE_EXTENSIONS, ".tsv"],
+        ),
+    )
+    monkeypatch.setattr(models, "CONFIG", clashing)
+
+    with pytest.raises(ValueError, match="matches multiple categories"):
+        _ = Data(source=path).input_type

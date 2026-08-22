@@ -80,3 +80,51 @@ def report_parquet(tmp_path, label_free_report):
     path = tmp_path / "report.parquet"
     label_free_report.to_parquet(path)
     return path
+
+
+@pytest.fixture
+def jmod_ids() -> pd.DataFrame:
+    """A JMod identification table, under JMod's own column names."""
+    rows = 6
+    return pd.DataFrame(
+        {
+            "file_name": ["run1", "run2"] * (rows // 2),
+            "seq": [f"PEPTIDEK{i}(mTRAQ-K-4)" for i in range(rows)],
+            "stripped_seq": [f"PEPTIDEK{i}" for i in range(rows)],
+            "z": [2, 3] * (rows // 2),
+            "silac_channel": ["mTRAQ-K-4"] * rows,
+            "protein": [f"P{i:05d}" for i in range(rows)],
+            "rt": np.linspace(10.0, 40.0, rows),
+            "mz": np.linspace(400.0, 900.0, rows),
+            "plex_Area": np.linspace(1e5, 1e7, rows),
+            "MS1_Area": np.linspace(1e5, 1e7, rows),
+            "Qvalue": np.linspace(0.001, 0.01, rows),
+            "pep_len": [8] * rows,
+            # Not in the configured subset, so subsetting has something to drop.
+            "unused_column": np.arange(rows, dtype=float),
+        }
+    )
+
+
+@pytest.fixture
+def fragpipe_psms() -> pd.DataFrame:
+    """A FragPipe/Philosopher psm.tsv, under FragPipe's own column names."""
+    rows = 6
+    return pd.DataFrame(
+        {
+            "Spectrum": [f"run1.{i:05d}.{i:05d}.2" for i in range(rows)],
+            "Spectrum File": ["interact-run1.pep.xml"] * rows,
+            "Peptide": [f"PEPTIDEK{i}" for i in range(rows)],
+            "Modified Peptide": [f"PEPTIDEK{i}" for i in range(rows)],
+            "Peptide Length": [8] * rows,
+            "Charge": [2, 3] * (rows // 2),
+            "Retention": np.linspace(600.0, 2400.0, rows),
+            "Observed M/Z": np.linspace(400.0, 900.0, rows),
+            "Hyperscore": np.linspace(10.0, 40.0, rows),
+            "Intensity": np.linspace(1e5, 1e7, rows),
+            "Number of Missed Cleavages": [0, 1] * (rows // 2),
+            "Protein": [f"sp|P{i:05d}|GENE{i}_HUMAN" for i in range(rows)],
+            "Gene": [f"GENE{i}" for i in range(rows)],
+            "Unused Column": np.arange(rows, dtype=float),
+        }
+    )
