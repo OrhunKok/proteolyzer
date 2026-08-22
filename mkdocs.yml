@@ -96,7 +96,9 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      # So docs/changelog.md can include the one at the root.
+      base_path: ["."]
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
@@ -110,6 +112,7 @@ nav:
       - guide/plots.md
       - guide/reference-data.md
   - API reference: reference/
+  - Changelog: changelog.md
 
 extra:
   social:
