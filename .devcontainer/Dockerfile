@@ -42,8 +42,16 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
 
-# Create workspace and config directories and set permissions
-RUN mkdir -p /workspace /home/node/.claude && \
+# Create workspace and config directories and set permissions.
+#
+# The memory path is here for a mount this repository does not have yet: a named
+# volume is initialised from the image path it covers, ownership included, so a
+# path the image does not have comes up root-owned and unwritable by node — with
+# no warning, and sudo here is restricted to init-firewall.sh. decoder hit exactly
+# that on a shared memory volume: five files failed to restore and the script died
+# on a bare Permission denied. Creating it node-owned here means a volume mounted
+# over it inherits that instead.
+RUN mkdir -p /workspace /home/node/.claude/projects/-workspace/memory && \
   chown -R node:node /workspace /home/node/.claude
 
 WORKDIR /workspace
