@@ -587,3 +587,16 @@ def test_a_real_run_directory_reads_end_to_end():
     assert not metadata.duplicated(["Target", "Field", "XPos", "YPos"]).any()
     assert metadata["Diameter"].notna().any()
     assert len(mapping.map_stats()) > 0
+
+
+def test_the_same_upload_can_be_read_twice(blind_run):
+    """The case the app is built on: read the run, correct a step, read it again.
+
+    A parser that starts where the last one stopped reads an empty file the
+    second time, which arrives as 'No columns to parse from file'.
+    """
+    first = CoordinatesMapping(blind_run, "mTRAQ", 3)
+    again = CoordinatesMapping(blind_run, "mTRAQ", 3, stages={"05/output.log": UNREAD})
+
+    assert len(again.map_data()) == len(first.map_data())
+    assert again.stages["05/output.log"] == UNREAD
