@@ -60,9 +60,16 @@ The state of the interface as of this tag:
 
 ### Depending on this
 
+Pin the wheel attached to the release, not the source archive:
+
 ```
-proteolyzer @ https://github.com/OrhunKok/proteolyzer/archive/refs/tags/v0.1.0.tar.gz
+proteolyzer @ https://github.com/OrhunKok/proteolyzer/releases/download/v0.1.0/proteolyzer-0.1.0-py3-none-any.whl
 ```
+
+A GitHub source archive carries no `.git`, so setuptools-scm falls back and the
+installed version reads `0.0.0` whichever tag it came from — pip cannot then
+tell one release from another. The wheel carries the version in its metadata.
+`.github/workflows/release.yml` builds and attaches both on every tag.
 
 `make test-downstream` runs the suites of the repositories that depend on this
 one against the working tree, when they are checked out under `downstream/`.
