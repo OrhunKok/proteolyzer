@@ -108,6 +108,7 @@ nav:
   - Installation: installation.md
   - Guide:
       - guide/core.md
+      - guide/cellenone.md
       - guide/memory.md
       - guide/plots.md
       - guide/reference-data.md
