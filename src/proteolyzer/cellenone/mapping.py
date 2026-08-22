@@ -21,6 +21,15 @@ import pandas as pd
 
 from ..core.logging import Logged
 
+
+def _column_to_datetime(column: pd.Series) -> pd.Series:
+    return pd.to_datetime(column, format="%d.%m.%y-%H:%M:%S.%f", errors="coerce")
+
+
+def _column_to_numeric(column: pd.Series) -> pd.Series:
+    return pd.to_numeric(column, errors="coerce")
+
+
 CELLEONE_MAPPING = {
     "mTRAQ": {
         2: {
@@ -144,7 +153,7 @@ class CoordinatesMapping(Logged):
         }
         # How many cells each file ends up accounting for, filled in as the steps
         # are processed. A run that was abandoned after two cells says so here.
-        self.contributed = {}
+        self.contributed: dict[str, int] = {}
         self.file_paths = self._output_file_paths()
         self.parsed_data, self.parsed_stats = self._files_parse(self.file_paths)
         self.parsed_data = self._data_process(self.parsed_data)
@@ -655,7 +664,7 @@ class CoordinatesMapping(Logged):
             well_clash = metadata.groupby(["Plate.Pickup", "Well.Pickup"]).size() != 1
             metadata["Well.Clash"] = (
                 metadata.set_index(["Plate.Pickup", "Well.Pickup"])
-                .index.map(well_clash)
+                .index.map(well_clash.to_dict())
                 .fillna(False)
             )
 
@@ -678,7 +687,7 @@ class CoordinatesMapping(Logged):
             )
             metadata["Label.Clash"] = (
                 metadata.set_index(["Plate.Pickup", "Well.Pickup"])
-                .index.map(labels_clash)
+                .index.map(labels_clash.to_dict())
                 .fillna(False)
             )
 
@@ -858,8 +867,8 @@ class CoordinatesMapping(Logged):
 
     def log_parse(self, key: str, file_paths: list):
 
-        dfs = []
-        stats_dfs = []
+        dfs_list: list[pd.DataFrame] = []
+        stats_dfs_list: list[pd.DataFrame] = []
         for file in file_paths:
             text = self._rewound(file).read().decode("latin1")
 
@@ -877,14 +886,8 @@ class CoordinatesMapping(Logged):
             temp_stats = (
                 pd.DataFrame(readings).replace("", np.nan).dropna(how="all", axis=1)
             )
-            time_col = temp_stats.apply(
-                lambda x: pd.to_datetime(
-                    x, format="%d.%m.%y-%H:%M:%S.%f", errors="coerce"
-                )
-            ).dropna(how="all", axis=1)
-            val_cols = temp_stats.apply(
-                lambda x: pd.to_numeric(x, errors="coerce")
-            ).dropna(how="all", axis=1)
+            time_col = temp_stats.apply(_column_to_datetime).dropna(how="all", axis=1)
+            val_cols = temp_stats.apply(_column_to_numeric).dropna(how="all", axis=1)
             temp_stats = pd.concat([time_col, val_cols], axis=1).reset_index(drop=True)
 
             # Six columns is a chamber reading. A log of a run that was stopped
@@ -900,7 +903,7 @@ class CoordinatesMapping(Logged):
                     "Bath Temp",
                 ]
                 temp_stats["Timestamp"] = temp_stats["Timestamp"].dt.floor("s")
-                stats_dfs.append(temp_stats)
+                stats_dfs_list.append(temp_stats)
             else:
                 print(f"No chamber readings in {file.name}.")
 
@@ -920,7 +923,7 @@ class CoordinatesMapping(Logged):
             if len(df) == 0:
                 # Can exit from geoprops or dispense log here
                 if key in ["Geoprops", "Dispense"]:
-                    dfs.append(pd.DataFrame())
+                    dfs_list.append(pd.DataFrame())
                 else:
                     # In case log from aborted process is included in the output
                     print(
@@ -961,14 +964,14 @@ class CoordinatesMapping(Logged):
                     else:
                         df["Plate"] = pd.to_numeric(df["Plate"], errors="coerce")
 
-                dfs.append(df)
+                dfs_list.append(df)
 
-        dfs = pd.concat(dfs, axis=0) if dfs else pd.DataFrame()
+        dfs = pd.concat(dfs_list, axis=0) if dfs_list else pd.DataFrame()
 
         # An empty frame still has to carry the columns and the timestamp dtype
         # the chamber plots read, in case every log of a step was an aborted run.
-        if stats_dfs:
-            stats_dfs = pd.concat(stats_dfs, axis=0)
+        if stats_dfs_list:
+            stats_dfs = pd.concat(stats_dfs_list, axis=0)
             stats_dfs = stats_dfs.groupby("Timestamp").mean().reset_index()
         else:
             stats_dfs = pd.DataFrame(
@@ -991,7 +994,11 @@ class CoordinatesMapping(Logged):
 
     def label_well_plex(self, label_df: pd.DataFrame):
 
-        available_plex = CELLEONE_MAPPING.get(self.label_type, {})
+        available_plex = (
+            CELLEONE_MAPPING.get(self.label_type, {})
+            if self.label_type is not None
+            else {}
+        )
 
         # The plex widget accepts any integer, so an unsupported combination has
         # to degrade to 'no label mapping' rather than raise a KeyError. The
