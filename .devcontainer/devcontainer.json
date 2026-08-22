@@ -65,11 +65,12 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  // Registers the SessionStart hook, makes gh usable, creates the two labels
-  // the cross-repo bus runs on, and refreshes the membership cache. Idempotent.
-  // Tries the mount first, then the in-workspace checkout, so it works whether
-  // or not claude-shared is a sibling on the host.
-  "postCreateCommand": "for d in /workspace-shared /workspace/claude-shared; do if [ -f $d/install.sh ]; then bash $d/install.sh; exit 0; fi; done; echo 'claude-shared not found; see https://github.com/OrhunKok/claude-shared'",
+  // Locates claude-shared and runs its installer: registers the SessionStart
+  // hook, makes gh usable, creates the two cross-repo labels, and refreshes the
+  // membership cache. Idempotent, and runs before the firewall is applied so a
+  // fallback clone can reach GitHub. The same script is used by every project
+  // in the network; the canonical copy is claude-shared/devcontainer/.
+  "postCreateCommand": "bash .devcontainer/link-ecosystem.sh",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
 }
