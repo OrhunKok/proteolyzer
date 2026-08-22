@@ -9,8 +9,21 @@ name: Cross-repo
 # obligation, since two repositories depend on this one: a change here that needs
 # a release needs the consumers' pins moved with it.
 #
-# Needs ANTHROPIC_API_KEY in the repository secrets. Without it the run fails
-# fast and the issue stays open, which is the safe way round.
+# Credentials, in order of preference, both optional:
+#
+#   CLAUDE_CODE_OAUTH_TOKEN  a long-lived token from a Claude subscription —
+#                            `claude setup-token` on a machine where Claude Code
+#                            is signed in. Not an API key and not a separate
+#                            account.
+#   ANTHROPIC_API_KEY        if there is ever an API account.
+#
+# With neither, this does not fail: it comments on the issue saying nothing ran
+# automatically and leaves it open for the next session here, which is the
+# fallback the network was built on anyway. Adding a secret is what turns it on.
+#
+# The third route needs no secret at all: a self-hosted runner on a machine where
+# Claude Code is already signed in, so the job inherits that authentication.
+# Change `runs-on` if you go that way.
 on:
   issues:
     types: [opened, labeled]
@@ -43,26 +56,71 @@ jobs:
       issues: write          # to answer and close the issue
 
     steps:
-      - uses: actions/checkout@v4
+      # Whether there is anything to run with. Read through env rather than
+      # interpolated into the script, and only ever tested for emptiness.
+      - id: creds
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$OAUTH" ] || [ -n "$KEY" ]; then
+            echo "have=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Nothing to run with: say so where the message is, and stop. Not a
+      # failure — the issue staying open is the correct state, and a red run
+      # every time one arrives would be noise about a known configuration.
+      - if: steps.creds.outputs.have == 'no'
+        name: Say that nothing ran, where the message is
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUMBER: ${{ github.event.issue.number || inputs.issue }}
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file - <<'BODY'
+          No Claude credential is configured in this repository, so this was not
+          worked automatically. It stays open, which is the correct state: the next
+          session opened here will find it in the inbox that the session-start hook
+          prints, and the convention is that whoever finds it does it.
+
+          To have it worked on arrival instead, add one of these to this
+          repository's secrets:
+
+          - `CLAUDE_CODE_OAUTH_TOKEN` — `claude setup-token` on a machine where
+            Claude Code is signed in. A subscription, not an API account.
+          - `ANTHROPIC_API_KEY` — if there is ever an API account.
+
+          Or point `runs-on` at a self-hosted runner on a machine that is already
+          signed in, which needs no secret at all.
+          BODY
+          echo "no credential; commented and stopped"
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - if: steps.creds.outputs.have == 'yes'
+        uses: actions/setup-python@v5
         with:
           python-version: "3.14"
 
       # So the agent can run the gate rather than guess at it.
-      - name: Install
+      - if: steps.creds.outputs.have == 'yes'
+        name: Install
         run: |
           pip install --upgrade pip
           pip install -e '.[dev]'
 
-      # The inputs here are the ones the action documents; check them against its
-      # README when this first runs, since a renamed input fails the whole job
-      # rather than the step.
-      - name: Work the issue
+      - if: steps.creds.outputs.have == 'yes'
+        name: Work the issue
         uses: anthropics/claude-code-action@v1
         with:
+          # Both, so whichever exists is used. Check these input names against
+          # the action's README on the first run: a renamed input fails the job
+          # rather than the step.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
