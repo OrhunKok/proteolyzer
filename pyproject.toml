@@ -86,6 +86,10 @@ where = ["src"]
 "*" = ["resources/*.csv", "py.typed"]
 
 [tool.setuptools_scm]
+# For a build with no repository to read: a GitHub source archive, or a vendored
+# copy. Without it `pip install <archive>.tar.gz` fails outright, which is why a
+# consumer's image ends up installing git for this one requirement.
+fallback_version = "0.0.0"
 
 [tool.mypy]
 # Checked so far: the base suite. The aas, cellenone and plots subpackages are

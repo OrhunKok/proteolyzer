@@ -19,7 +19,7 @@ from .matrix import MatrixBuilder
 from .models import Data, Processing, Report
 from .operations import cv
 from .pipeline import NullQueue, Stage
-from .processor import DataProcessor
+from .processor import DataProcessor, Narrower, narrow
 from .reader import read
 
 __all__ = [
@@ -28,6 +28,7 @@ __all__ = [
     "DataProcessor",
     "Logged",
     "MatrixBuilder",
+    "Narrower",
     "NullQueue",
     "Processing",
     "Report",
@@ -35,6 +36,7 @@ __all__ = [
     "configure_logging",
     "cv",
     "frame_exists",
+    "narrow",
     "read",
     "read_frame",
     "write_frame",

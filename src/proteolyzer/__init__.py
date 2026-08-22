@@ -18,8 +18,10 @@ from .core import (
     DataLoader,
     DataProcessor,
     MatrixBuilder,
+    Narrower,
     Report,
     configure_logging,
+    narrow,
     read,
 )
 
@@ -28,9 +30,11 @@ __all__ = [
     "DataLoader",
     "DataProcessor",
     "MatrixBuilder",
+    "Narrower",
     "Report",
     "configure_logging",
     "core",
+    "narrow",
     "plots",
     "read",
     "reference",

@@ -1,10 +1,12 @@
+import io
 import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from proteolyzer.core.models import Data
+import proteolyzer as pz
+from proteolyzer.core.models import Data, Report
 from proteolyzer.core.processor import DataProcessor
 
 
@@ -411,3 +413,52 @@ def test_all_nan_float_columns_are_left_alone(label_free_report, tmp_path):
 
     assert narrowed["Empty"].dtype == "float64"
     assert narrowed["Empty"].isna().all()
+
+
+def test_narrowing_a_frame_needs_nothing_but_the_frame():
+    """The four steps, without a Report or an id column; see #24."""
+    frame = pd.DataFrame(
+        {
+            "Run": ["run1", "run2"] * 50,
+            "Ms1.Area": np.linspace(1e5, 1e7, 100),
+            "Precursor.Charge": np.full(100, 2.0),
+            "PEP": np.linspace(0.001, 0.05, 100),
+        }
+    )
+    narrowed = pz.narrow(frame, input_type="DIANN", floats=False)
+
+    assert narrowed["Precursor.Charge"].dtype == np.int8
+    assert isinstance(narrowed["Run"].dtype, pd.CategoricalDtype)
+    # A number is never made categorical, however few values it takes, and a
+    # fractional column is left as it is when floats are not being narrowed.
+    assert narrowed["PEP"].dtype == np.float64
+
+
+def test_narrowing_floats_is_optional():
+    frame = pd.DataFrame({"PEP": np.linspace(0.001, 0.05, 10)})
+    assert pz.narrow(frame.copy(), floats=True)["PEP"].dtype == np.float32
+    assert pz.narrow(frame.copy(), floats=False)["PEP"].dtype == np.float64
+
+
+def test_the_processor_runs_the_same_steps_as_the_narrower():
+    """The pipeline goes through Narrower, so the two cannot drift apart."""
+    frame = pd.DataFrame(
+        {
+            "Run": ["run1"] * 10,
+            "Ms1.Area": np.linspace(1e5, 1e6, 10),
+            "Precursor.Charge": np.full(10, 3.0),
+        }
+    )
+    through_processor = DataProcessor(
+        Report(
+            frame=frame.copy(), source=Data(source=io.BytesIO(), INPUT_TYPE="DIANN")
+        ),
+        id_col="Run",
+    )
+    assert through_processor.narrow_integer_columns is not None
+    assert (
+        through_processor.convert_float_columns_to_int(frame.copy())[
+            "Precursor.Charge"
+        ].dtype
+        == pz.narrow(frame.copy(), input_type="DIANN")["Precursor.Charge"].dtype
+    )
