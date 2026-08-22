@@ -92,11 +92,13 @@ where = ["src"]
 fallback_version = "0.0.0"
 
 [tool.mypy]
-# Checked so far: the base suite. The aas, cellenone and plots subpackages are
-# not annotated enough to pass yet; add them here as they are typed.
+# Checked so far: the base suite, and cellenone since a downstream consumer
+# reads every run through it. The plots subpackage is not annotated enough to
+# pass yet; add it here as it is typed. `aas` left the repository.
 files = [
     "src/proteolyzer/reference.py",
     "src/proteolyzer/core",
+    "src/proteolyzer/cellenone",
 ]
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
