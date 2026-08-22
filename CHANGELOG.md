@@ -7,6 +7,20 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## v0.2.1
+
+### Fixed
+
+- A cellenONE run directory can be read twice. Every parser now starts the file
+  at its start rather than wherever the last reader left it: an upload is read to
+  work out which step each file belongs to and read again to parse it, and a
+  consumed buffer parses as an empty file — which arrives as 'No columns to parse
+  from file'. It is the second read that matters, because correcting a step and
+  reading the run again is what the correction is for.
+- `map_data()` parses the droplets if they have not been parsed already, rather
+  than raising `AttributeError` about an attribute a caller has no reason to know
+  exists.
+
 ## v0.2.0
 
 ### Added

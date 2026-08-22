@@ -151,6 +151,22 @@ class CoordinatesMapping(Logged):
         self.parsed_stats = self._stats_process(self.parsed_stats)
 
     @staticmethod
+    def _rewound(file):
+        """`file`, positioned at its start.
+
+        A parser should not depend on where the last one left the file. An upload
+        is read more than once — the directory is peeked at to work out which step
+        each file is, and read again to parse it, and the whole run is read again
+        when a step is corrected and resubmitted — and the second read of a
+        consumed buffer is an empty file, which arrives as 'No columns to parse'.
+        """
+        seek = getattr(file, "seek", None)
+        if callable(seek):
+            seek(0)
+
+        return file
+
+    @staticmethod
     def _peek(file, limit: int = 400_000) -> str:
         """The start of a file as text, without moving where it is being read from.
 
@@ -726,6 +742,13 @@ class CoordinatesMapping(Logged):
 
     def map_data(self) -> pd.DataFrame:
 
+        # Parsed here if it has not been already: the droplets are what this maps,
+        # and a caller that asks for the cells without asking for the droplets
+        # first used to get an AttributeError about an attribute it has no reason
+        # to know exists.
+        if not hasattr(self, "droplets"):
+            self.parse_droplets()
+
         droplets = self.droplets.copy()
 
         dfs = {
@@ -810,7 +833,7 @@ class CoordinatesMapping(Logged):
 
         dispense_dfs = []
         for file in file_paths:
-            df = pd.read_csv(file, sep="\t")
+            df = pd.read_csv(self._rewound(file), sep="\t")
             df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
 
             # The folder the table sat in names the sample. A flat upload has no
@@ -838,7 +861,7 @@ class CoordinatesMapping(Logged):
         dfs = []
         stats_dfs = []
         for file in file_paths:
-            text = file.read().decode("latin1")
+            text = self._rewound(file).read().decode("latin1")
 
             # Which lines are wanted is decided on the lines themselves, before
             # anything is split into columns. Splitting a whole log into a frame of
