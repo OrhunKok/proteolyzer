@@ -287,3 +287,52 @@ def test_a_file_matching_two_engines_says_which(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="matches multiple categories"):
         _ = Data(source=path).input_type
+
+
+def test_cols_to_load_replaces_the_configured_subset(report_parquet):
+    """A caller that wants less than LOAD_COLS names, rather than more."""
+    loaded = Data(source=report_parquet, cols_to_load={"Run", "Precursor.Id"}).load()
+    assert set(loaded.columns) == {"Run", "Precursor.Id"}
+
+
+def test_cols_to_load_wins_over_extras_and_loses_to_load_all(report_parquet):
+    loaded = Data(
+        source=report_parquet,
+        cols_to_load={"Run"},
+        extra_cols_to_load={"Q.Value"},
+    ).load()
+    assert set(loaded.columns) == {"Run"}
+
+    everything = Data(
+        source=report_parquet, cols_to_load={"Run"}, load_all_columns=True
+    ).load()
+    assert "Q.Value" in everything.columns
+
+
+def test_the_file_can_keep_its_own_column_names(tmp_path, label_free_report):
+    """For a caller written against the engine's names rather than ours."""
+    frame = label_free_report.rename(columns={"Run": "Experiment"})
+    path = tmp_path / "evidence.txt"
+    frame.to_csv(path, sep="\t", index=False)
+
+    renamed = Data(source=path).load()
+    assert "Run" in renamed.columns and "Experiment" not in renamed.columns
+
+    as_written = Data(source=path, rename=False).load()
+    assert "Experiment" in as_written.columns and "Run" not in as_written.columns
+
+
+def test_extras_are_honoured_for_a_file_with_no_configured_subset(tmp_path):
+    """Regression: asking for two columns of such a file read all of them."""
+    frame = pd.DataFrame(
+        {
+            "Raw file": ["run1"],
+            "Kept": [1.0],
+            **{f"Unused {n}": [1.0] for n in range(20)},
+        }
+    )
+    path = tmp_path / "peptides.txt"
+    frame.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path, extra_cols_to_load={"Raw file", "Kept"}).load()
+    assert set(loaded.columns) == {"Run", "Kept"}

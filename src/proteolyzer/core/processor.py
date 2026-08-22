@@ -4,8 +4,10 @@ This module composes loader, transformer and model utilities into
 reusable processing functions and light-weight pipelines.
 """
 
+import logging
 import warnings
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import cast
 
 import numpy as np
@@ -21,156 +23,42 @@ from .operations import per_distinct
 CONFIG = Config()
 
 
-class DataProcessor(Logged):
-    """Processes raw data into a structured DataFrame."""
+@dataclass
+class Narrower:
+    """The dtype narrowing, over a frame and nothing else.
 
-    __slots__ = (
-        "report",
-        "data",
-        "input_type",
-        "id_col",
-        "label_group_capture",
-        "label_free",
-        "labels_complete",
-        "protease",
-        "round_large_floats",
-        "narrow_floats",
+    Separate from :class:`DataProcessor` because the narrowing is the part of
+    processing a caller wants on its own: a dashboard that reads its own
+    columns, derives its own, and only wants the frame to fit in memory has no
+    use for the renames, the derived columns, the labelling or the miscleavage
+    counts, and had to build a Report from a source it never read to reach
+    these four steps. Asked for by streamlit-DO-MS; see #24.
+
+    The steps are the same ones :class:`DataProcessor` runs, and it runs them
+    through here.
+    """
+
+    input_type: str = "Unknown"
+    narrow_floats: bool = True
+    round_large_floats: bool = False
+    logger: logging.Logger = field(
+        default_factory=lambda: logging.getLogger("proteolyzer.Narrower")
     )
 
-    def __init__(
-        self,
-        report: Report,
-        id_col: str = "Precursor.Id",
-        label_group_capture: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
-        protease: str = "Trypsin",
-        round_large_floats: bool = False,
-        narrow_floats: bool = True,
-    ):
-        """Initializes the DataProcessor.
+    def narrow(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Every step, in the order they have to run in.
 
-        Parameters
-        ----------
-        report
-            The report to process. Its frame is copied, so the input is
-            untouched.
-        round_large_floats : bool, default False
-            Round float columns whose median exceeds
-            ``Config.COL_MEDIAN_THRESHOLD`` to integers, discarding their
-            fractional part. Off by default because it loses real precision in
-            the low range of quantitative columns.
-        narrow_floats : bool, default True
-            Narrow float64 columns to float32. See
-            :meth:`narrow_float_columns`; pass False to keep double precision.
+        Integers before floats, because a column of whole numbers should end up
+        an integer rather than a narrowed float; categoricals last, since they
+        are decided by measuring what the numeric steps left behind.
         """
-        self.report = report
-        self.data = report.frame.copy()
-        self.input_type = report.source.input_type
-        self.id_col = id_col
-        self.label_group_capture = label_group_capture
-        self.protease = protease
-        self.round_large_floats = round_large_floats
-        self.narrow_floats = narrow_floats
-        # True unless a label matrix has to be skipped; see _LabelGenerator.
-        self.labels_complete = True
-        self._check_labelfree()
-
-    def process(self, verbose: bool = False) -> Report:
-        """Processes the data and returns a new :class:`Report`.
-
-        Parameters
-        ----------
-        verbose : bool, default False
-            If True, run optional diagnostic steps after processing (currently:
-            log the in-memory size of the processed data).
-        """
-        self.data = (
-            self.data.pipe(self.drop_identical_cols)
-            .pipe(self.convert_float_columns_to_int)
-            .pipe(self.rename_columns)
-            .pipe(self.extra_info)
-            # After extra_info, so the columns derived there are computed at
-            # full precision: RT.Width is a difference of two nearly equal
-            # retention times, and narrowing its inputs first would amplify
-            # their rounding by the ratio between the times and the width --
-            # 6e-8 becomes 3e-5.
+        df = (
+            df.pipe(self.convert_float_columns_to_int)
             .pipe(self.narrow_float_columns)
             .pipe(self.narrow_integer_columns)
         )
 
-        self.data = self.convert_columns_to_categorical(self.data)
-
-        if not self.label_free and self.input_type == "DIANN":
-            labels = _LabelGenerator(self)
-            self.data = labels.data
-            self.labels_complete = labels.labels_complete
-            if not self.labels_complete:
-                self.logger.warning(
-                    "Labelling information is incomplete; some channel columns "
-                    "are missing. Check Report.processing.labels_complete "
-                    "before using channel-level results."
-                )
-
-        self.data = self.miscleavages(self.data, protease=self.protease)
-
-        if verbose:
-            self._memory_check(self.data)
-
-        return Report(
-            frame=self.data,
-            source=self.report.source,
-            processing=Processing(
-                id_col=self.id_col,
-                label_free=self.label_free,
-                label_group_capture=self.label_group_capture,
-                protease=self.protease,
-                labels_complete=self.labels_complete,
-                rounded_large_floats=self.round_large_floats,
-                narrowed_floats=self.narrow_floats,
-            ),
-        )
-
-    def _check_labelfree(self) -> None:
-        """Checks if the data is label-free."""
-        if self.id_col not in self.data.columns:
-            raise ValueError(
-                f"id_col '{self.id_col}' is not a column of the loaded data. "
-                f"Available columns: {sorted(self.data.columns)}"
-            )
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
-            extracted_matches = (
-                self.data[self.id_col]
-                .str.contains(self.label_group_capture, regex=True)
-                .any()
-            )
-
-        if extracted_matches:
-            self.label_free = False
-            self.logger.info(
-                "Data appears to be labelled. Proceeding with generating labelling information..."
-            )
-        else:
-            self.label_free = True
-            self.logger.info(
-                "No labelling groups found in data. Data appears to be label-free or labels are in a custom format that is not recognized."
-            )
-
-    def drop_identical_cols(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Drops columns holding the same value in every row.
-
-        Missing counts as a value, which reverses two cases that ``nunique``
-        alone gets backwards: it ignores NA, so a column that is entirely
-        empty counts 0 distinct values and survives, while one holding a
-        single value in a handful of rows counts 1 and is dropped -- losing
-        which rows those were.
-        """
-        cols_to_drop = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
-        if cols_to_drop:
-            self.logger.info(
-                f"Columns dropped for having identical values in all rows: {cols_to_drop}."
-            )
-        return df.drop(columns=cols_to_drop, errors="ignore")
+        return self.convert_columns_to_categorical(df)
 
     def convert_float_columns_to_int(self, df: pd.DataFrame) -> pd.DataFrame:
         """Narrows float columns that already hold whole numbers to integers.
@@ -395,6 +283,185 @@ class DataProcessor(Logged):
             return 0.0, as_category
         saving = 1 - as_category.memory_usage(deep=True, index=False) / current
         return saving, as_category
+
+
+class DataProcessor(Logged):
+    """Processes raw data into a structured DataFrame."""
+
+    __slots__ = (
+        "report",
+        "data",
+        "input_type",
+        "id_col",
+        "label_group_capture",
+        "label_free",
+        "labels_complete",
+        "protease",
+        "round_large_floats",
+        "narrow_floats",
+        "_narrower",
+    )
+
+    def __init__(
+        self,
+        report: Report,
+        id_col: str = "Precursor.Id",
+        label_group_capture: str = r"\(((?:mTRAQ|SILAC|TMT)[^()]*)\)",
+        protease: str = "Trypsin",
+        round_large_floats: bool = False,
+        narrow_floats: bool = True,
+    ):
+        """Initializes the DataProcessor.
+
+        Parameters
+        ----------
+        report
+            The report to process. Its frame is copied, so the input is
+            untouched.
+        round_large_floats : bool, default False
+            Round float columns whose median exceeds
+            ``Config.COL_MEDIAN_THRESHOLD`` to integers, discarding their
+            fractional part. Off by default because it loses real precision in
+            the low range of quantitative columns.
+        narrow_floats : bool, default True
+            Narrow float64 columns to float32. See
+            :meth:`narrow_float_columns`; pass False to keep double precision.
+        """
+        self.report = report
+        self.data = report.frame.copy()
+        self.input_type = report.source.input_type
+        self.id_col = id_col
+        self.label_group_capture = label_group_capture
+        self.protease = protease
+        self.round_large_floats = round_large_floats
+        self.narrow_floats = narrow_floats
+
+        # The narrowing steps live on Narrower now, which a caller can use on
+        # its own. The four methods below stay because they are public, and
+        # because process() pipes through them.
+        self._narrower = Narrower(
+            input_type=self.input_type,
+            narrow_floats=narrow_floats,
+            round_large_floats=round_large_floats,
+            logger=self.logger,
+        )
+        # True unless a label matrix has to be skipped; see _LabelGenerator.
+        self.labels_complete = True
+        self._check_labelfree()
+
+    def process(self, verbose: bool = False) -> Report:
+        """Processes the data and returns a new :class:`Report`.
+
+        Parameters
+        ----------
+        verbose : bool, default False
+            If True, run optional diagnostic steps after processing (currently:
+            log the in-memory size of the processed data).
+        """
+        self.data = (
+            self.data.pipe(self.drop_identical_cols)
+            .pipe(self.convert_float_columns_to_int)
+            .pipe(self.rename_columns)
+            .pipe(self.extra_info)
+            # After extra_info, so the columns derived there are computed at
+            # full precision: RT.Width is a difference of two nearly equal
+            # retention times, and narrowing its inputs first would amplify
+            # their rounding by the ratio between the times and the width --
+            # 6e-8 becomes 3e-5.
+            .pipe(self.narrow_float_columns)
+            .pipe(self.narrow_integer_columns)
+        )
+
+        self.data = self.convert_columns_to_categorical(self.data)
+
+        if not self.label_free and self.input_type == "DIANN":
+            labels = _LabelGenerator(self)
+            self.data = labels.data
+            self.labels_complete = labels.labels_complete
+            if not self.labels_complete:
+                self.logger.warning(
+                    "Labelling information is incomplete; some channel columns "
+                    "are missing. Check Report.processing.labels_complete "
+                    "before using channel-level results."
+                )
+
+        self.data = self.miscleavages(self.data, protease=self.protease)
+
+        if verbose:
+            self._memory_check(self.data)
+
+        return Report(
+            frame=self.data,
+            source=self.report.source,
+            processing=Processing(
+                id_col=self.id_col,
+                label_free=self.label_free,
+                label_group_capture=self.label_group_capture,
+                protease=self.protease,
+                labels_complete=self.labels_complete,
+                rounded_large_floats=self.round_large_floats,
+                narrowed_floats=self.narrow_floats,
+            ),
+        )
+
+    def convert_float_columns_to_int(self, df: pd.DataFrame) -> pd.DataFrame:
+        """See :meth:`Narrower.convert_float_columns_to_int`."""
+        return self._narrower.convert_float_columns_to_int(df)
+
+    def narrow_float_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """See :meth:`Narrower.narrow_float_columns`."""
+        return self._narrower.narrow_float_columns(df)
+
+    def narrow_integer_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """See :meth:`Narrower.narrow_integer_columns`."""
+        return self._narrower.narrow_integer_columns(df)
+
+    def convert_columns_to_categorical(self, df: pd.DataFrame) -> pd.DataFrame:
+        """See :meth:`Narrower.convert_columns_to_categorical`."""
+        return self._narrower.convert_columns_to_categorical(df)
+
+    def _check_labelfree(self) -> None:
+        """Checks if the data is label-free."""
+        if self.id_col not in self.data.columns:
+            raise ValueError(
+                f"id_col '{self.id_col}' is not a column of the loaded data. "
+                f"Available columns: {sorted(self.data.columns)}"
+            )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            extracted_matches = (
+                self.data[self.id_col]
+                .str.contains(self.label_group_capture, regex=True)
+                .any()
+            )
+
+        if extracted_matches:
+            self.label_free = False
+            self.logger.info(
+                "Data appears to be labelled. Proceeding with generating labelling information..."
+            )
+        else:
+            self.label_free = True
+            self.logger.info(
+                "No labelling groups found in data. Data appears to be label-free or labels are in a custom format that is not recognized."
+            )
+
+    def drop_identical_cols(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Drops columns holding the same value in every row.
+
+        Missing counts as a value, which reverses two cases that ``nunique``
+        alone gets backwards: it ignores NA, so a column that is entirely
+        empty counts 0 distinct values and survives, while one holding a
+        single value in a handful of rows counts 1 and is dropped -- losing
+        which rows those were.
+        """
+        cols_to_drop = [col for col in df.columns if df[col].nunique(dropna=False) == 1]
+        if cols_to_drop:
+            self.logger.info(
+                f"Columns dropped for having identical values in all rows: {cols_to_drop}."
+            )
+        return df.drop(columns=cols_to_drop, errors="ignore")
 
     def rename_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Renames columns based on given alias mapping."""
@@ -671,3 +738,34 @@ class _LabelGenerator(Logged):
         df["Run.Full.Channel"] = full_channel.astype("category")
 
         return df
+
+
+def narrow(
+    frame: pd.DataFrame,
+    *,
+    input_type: str = "Unknown",
+    floats: bool = True,
+    round_large_floats: bool = False,
+) -> pd.DataFrame:
+    """Narrow a frame's dtypes, without the pipeline around them.
+
+    Parameters
+    ----------
+    frame
+        The frame to narrow. Modified in place and returned, as the steps are.
+    input_type
+        The engine the frame came from, which decides only which columns are
+        kept out of the categorical conversion.
+    floats
+        Whether to narrow float64 to float32. Pass False when the caller will
+        subtract nearly equal values from the frame afterwards; see
+        :meth:`Narrower.narrow_float_columns`.
+    round_large_floats
+        Round large-magnitude float columns to integers, discarding their
+        fractional part.
+    """
+    return Narrower(
+        input_type=input_type,
+        narrow_floats=floats,
+        round_large_floats=round_large_floats,
+    ).narrow(frame)

@@ -45,6 +45,20 @@ class Data(BaseModel):
     extra_cols_to_load: set[str] | None = Field(
         None, description="Additional columns to load."
     )
+    cols_to_load: set[str] | None = Field(
+        None,
+        description=(
+            "Columns to load, replacing the configured subset rather than "
+            "adding to it. For a caller that wants less than LOAD_COLS names."
+        ),
+    )
+    rename: bool = Field(
+        True,
+        description=(
+            "Whether to rename the columns onto proteolyzer's names. False "
+            "keeps the file's own, for a caller written against them."
+        ),
+    )
     INPUT_TYPE: str | None = Field(
         None,
         description="Manually set the input data type (e.g., 'DIANN', 'MaxQuant').",
@@ -187,16 +201,33 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def cols_subset(self) -> set[str] | None:
-        """Columns to read, or ``None`` to read everything."""
-        if self.input_type == "Unknown" or self.load_all_columns:
+        """Columns to read, or ``None`` to read everything.
+
+        ``load_all_columns`` wins, then ``cols_to_load``, which replaces the
+        configured subset; otherwise the configured subset with
+        ``extra_cols_to_load`` added. Whichever it is, the loader intersects it
+        with the columns the file actually has.
+        """
+        if self.load_all_columns:
             return None
+
+        if self.cols_to_load:
+            return set(self.cols_to_load)
+
+        if self.input_type == "Unknown":
+            # Nothing describes this file, so a subset would be guesswork --
+            # unless the caller asked for one above.
+            return set(self.extra_cols_to_load) if self.extra_cols_to_load else None
 
         cols = getattr(getattr(CONFIG, self.input_type, None), "LOAD_COLS", {}).get(
             self.file_name
         )
 
         if cols is None:
-            return None
+            # No subset configured for this file. Asked-for columns are still
+            # asked for: reading everything instead is how a caller after four
+            # columns of an allPeptides.txt ends up reading sixty.
+            return set(self.extra_cols_to_load) if self.extra_cols_to_load else None
 
         if self.extra_cols_to_load:
             return set(cols) | set(self.extra_cols_to_load)
@@ -206,6 +237,9 @@ class Data(BaseModel):
     @computed_field
     @cached_property
     def cols_rename_mapping(self) -> dict:
+        if not self.rename:
+            return {}
+
         config_block = getattr(CONFIG, self.input_type, None)
         return getattr(config_block, "COLS_RENAME_MAPPING", {})
 
