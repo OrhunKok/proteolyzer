@@ -140,7 +140,7 @@ jobs:
           # the action's docs/custom-automations.md.
           claude_args: |
             --allowedTools Read,Glob,Grep,Edit,Write,Bash
-            --max-turns 50
+            --max-turns 80
 
           # So it can read the CI result on the pull request it opens.
           additional_permissions: |
@@ -182,3 +182,33 @@ jobs:
             If you cannot finish it, say what is blocking you in a comment and
             leave the issue open. Leaving it open is the correct outcome for
             something that needs a decision only a person can make.
+
+            You have a turn budget and it is not generous. Spend it in this
+            order: understand the issue, make the change, run the gate, then say
+            what you did. If you are running low, stop and comment with what you
+            have established and what is left — a run that is cut off mid-task
+            leaves a branch and no explanation, which is worse for whoever picks
+            it up than a short answer would have been.
+
+      # A run that does not finish — the turn ceiling, a crash, a bad tool call —
+      # otherwise leaves work on a branch and says nothing at all. One did
+      # exactly that: a complete, passing change on a branch, no comment, and an
+      # issue that looked untouched.
+      - if: failure()
+        name: Say that the run did not finish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUMBER: ${{ github.event.issue.number || inputs.issue }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file - <<BODY || \
+            echo "could not comment on #$NUMBER"
+          The worker started on this and did not finish: $RUN
+
+          It may have pushed a branch before stopping — check the branch list
+          before starting again, since the work may only need finishing. The
+          usual cause is the turn ceiling (\`--max-turns\` in
+          \`.github/workflows/cross-repo.yml\`).
+
+          This issue stays open.
+          BODY
