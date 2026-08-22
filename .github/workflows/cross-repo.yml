@@ -1,0 +1,103 @@
+name: Cross-repo
+
+# A message from another project in the network is work, not a notification. The
+# convention in claude-shared is that whoever finds it does it; this makes
+# "finds it" not depend on a person opening a session here.
+#
+# Trialled in streamlit-DO-MS first, which is the consumer at the end of the
+# chain. This copy is the same workflow with a different prompt — and a heavier
+# obligation, since two repositories depend on this one: a change here that needs
+# a release needs the consumers' pins moved with it.
+#
+# Needs ANTHROPIC_API_KEY in the repository secrets. Without it the run fails
+# fast and the issue stays open, which is the safe way round.
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to work on"
+        required: true
+
+# One at a time. Two agents in one repository would race on the same branch.
+concurrency:
+  group: cross-repo-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  handle:
+    # Only the two labels the bus runs on, and not an issue an agent filed
+    # itself: an agent that answers its own messages is a loop with a bill.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      ((contains(github.event.issue.labels.*.name, 'from-upstream') ||
+        contains(github.event.issue.labels.*.name, 'cross-repo-question')) &&
+       !contains(github.event.issue.labels.*.name, 'agent-filed') &&
+       github.event.issue.user.type != 'Bot')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # to push a branch
+      pull-requests: write   # to open the PR
+      issues: write          # to answer and close the issue
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # So the agent can run the gate rather than guess at it.
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install -e '.[dev]'
+
+      # The inputs here are the ones the action documents; check them against its
+      # README when this first runs, since a renamed input fails the whole job
+      # rather than the step.
+      - name: Work the issue
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Issue #${{ github.event.issue.number || inputs.issue }} in this
+            repository is a message from another project in the network. Read it,
+            including its comments, and handle it.
+
+            This repository is proteolyzer: the core two other projects depend
+            on. Read CLAUDE.md and DECISIONS.md first — the second one indexes the
+            reasoning behind the choices, most of which is argued in a docstring
+            beside the code.
+
+            What handling it means:
+
+            - If it says something changed upstream, make the change here. That
+              usually means moving the pin in requirements.txt to the wheel of a
+              new release and adapting to whatever its CHANGELOG says broke.
+            - If it asks a question only this repository can answer, answer it in
+              a comment, citing the code.
+            - If it is wrong about this repository, say so in a comment with the
+              evidence, and close it.
+
+            Then, whatever you did:
+
+            - Run the gate: `make test`, `make lint`, `make types`. All three,
+              and do not open a pull request with any of them red.
+            - If the change alters a public interface, add a CHANGELOG entry
+              saying what moved and what it is now, and say in the pull request
+              which version it should be tagged as. Two repositories pin this one
+              and the last silent rename broke one of them for two days.
+            - If you changed anything, open a pull request against main from a
+              branch. Do not push to main.
+            - Comment on the issue with what you did, linking the pull request,
+              and close it. Open means unhandled.
+
+            If you cannot finish it, say what is blocking you in a comment and
+            leave the issue open. Leaving it open is the correct outcome for
+            something that needs a decision only a person can make.
