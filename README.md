@@ -40,6 +40,13 @@ pip install '.[unimod]'       # only to *build* the UniMod cache; querying needs
 pip install -e '.[dev]'       # editable install with test and lint tooling
 ```
 
+To depend on it, pin a tag rather than a commit or a branch — see
+[CHANGELOG.md](./CHANGELOG.md), which says what each one broke:
+
+```
+proteolyzer @ https://github.com/OrhunKok/proteolyzer/archive/refs/tags/v0.1.0.tar.gz
+```
+
 Notes on the optional extras:
 
 - The plotting module defaults to the `science`
