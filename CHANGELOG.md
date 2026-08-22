@@ -7,6 +7,38 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## v0.2.0
+
+### Added
+
+- `proteolyzer.cellenone` reads a cellenONE run directory: which file belongs to
+  which step of the preparation, one row per cell with where it landed and what
+  was dispensed onto it, and the chamber readings stamped with the step they were
+  taken during. See the [guide](guide/cellenone.md).
+
+  It came from streamlit-DO-MS, which had the more developed of two copies of it:
+  the same class name and method names existed in a second repository, both had
+  independently fixed the same imaging-channel bug, and neither knew about the
+  other. The two are now one, and it lives where the projects that read this
+  instrument's output can share it.
+
+- A fluorescence channel is kept rather than discarded. cellenONE writes a
+  geoprops row per cell *per imaging channel*, so counting rows doubles the cell
+  count and halves every geometry average. Both copies had noticed; one filtered
+  to the transmission row, which fixes the count and throws the fluorescence
+  away. Here the transmission row is the cell and every other channel joins onto
+  it under its own name — `Diameter.Green` beside `Diameter` — because in a
+  sorting experiment the fluorescence is what the experiment was for. A
+  preparation imaged in transmission alone comes out exactly as before.
+
+- The cells table is recognised by its columns whatever channel it was imaged
+  in, so a fluorescence-only export is no longer invisible.
+
+### Note for consumers
+
+The subpackage is imported on first use, like `plots` and `unimod`, so a core
+install does not pay for it. It needs nothing that the core does not.
+
 ## v0.1.0
 
 The first tagged release. It exists because the packages that depend on this one

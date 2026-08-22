@@ -33,6 +33,7 @@ __all__ = [
     "Narrower",
     "Report",
     "configure_logging",
+    "cellenone",
     "core",
     "narrow",
     "plots",
@@ -42,7 +43,7 @@ __all__ = [
 ]
 
 #: Subpackages imported on first attribute access, see :func:`__getattr__`.
-__lazy__ = ("plots", "unimod")
+__lazy__ = ("cellenone", "plots", "unimod")
 
 
 def __getattr__(name: str):
