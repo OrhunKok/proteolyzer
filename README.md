@@ -44,7 +44,7 @@ To depend on it, pin a tag rather than a commit or a branch — see
 [CHANGELOG.md](./CHANGELOG.md), which says what each one broke:
 
 ```
-proteolyzer @ https://github.com/OrhunKok/proteolyzer/archive/refs/tags/v0.1.0.tar.gz
+proteolyzer @ https://github.com/OrhunKok/proteolyzer/releases/download/v0.1.0/proteolyzer-0.1.0-py3-none-any.whl
 ```
 
 Notes on the optional extras:

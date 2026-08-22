@@ -1,0 +1,46 @@
+name: Release
+
+# A tag is what a consumer pins, so a tag has to produce something a consumer
+# can install. A GitHub source archive cannot: it carries no .git, so
+# setuptools-scm falls back and the version reads 0.0.0 whichever tag it came
+# from — pip then cannot tell one release from the next. A wheel carries the
+# version in its metadata, so that is what is published.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Whole history and tags: setuptools-scm reads the version from them.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Build the sdist and the wheel
+        run: |
+          pip install build
+          python -m build
+
+      # The version in the artifact has to be the tag, or the tag is not what
+      # was published. A dev version here means the tag was not fetched.
+      - name: Check the version is the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          built=$(ls dist/*.whl | sed -E 's/.*proteolyzer-([^-]+)-.*/\1/')
+          echo "tag $tag, built $built"
+          test "$tag" = "$built"
+
+      - name: Attach them to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
