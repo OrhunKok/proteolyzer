@@ -8,7 +8,7 @@ was, and what the chamber was doing while that happened.
 Moved here from streamlit-DO-MS, which had the more developed of two copies of
 this: the same class name and method names existed in a second repository, both
 had independently fixed the same imaging-channel bug, and neither knew about the
-other. See CAPABILITIES.md in claude-shared.
+other. This is the surviving copy; see DECISIONS.md for what was kept and why.
 """
 
 import os
