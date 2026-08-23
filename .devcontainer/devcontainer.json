@@ -50,9 +50,13 @@
     "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
 
     // claude-shared, read-only: the capability index, the membership list, the
-    // session hook and the gh wrapper. Expects it cloned next to this
-    // repository on the host; if it is not there, install.sh falls back to the
-    // copy inside the workspace, so the container still comes up wired.
+    // session hooks and the gh wrapper. Expects it cloned next to this
+    // repository on the host; if it is not there, link-ecosystem.sh falls back
+    // to the copy inside the workspace, then a cached clone, then cloning it, so
+    // the container still comes up wired. Nothing durable is registered against
+    // this mount: it is how the installer is found, and the installer then runs
+    // everything from a working copy at ~/.claude-shared that keeps itself
+    // current, because a mount from a host checkout lags until someone pulls it.
     // https://github.com/OrhunKok/claude-shared
     "source=${localWorkspaceFolder}/../claude-shared,target=/workspace-shared,type=bind,readonly"
   ],
@@ -61,15 +65,21 @@
     "DISABLE_TELEMETRY": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
+    // So a session can name its own project without inspecting paths. Part of
+    // the shared fragment; it costs nothing here and matters if memory is ever
+    // shared between containers, where a project fact has to say which project.
+    "CLAUDE_PROJECT": "${localWorkspaceFolderBasename}"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  // Locates claude-shared and runs its installer: registers the SessionStart
-  // hook, makes gh usable, creates the two cross-repo labels, and refreshes the
-  // membership cache. Idempotent, and runs before the firewall is applied so a
-  // fallback clone can reach GitHub. The same script is used by every project
-  // in the network; the canonical copy is claude-shared/devcontainer/.
+  // Locates claude-shared and runs its installer: clones the working copy it
+  // then runs everything from, registers the two session hooks, makes gh usable,
+  // creates the two cross-repo labels, refreshes the membership cache, and
+  // checks the other members out read-only under ~/.claude-siblings. Idempotent,
+  // and runs before the firewall is applied so a fallback clone can reach
+  // GitHub. The same script is used by every project in the network; the
+  // canonical copy is claude-shared/devcontainer/.
   "postCreateCommand": "bash .devcontainer/link-ecosystem.sh",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
