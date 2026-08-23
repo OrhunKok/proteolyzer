@@ -59,11 +59,13 @@ consumer has to do.
 
 This repository is one of several with a Claude devcontainer, which is what makes
 it part of the network. The connective tissue is
-[claude-shared](https://github.com/OrhunKok/claude-shared), mounted read-only at
-`/workspace-shared`. The session hook prints who else is in it, and anything
-addressed here, at the start of every session.
+[claude-shared](https://github.com/OrhunKok/claude-shared), checked out at
+`~/.claude-shared`, which keeps itself current — the read-only mount at
+`/workspace-shared` is only how the installer finds it the first time, and it
+lags until someone pulls the host checkout. The session hook prints who else is
+in the network, and anything addressed here, at the start of every session.
 
-**Before writing anything reusable, read `/workspace-shared/CAPABILITIES.md`.**
+**Before writing anything reusable, read `~/.claude-shared/CAPABILITIES.md`.**
 It is keyed by capability, so it answers "has this already been solved?" The
 other repositories are checked out read-only under `~/.claude-siblings`, so
 reading one is `grep` rather than a question.

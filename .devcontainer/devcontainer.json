@@ -49,10 +49,13 @@
     "source=claude-code-bashhistory-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
     "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
 
-    // claude-shared, read-only: the capability index, the membership list, the
-    // session hook and the gh wrapper. Expects it cloned next to this
-    // repository on the host; if it is not there, install.sh falls back to the
-    // copy inside the workspace, so the container still comes up wired.
+    // claude-shared, read-only. A seed, not the copy anything runs from: the
+    // installer clones it to ~/.claude-shared and registers the hooks and the
+    // gh wrapper against that clone, which then keeps itself current -- a mount
+    // from a host checkout lags until someone pulls it. Expects it cloned next
+    // to this repository on the host; if it is not there, link-ecosystem.sh
+    // falls back to a copy in the workspace or a clone, so the container still
+    // comes up wired.
     // https://github.com/OrhunKok/claude-shared
     "source=${localWorkspaceFolder}/../claude-shared,target=/workspace-shared,type=bind,readonly"
   ],
@@ -65,11 +68,13 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  // Locates claude-shared and runs its installer: registers the SessionStart
-  // hook, makes gh usable, creates the two cross-repo labels, and refreshes the
-  // membership cache. Idempotent, and runs before the firewall is applied so a
-  // fallback clone can reach GitHub. The same script is used by every project
-  // in the network; the canonical copy is claude-shared/devcontainer/.
+  // Locates claude-shared and runs its installer: clones the working copy,
+  // registers the two session hooks against it, makes gh usable, creates the two
+  // cross-repo labels, refreshes the membership cache, and checks the other
+  // members out read-only under ~/.claude-siblings. Idempotent, and runs before
+  // the firewall is applied so a fallback clone can reach GitHub. The same
+  // script is used by every project in the network; the canonical copy is
+  // claude-shared/devcontainer/.
   "postCreateCommand": "bash .devcontainer/link-ecosystem.sh",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
