@@ -95,6 +95,14 @@ setuptools-scm falls back and every tag installs as `0.0.0` — pip cannot then
 tell two releases apart or compute an upgrade. `fallback_version` exists so an
 archive *builds*; the wheel is what to pin.
 
+**No LICENSE, deliberately.** This is public and released, and it still has no
+license, which reads like an oversight and is not one: nothing on the account
+gets one yet, because everything is early enough that the choice is not worth
+making and would only have to be revisited. What it forecloses is publishing
+outside the account — PyPI, or a dependant that is not private. Both consumers
+are private and pin a wheel by URL, so neither is waiting on it. Revisit when
+something is actually to be published, and not before.
+
 **An invariant test is worth more than a case.** "Every engine block describes
 only files it lists" found `msScans` in `LOAD_COLS` and missing from `FILES`,
 which meant a `msScans.txt` was not recognised as MaxQuant output at all and came
