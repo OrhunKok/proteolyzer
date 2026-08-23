@@ -13,6 +13,10 @@ make types       # mypy
 make docs        # mkdocs build
 ```
 
+`make test`, `make lint` and `make types` are the gate: all three, green, before
+a pull request. CI runs them on every push, the suite on three platforms, and
+builds the docs `--strict` besides.
+
 ## Why it is built this way
 
 [DECISIONS.md](./DECISIONS.md) — the choices that are not visible from the code,
@@ -37,8 +41,10 @@ from the settings, and decoder stopped importing at all for two days
   the wheel — a GitHub source archive carries no `.git`, so setuptools-scm falls
   back and every tag installs as `0.0.0`, which pip cannot compare.
 - **`make test-downstream`**, which runs their suites against this working tree
-  when they are checked out under `downstream/`. Neither is wired in yet; both
-  have a suite worth running.
+  when they are checked out under `downstream/`: streamlit-DO-MS's four scripts,
+  and decoder's `tests/test_imports.py`. A consumer this machine has no checkout
+  of is skipped rather than failed, so the target is worth exactly as much as
+  what is checked out beside it.
 
 Breaking something on purpose is fine. Breaking it silently is what the tags are
 against: bump the minor, write down what moved and what it is now, and say what a
@@ -48,11 +54,15 @@ consumer has to do.
 
 This repository is one of several with a Claude devcontainer, which is what makes
 it part of the network. The connective tissue is
-[claude-shared](https://github.com/OrhunKok/claude-shared), mounted read-only at
-`/workspace-shared`. The session hook prints who else is in it, and anything
-addressed here, at the start of every session.
+[claude-shared](https://github.com/OrhunKok/claude-shared), in two places:
+`/workspace-shared` is the read-only host mount, and it is only how the installer
+gets found; `~/.claude-shared` is the working copy this container fast-forwards
+by itself after every session. **Read the working copy** — the mount is a
+checkout on the host and lags until a person pulls it, and a stale index is not
+inert. The session hook names the path it read, prints who else is in the
+network, and prints anything addressed here, at the start of every session.
 
-**Before writing anything reusable, read `/workspace-shared/CAPABILITIES.md`.**
+**Before writing anything reusable, read `~/.claude-shared/CAPABILITIES.md`.**
 It is keyed by capability, so it answers "has this already been solved?" The
 other repositories are checked out read-only under `~/.claude-siblings`, so
 reading one is `grep` rather than a question.
