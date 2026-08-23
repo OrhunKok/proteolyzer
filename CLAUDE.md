@@ -35,7 +35,12 @@ from the settings, and decoder stopped importing at all for two days
 - **Tags.** `CHANGELOG.md` says what each version broke, and
   `.github/workflows/release.yml` attaches a wheel to every tag. Consumers pin
   the wheel — a GitHub source archive carries no `.git`, so setuptools-scm falls
-  back and every tag installs as `0.0.0`, which pip cannot compare.
+  back and every tag installs as `0.0.0`, which pip cannot compare. What the
+  release still owes by hand is the tag, the wheel, and that changelog entry;
+  making sure the consumers notice is not. Both of them run a `pin-check`
+  workflow that compares their pin against this repository's latest release
+  every Monday and hands their own worker a pull request carrying the wheel URL
+  and the notes.
 - **`make test-downstream`**, which runs their suites against this working tree
   when they are checked out under `downstream/`. Neither is wired in yet; both
   have a suite worth running.
@@ -69,8 +74,9 @@ can answer. Open means unhandled, closed is the acknowledgement.
 
 **Filing one is the last resort, not the first.** A session here has push rights
 on the other repositories and a clone is one command, so the default is to do the
-work where it belongs — including moving a consumer's pin after a release here,
-which is the half that is usually forgotten:
+work where it belongs. Moving a consumer's pin after a release here is no longer
+that work — the `pin-check` workflow does it on its own — but a from-upstream
+issue that needs code on their side still does:
 
 ```bash
 git clone https://github.com/OrhunKok/<other> /tmp/<other> && cd /tmp/<other>
