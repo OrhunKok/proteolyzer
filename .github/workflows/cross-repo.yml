@@ -1,34 +1,39 @@
 name: Cross-repo
 
 # A message from another project in the network is work, not a notification. The
-# convention in claude-shared is that whoever finds it does it; this makes
-# "finds it" not depend on a person opening a session here.
+# convention in claude-shared is that whoever finds it does it; this makes "finds
+# it" not depend on a person opening a session here.
 #
-# Trialled in streamlit-DO-MS first, which is the consumer at the end of the
-# chain. This copy is the same workflow with a different prompt — and a heavier
-# obligation, since two repositories depend on this one: a change here that needs
-# a release needs the consumers' pins moved with it.
+# What stays in this file is what only this repository can say: when to wake, on
+# which messages, and with what authority. The worker itself is called below,
+# from claude-shared-workflows — three repositories were each running a 214-line
+# copy of it, four defects were found in it in one day, and every fix had to be
+# made three times. This copy was also the only one current on `actions/checkout`,
+# which is the other half of the argument: the drift was invisible until the
+# copies were diffed.
 #
-# Credentials, in order of preference, both optional:
+# This repository is why the workflows are in a repository of their own rather
+# than in claude-shared with everything else shared. It is the only public one,
+# and a public repository cannot resolve a reusable workflow out of a private
+# one: the run fails with zero jobs, before anything starts, and no permission
+# setting changes it. A public run's logs are world-readable, so the refusal is
+# about what would be published, not about who owns what. Verified here twice —
+# once with the real worker and once with a probe whose entire content was the
+# `uses:` line — after the same stub worked in the two private consumers.
 #
-#   CLAUDE_CODE_OAUTH_TOKEN  a long-lived token from a Claude subscription —
-#                            `claude setup-token` on a machine where Claude Code
-#                            is signed in. Not an API key and not a separate
-#                            account.
-#   ANTHROPIC_API_KEY        if there is ever an API account.
+# There is no pin check here. This repository is the root of the chain; nothing
+# in the network is upstream of it. The obligation runs the other way: a change
+# here that needs a release needs its consumers' pins moved with it, and their
+# pin checks are what notice.
 #
-# With neither, this does not fail: it comments on the issue saying nothing ran
-# automatically and leaves it open for the next session here, which is the
-# fallback the network was built on anyway. Adding a secret is what turns it on.
-#
-# The third route needs no secret at all: a self-hosted runner on a machine where
-# Claude Code is already signed in, so the job inherits that authentication.
-# Change `runs-on` if you go that way.
+# Credentials, if this ever stops working: the worker reads
+# CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY from this repository's secrets,
+# and with neither it comments on the issue and stops rather than failing.
 on:
   # labeled only, not [opened, labeled]: an issue created *with* a label emits
-  # both, so the first live run answered one message twice. Anything opened
-  # without a label and labelled later still arrives here, which is every case
-  # that matters.
+  # both, so the first live run in the network answered one message twice.
+  # Anything opened without a label and labelled later still arrives here, which
+  # is every case that matters.
   issues:
     types: [labeled]
   workflow_dispatch:
@@ -36,11 +41,6 @@ on:
       issue:
         description: "Issue number to work on"
         required: true
-
-# One at a time. Two agents in one repository would race on the same branch.
-concurrency:
-  group: cross-repo-${{ github.repository }}
-  cancel-in-progress: false
 
 jobs:
   handle:
@@ -53,162 +53,19 @@ jobs:
        !contains(github.event.issue.labels.*.name, 'agent-filed') &&
        github.event.issue.user.type != 'Bot')
 
-    runs-on: ubuntu-latest
+    uses: OrhunKok/claude-shared-workflows/.github/workflows/cross-repo-worker.yml@v1
+    with:
+      # Empty on an issues event, where the worker reads the number off the
+      # event itself.
+      issue: ${{ inputs.issue }}
+      install: pip install -e '.[dev]'
+    secrets: inherit
+
+    # Granted here rather than taken there: the repository whose contents are at
+    # stake is the one that decides what the worker may do.
     permissions:
       contents: write        # to push a branch
-      pull-requests: write   # to open the PR
+      pull-requests: write   # to open the pull request
       issues: write          # to answer and close the issue
-      actions: read          # to read the CI result on the PR it opens
+      actions: read          # to read the CI result on the pull request it opens
       id-token: write        # the action asks for this in its own example
-
-    steps:
-      # Whether there is anything to run with. Read through env rather than
-      # interpolated into the script, and only ever tested for emptiness.
-      - id: creds
-        env:
-          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          if [ -n "$OAUTH" ] || [ -n "$KEY" ]; then
-            echo "have=yes" >> "$GITHUB_OUTPUT"
-          else
-            echo "have=no" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Nothing to run with: say so where the message is, and stop. Not a
-      # failure — the issue staying open is the correct state, and a red run
-      # every time one arrives would be noise about a known configuration.
-      - if: steps.creds.outputs.have == 'no'
-        name: Say that nothing ran, where the message is
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NUMBER: ${{ github.event.issue.number || inputs.issue }}
-        run: |
-          # An issue that has been deleted since the event cannot be commented
-          # on, and that is not a failure of this workflow. Two runs went red
-          # that way while the credential was being set up.
-          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file - <<'BODY' || \
-            echo "could not comment on #$NUMBER — deleted, or moved"
-          No Claude credential is configured in this repository, so this was not
-          worked automatically. It stays open, which is the correct state: the next
-          session opened here will find it in the inbox that the session-start hook
-          prints, and the convention is that whoever finds it does it.
-
-          To have it worked on arrival instead, add one of these to this
-          repository's secrets:
-
-          - `CLAUDE_CODE_OAUTH_TOKEN` — `claude setup-token` on a machine where
-            Claude Code is signed in. A subscription, not an API account.
-          - `ANTHROPIC_API_KEY` — if there is ever an API account.
-
-          Or point `runs-on` at a self-hosted runner on a machine that is already
-          signed in, which needs no secret at all.
-          BODY
-          echo "no credential; commented and stopped"
-
-      - if: steps.creds.outputs.have == 'yes'
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - if: steps.creds.outputs.have == 'yes'
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.14"
-
-      # So the agent can run the gate rather than guess at it.
-      - if: steps.creds.outputs.have == 'yes'
-        name: Install
-        run: |
-          pip install --upgrade pip
-          pip install -e '.[dev]'
-
-      - if: steps.creds.outputs.have == 'yes'
-        name: Work the issue
-        uses: anthropics/claude-code-action@v1
-        with:
-          # Both, so whichever exists is used. Check these input names against
-          # the action's README on the first run: a renamed input fails the job
-          # rather than the step.
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Without this the agent is denied its tools and finishes having done
-          # nothing: the first live run spent 36 turns and hit twenty permission
-          # denials, because it could not run the gate or reach gh. Documented in
-          # the action's docs/custom-automations.md.
-          claude_args: |
-            --allowedTools Read,Glob,Grep,Edit,Write,Bash
-            --max-turns 80
-
-          # So it can read the CI result on the pull request it opens.
-          additional_permissions: |
-            actions: read
-
-          prompt: |
-            Issue #${{ github.event.issue.number || inputs.issue }} in this
-            repository is a message from another project in the network. Read it,
-            including its comments, and handle it.
-
-            This repository is proteolyzer: the core two other projects depend
-            on. Read CLAUDE.md and DECISIONS.md first — the second one indexes the
-            reasoning behind the choices, most of which is argued in a docstring
-            beside the code.
-
-            What handling it means:
-
-            - If it says something changed upstream, make the change here. That
-              usually means moving the pin in requirements.txt to the wheel of a
-              new release and adapting to whatever its CHANGELOG says broke.
-            - If it asks a question only this repository can answer, answer it in
-              a comment, citing the code.
-            - If it is wrong about this repository, say so in a comment with the
-              evidence, and close it.
-
-            Then, whatever you did:
-
-            - Run the gate: `make test`, `make lint`, `make types`. All three,
-              and do not open a pull request with any of them red.
-            - If the change alters a public interface, add a CHANGELOG entry
-              saying what moved and what it is now, and say in the pull request
-              which version it should be tagged as. Two repositories pin this one
-              and the last silent rename broke one of them for two days.
-            - If you changed anything, open a pull request against main from a
-              branch. Do not push to main.
-            - Comment on the issue with what you did, linking the pull request,
-              and close it. Open means unhandled.
-
-            If you cannot finish it, say what is blocking you in a comment and
-            leave the issue open. Leaving it open is the correct outcome for
-            something that needs a decision only a person can make.
-
-            You have a turn budget and it is not generous. Spend it in this
-            order: understand the issue, make the change, run the gate, then say
-            what you did. If you are running low, stop and comment with what you
-            have established and what is left — a run that is cut off mid-task
-            leaves a branch and no explanation, which is worse for whoever picks
-            it up than a short answer would have been.
-
-      # A run that does not finish — the turn ceiling, a crash, a bad tool call —
-      # otherwise leaves work on a branch and says nothing at all. One did
-      # exactly that: a complete, passing change on a branch, no comment, and an
-      # issue that looked untouched.
-      - if: failure()
-        name: Say that the run did not finish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NUMBER: ${{ github.event.issue.number || inputs.issue }}
-          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file - <<BODY || \
-            echo "could not comment on #$NUMBER"
-          The worker started on this and did not finish: $RUN
-
-          It may have pushed a branch before stopping — check the branch list
-          before starting again, since the work may only need finishing. The
-          usual cause is the turn ceiling (\`--max-turns\` in
-          \`.github/workflows/cross-repo.yml\`).
-
-          This issue stays open.
-          BODY
