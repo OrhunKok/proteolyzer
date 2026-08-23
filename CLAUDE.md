@@ -13,6 +13,11 @@ make types       # mypy
 make docs        # mkdocs build
 ```
 
+`make test`, `make lint` and `make types` are the gate: all three, green, before
+a pull request. CI runs them on every push, the suite on three platforms, and
+builds the docs `--strict` besides. `make test-downstream` is not part of it —
+see below for why.
+
 ## Why it is built this way
 
 [DECISIONS.md](./DECISIONS.md) — the choices that are not visible from the code,
@@ -59,11 +64,16 @@ consumer has to do.
 
 This repository is one of several with a Claude devcontainer, which is what makes
 it part of the network. The connective tissue is
-[claude-shared](https://github.com/OrhunKok/claude-shared), mounted read-only at
-`/workspace-shared`. The session hook prints who else is in it, and anything
+[claude-shared](https://github.com/OrhunKok/claude-shared), in two places:
+`/workspace-shared` is the read-only mount and is only how the installer gets
+found; `~/.claude-shared` is the working copy this container fast-forwards by
+itself after every session. **Read the working copy** — the mount is a checkout
+on the host, so it lags until a person pulls it, and a stale index is not inert:
+it once said a member lived on a branch that had been deleted. The session hook
+names the path it read, and prints who else is in the network and anything
 addressed here, at the start of every session.
 
-**Before writing anything reusable, read `/workspace-shared/CAPABILITIES.md`.**
+**Before writing anything reusable, read `~/.claude-shared/CAPABILITIES.md`.**
 It is keyed by capability, so it answers "has this already been solved?" The
 other repositories are checked out read-only under `~/.claude-siblings`, so
 reading one is `grep` rather than a question.
