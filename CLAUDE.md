@@ -60,42 +60,30 @@ Breaking something on purpose is fine. Breaking it silently is what the tags are
 against: bump the minor, write down what moved and what it is now, and say what a
 consumer has to do.
 
-## Ecosystem
+## Reading another repository
 
-This repository is one of several with a Claude devcontainer, which is what makes
-it part of the network. The connective tissue is
-[claude-shared](https://github.com/OrhunKok/claude-shared), in two places:
-`/workspace-shared` is the read-only mount and is only how the installer gets
-found; `~/.claude-shared` is the working copy this container fast-forwards by
-itself after every session. **Read the working copy** — the mount is a checkout
-on the host, so it lags until a person pulls it, and a stale index is not inert:
-it once said a member lived on a branch that had been deleted. The session hook
-names the path it read, and prints who else is in the network and anything
-addressed here, at the start of every session.
-
-**Before writing anything reusable, read `~/.claude-shared/CAPABILITIES.md`.**
-It is keyed by capability, so it answers "has this already been solved?" The
-other repositories are checked out read-only under `~/.claude-siblings`, so
-reading one is `grep` rather than a question.
-
-That index exists because of this repository: `CoordinatesMapping` was written
-twice, in two places, and both copies fixed the same imaging-channel bug in the
-same week without either knowing. The cellenONE reader here is the surviving one.
-
-### Working across the repositories
-
-The bus is GitHub issues on the *receiving* repository, labelled `from-upstream`
-for something they need to know and `cross-repo-question` for something only they
-can answer. Open means unhandled, closed is the acknowledgement.
-
-**Filing one is the last resort, not the first.** A session here has push rights
-on the other repositories and a clone is one command, so the default is to do the
-work where it belongs. Moving a consumer's pin after a release here is no longer
-that work — the `pin-check` workflow does it on its own — but a from-upstream
-issue that needs code on their side still does:
+There is no shared index, no mounted checkout and no session hook. If you need
+to see how a consumer uses this package, clone it — it takes a second and needs
+no setup:
 
 ```bash
-git clone https://github.com/OrhunKok/<other> /tmp/<other> && cd /tmp/<other>
-# ... the change, in their style, with their tests ...
-gh pr create --fill && gh pr merge --merge
+gh repo clone OrhunKok/streamlit-DO-MS /tmp/x && grep -rn proteolyzer /tmp/x
 ```
+
+`downstream/` is the same idea kept for an afternoon: check a consumer out there
+and `make test-downstream` runs its suite against this working tree.
+
+This repository is where the surviving copy of the cellenONE reader lives, and
+that is worth knowing before writing a second one of anything: `CoordinatesMapping`
+existed twice, in two repositories, and both copies fixed the same
+imaging-channel bug in the same week without either knowing. Search before you
+write — `gh api -X GET /search/code -f q="<term> user:OrhunKok"` — rather than
+trusting an index to have been kept true.
+
+## The agent that runs here
+
+An issue labelled `agent` is worked by `.github/workflows/agent.yml`, in this
+repository, using this repository's `CLAUDE.md` and `DECISIONS.md` as its brief.
+Nothing outside this repository is involved, and nothing here reaches into
+another repository: a change that belongs elsewhere is filed as an issue there
+and worked by that repository's own agent.

@@ -1,0 +1,153 @@
+name: Agent
+
+# An issue labelled `agent` is work, and this runs it in this repository.
+#
+# Self-contained on purpose. This used to call a reusable workflow in a shared
+# repository, along with two other repositories, which was the right answer when
+# the copies were 214 lines of orchestration each: four defects were found in
+# them in one day and every fix had to be made three times. What is left here is
+# ~50 lines wrapping `anthropics/claude-code-action`, which is the maintained
+# part, so a copy per repository is cheaper than a shared repository to keep
+# current -- and this repository no longer depends on anything to be able to run
+# its own agent. See DECISIONS.md.
+#
+# The brief is not in this file. It is CLAUDE.md and DECISIONS.md, which a person
+# reads too; this workflow only carries the protocol.
+#
+# Credentials: CLAUDE_CODE_OAUTH_TOKEN (`claude setup-token`, a subscription
+# rather than an API account) or ANTHROPIC_API_KEY, in this repository's secrets.
+# With neither it says so on the issue and stops, rather than failing.
+on:
+  # labeled only, not [opened, labeled]: an issue created *with* a label emits
+  # both, and the first live run answered one message twice.
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to work on"
+        required: true
+
+# One at a time: two agents in one repository would race on the same branch.
+concurrency:
+  group: agent-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  work:
+    # Not an issue the agent filed itself, and not one a token filed: an agent
+    # that answers its own messages is a loop with a bill.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'agent' &&
+       !contains(github.event.issue.labels.*.name, 'agent-filed') &&
+       github.event.issue.user.type != 'Bot')
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # to push a branch
+      pull-requests: write   # to open the pull request
+      issues: write          # to answer and close the issue
+      actions: read          # to read the CI result on the pull request it opens
+      id-token: write        # the action asks for this in its own example
+
+    env:
+      NUMBER: ${{ github.event.issue.number || inputs.issue }}
+
+    steps:
+      - id: creds
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$OAUTH" ] || [ -n "$KEY" ]; then
+            echo "have=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Nothing to run with is not a failure: the issue staying open is the
+      # correct state, and a red run every time one arrives would be noise about
+      # a known configuration. An issue deleted since the event cannot be
+      # commented on, which is also not a failure -- two runs went red that way.
+      - if: steps.creds.outputs.have == 'no'
+        name: Say that nothing ran, where the work is
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body \
+            "No Claude credential is configured here, so this was not worked
+            automatically. It stays open for the next session opened in this
+            repository. To change that, add \`CLAUDE_CODE_OAUTH_TOKEN\` to this
+            repository's secrets." || echo "could not comment on #$NUMBER"
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      # So the agent can run the gate rather than guess at it.
+      - if: steps.creds.outputs.have == 'yes'
+        run: pip install --upgrade pip && pip install -e '.[dev]'
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Without this the agent is denied its tools and finishes having done
+          # nothing: one run spent 36 turns hitting twenty permission denials.
+          claude_args: |
+            --allowedTools Read,Glob,Grep,Edit,Write,Bash
+            --max-turns 80
+
+          additional_permissions: |
+            actions: read
+
+          prompt: |
+            Issue #${{ github.event.issue.number || inputs.issue }} in this
+            repository is work. Read it, including its comments, and handle it.
+
+            Read CLAUDE.md first, and DECISIONS.md. Between them they say what
+            this repository is, what its gate is and how to run it, and which
+            choices were deliberate. They are the brief; this is only the
+            protocol.
+
+            Then, whatever you did:
+
+            - Run the gate as CLAUDE.md describes it. Do not open a pull request
+              with a failing gate.
+            - If you changed anything, open a pull request from a branch against
+              master. Do not push to master.
+            - Comment on the issue with what you did, linking the pull request,
+              and close it. Open means unhandled.
+
+            If you cannot finish, say what is blocking you in a comment and leave
+            it open -- that is the correct outcome for something needing a
+            decision only a person can make. You have a turn budget and it is not
+            generous: understand the issue, make the change, run the gate, then
+            say what you did. If you are running low, stop and comment with what
+            you established and what is left.
+
+      # A run that stops at the turn ceiling otherwise leaves work on a branch
+      # and says nothing at all. One did exactly that.
+      - if: failure()
+        name: Say that the run did not finish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body \
+            "The agent started on this and did not finish: $RUN
+
+            It may have pushed a branch before stopping, so check the branch list
+            before starting again. The usual cause is the turn ceiling
+            (\`--max-turns\` in \`.github/workflows/agent.yml\`). This stays open." \
+            || echo "could not comment on #$NUMBER"

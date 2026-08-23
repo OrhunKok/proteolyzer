@@ -95,6 +95,21 @@ setuptools-scm falls back and every tag installs as `0.0.0` — pip cannot then
 tell two releases apart or compute an upgrade. `fallback_version` exists so an
 archive *builds*; the wheel is what to pin.
 
+**The cross-repository wiring was removed, deliberately.** For two days this
+repository carried a shared index mounted read-only, a self-refreshing working
+copy of it, two session hooks, an installer, a membership list, a pasted
+`CLAUDE.md` stanza and two workflows called out of a shared repository. It was
+built for a network of peers in constant communication. What exists is a
+dependency graph with two edges — `streamlit-DO-MS` and `decoder` pin a wheel
+from here — and adding an unrelated repository to the account required five steps
+in two other repositories, which is the tell that the shape was wrong. So: no
+shared repository, nothing mounted, no hooks, and every repository self-contained.
+A consumer owns its pin; this repository owns the table of who consumes it,
+because that is a fact about this repository rather than a hierarchy. Reading
+another repository is `gh repo clone`, which costs a second and cannot go stale.
+What survived is what actually fixed the original problem, which was never
+communication: tags, wheels, a CHANGELOG, pinned consumers and CI.
+
 **No LICENSE, deliberately.** This is public and released, and it still has no
 license, which reads like an oversight and is not one: nothing on the account
 gets one yet, because everything is early enough that the choice is not worth

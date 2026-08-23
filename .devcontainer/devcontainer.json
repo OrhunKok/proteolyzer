@@ -45,42 +45,29 @@
     }
   },
   "remoteUser": "node",
+  // Key every volume on ${localWorkspaceFolderBasename}, never on
+  // ${devcontainerId}: the stock Claude template ships the latter, and on macOS
+  // it is not resolved consistently across rebuilds, so the volume name changes
+  // and the command history and Claude config in the old one are silently left
+  // behind. Two checkouts with the same directory name would share volumes, so
+  // keep the directory names distinct.
   "mounts": [
     "source=claude-code-bashhistory-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
-    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
-
-    // claude-shared, read-only: the capability index, the membership list, the
-    // session hooks and the gh wrapper. Expects it cloned next to this
-    // repository on the host; if it is not there, link-ecosystem.sh falls back
-    // to the copy inside the workspace, then a cached clone, then cloning it, so
-    // the container still comes up wired. Nothing durable is registered against
-    // this mount: it is how the installer is found, and the installer then runs
-    // everything from a working copy at ~/.claude-shared that keeps itself
-    // current, because a mount from a host checkout lags until someone pulls it.
-    // https://github.com/OrhunKok/claude-shared
-    "source=${localWorkspaceFolder}/../claude-shared,target=/workspace-shared,type=bind,readonly"
+    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume"
   ],
   "containerEnv": {
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true",
     "DISABLE_TELEMETRY": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
-    // So a session can name its own project without inspecting paths. Part of
-    // the shared fragment; it costs nothing here and matters if memory is ever
-    // shared between containers, where a project fact has to say which project.
-    "CLAUDE_PROJECT": "${localWorkspaceFolderBasename}"
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  // Locates claude-shared and runs its installer: clones the working copy it
-  // then runs everything from, registers the two session hooks, makes gh usable,
-  // creates the two cross-repo labels, refreshes the membership cache, and
-  // checks the other members out read-only under ~/.claude-siblings. Idempotent,
-  // and runs before the firewall is applied so a fallback clone can reach
-  // GitHub. The same script is used by every project in the network; the
-  // canonical copy is claude-shared/devcontainer/.
-  "postCreateCommand": "bash .devcontainer/link-ecosystem.sh",
+  // Make `gh` read the credential the container already has for git. Idempotent.
+  // This one line is what replaced a shared repository, a read-only mount, an
+  // installer and two session hooks -- see DECISIONS.md.
+  "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /workspace/.devcontainer/gh-auth.sh' >> ~/.zshrc",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
 }
