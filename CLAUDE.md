@@ -42,8 +42,14 @@ from the settings, and decoder stopped importing at all for two days
   every Monday and hands their own worker a pull request carrying the wheel URL
   and the notes.
 - **`make test-downstream`**, which runs their suites against this working tree
-  when they are checked out under `downstream/`. Neither is wired in yet; both
-  have a suite worth running.
+  when they are checked out under `downstream/`. That checkout is a session's,
+  made by hand for the afternoon it's needed — not a CI fixture, since both
+  consumers are private and giving a workflow run the credentials to clone them
+  would hand the network an authority it needs nowhere else. So this is a tool
+  for a session to run before a release it's unsure of, not a gate wired into
+  one: it skips a consumer that isn't checked out rather than failing on it,
+  which is right for a command a person reaches for and wrong for a gate that
+  is supposed to block.
 
 Breaking something on purpose is fine. Breaking it silently is what the tags are
 against: bump the minor, write down what moved and what it is now, and say what a
