@@ -124,6 +124,19 @@ jobs:
           app-id: ${{ secrets.AGENT_APP_ID }}
           private-key: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
 
+      # Falling back is not a failure, but it must not be silent. The App is
+      # installed per repository, so a project added later gets a pull request
+      # with no checks on it and looks exactly like one that was checked and
+      # passed -- which is the failure this whole step exists to stop, arriving
+      # by a different door. An annotation on the run says which door it was.
+      - if: steps.creds.outputs.have == 'yes' && steps.token.outputs.token == ''
+        name: Say that the pull request will not be checked
+        run: |
+          echo "::warning title=No App token::Falling back to GITHUB_TOKEN, so the" \
+               "pull request this opens will carry no checks. Either AGENT_APP_ID" \
+               "and AGENT_APP_PRIVATE_KEY are not set here, or the App is not" \
+               "installed on this repository. See DECISIONS.md."
+
       - if: steps.creds.outputs.have == 'yes'
         uses: anthropics/claude-code-action@v1
         with:
