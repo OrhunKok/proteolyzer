@@ -61,6 +61,21 @@ def cv(data: Sequence[float] | np.ndarray, min_datapoints: int = 3) -> float:
     return np.std(data, ddof=1) / mean
 
 
+def log10(values: Sequence[float] | np.ndarray) -> np.ndarray:
+    """log10 of `values`, with zeros and negative numbers dropped first.
+
+    Written for an axis: ``np.log10`` of zero is ``-inf`` and of a negative
+    number is ``nan``, either of which sends a plot's scale to a value with
+    nothing to show for it. Dropping the offending values first, rather than
+    clipping them, keeps what survives exact.
+
+    >>> log10([1.0, 10.0, 0.0, -5.0]).tolist()
+    [0.0, 1.0]
+    """
+    data = np.asarray(values, dtype="float64")
+    return np.log10(data[data > 0])
+
+
 def jaccard_index(
     left: Sequence[bool] | np.ndarray, right: Sequence[bool] | np.ndarray
 ) -> float:

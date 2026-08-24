@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from proteolyzer.core.operations import cv, jaccard_index, per_distinct
+from proteolyzer.core.operations import cv, jaccard_index, log10, per_distinct
 
 
 def test_cv_matches_manual_calculation():
@@ -120,3 +120,20 @@ def test_jaccard_index_reads_counts_as_presence():
     """The masks come off columns that may be counts rather than flags, and the
     question asked of them is which precursors are there at all."""
     assert jaccard_index([3, 0, 7], [1, 0, 0]) == pytest.approx(0.5)
+
+
+# ------------------------------------------------------------------- log10
+
+
+def test_log10_matches_numpy_for_positive_values():
+    data = [1.0, 10.0, 100.0]
+    np.testing.assert_allclose(log10(data), np.log10(data))
+
+
+def test_log10_drops_zero_and_negative_values():
+    result = log10([1.0, 0.0, -5.0, 100.0])
+    np.testing.assert_allclose(result, [0.0, 2.0])
+
+
+def test_log10_of_all_non_positive_values_is_empty():
+    assert log10([0.0, -1.0, -2.0]).size == 0

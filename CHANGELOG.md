@@ -7,6 +7,39 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Added
+
+- `core.quirks` moves five pieces of engine-format knowledge out of
+  streamlit-DO-MS, which had the only copies:
+
+  - `psm_identified` reads MaxQuant's `Sequence`: a scan with no PSM comes back
+    as a single space, an empty string, or null depending on the MaxQuant
+    version and the parser, and all three mean the same thing.
+  - `decoy_flag` normalizes JMod's `is_decoy`, which survives as a real bool
+    through parquet and as the word or the number through a csv round-trip.
+  - `contaminant_flag` and `CONTAMINANT_MARK` recognize a FragPipe contaminant
+    by the prefix its library was searched under, rather than a keratin list
+    that goes stale.
+  - `fragpipe_run_names` reads the run off Philosopher's `Spectrum`
+    (`(file).(scan).(scan).(charge)`, with the file taken off the end because
+    it can itself contain dots), falling back to `Spectrum File` for a row
+    that lacks one.
+  - `run_name_from_path` is the basename-and-strip that three separate copies
+    over there had each reimplemented — inline in JMod's own reader, as the
+    `Spectrum File` fallback above, and in a since-deleted DIA-NN one.
+
+  All five work on an engine's own column names, ahead of proteolyzer's
+  rename: streamlit-DO-MS loads with `rename=False` and is written against
+  each engine's own schema, so a helper that only worked afterwards would be
+  unusable there.
+
+- `core.log10`, next to `cv` in `operations`: log10 with zeros and negative
+  values dropped first, rather than sent to `-inf` or `nan`. Also from
+  streamlit-DO-MS, where two byte-identical copies of it existed in
+  `JMod.py` and `FragPipe.py`.
+
 ## v0.3.0
 
 ### Added
