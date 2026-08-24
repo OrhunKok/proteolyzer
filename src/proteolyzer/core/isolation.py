@@ -1,0 +1,115 @@
+"""What a DIA isolation-window design did to a precursor's isotopic envelope.
+
+A DIA method fragments everything inside a window of m/z, so the MS2 spectrum a
+precursor is identified from depends on where the window edges fell relative to
+its isotopes. Where part of the envelope lands outside the window, the fragments
+come from a different slice of the signal than the MS1 quantitation was measured
+over -- which is a property of the design and the precursor, not of the sample,
+and worth ruling out before a quantitative difference is attributed to one.
+
+The columns this reads are not all ones the core loads by default:
+``Precursor.Mz`` is not in the DIA-NN report subset, because that subset is a
+pipeline's rather than a dashboard's. So the caller supplies the frame, and a
+frame without the columns is answered with nothing rather than a guess.
+
+Moved here from streamlit-DO-MS, which had the only copy of it and could ask the
+question only from inside a dashboard. See DECISIONS.md.
+"""
+
+import numpy as np
+import pandas as pd
+
+#: The gap between one isotope of a peptide and the next, as a neutral mass: 13C
+#: less 12C. Divided by the charge it becomes a step in m/z.
+ISOTOPE_STEP: float = 1.00336
+
+#: How much of the envelope has to be isolated together for the precursor to be
+#: fragmented as one thing. M0 to M+2 carries all but a little of the signal.
+ENVELOPE_ISOTOPES: int = 2
+
+#: What the frame is asked for. Everything else it may carry is ignored.
+PRECURSOR_COLUMNS: frozenset[str] = frozenset({"Precursor.Mz", "Precursor.Charge"})
+
+#: The window design's own columns, which come from the instrument method rather
+#: than from a search engine, so they are named as the method writes them.
+WINDOW_MASS_COLUMNS: tuple[str, str] = ("Start Mass [m/z]", "End Mass [m/z]")
+WINDOW_MOBILITY_COLUMNS: tuple[str, str] = ("Start IM [1/K0]", "End IM [1/K0]")
+
+
+def envelope_split(
+    report: pd.DataFrame,
+    windows: pd.DataFrame,
+    isotopes: int = ENVELOPE_ISOTOPES,
+) -> pd.Series:
+    """Whether each precursor's isotopic envelope was isolated whole or in parts.
+
+    A precursor is isolated by the window its monoisotopic m/z falls in, and its
+    isotopes sit ``ISOTOPE_STEP / charge`` above that, one per 13C. Where an
+    isotope lands past the window's upper edge it is fragmented in a different
+    window, or in none, so the MS2 spectrum is missing part of the envelope the
+    MS1 quantitation was measured from.
+
+    A precursor counts as intact when some one window holds its whole envelope,
+    rather than by looking up 'its' window first: schemes overlap, and a
+    precursor isolated whole by any of them was isolated whole. Windows are taken
+    as m/z by ion mobility rectangles, which is the same approximation a window
+    overlay is drawn with.
+
+    Returns ``'Intact'``, ``'Split'``, or ``None`` where the design covers no
+    window the precursor could have come from -- aligned to the report's own
+    index, so the answer can be assigned straight back onto it.
+    """
+
+    def numeric(column: str) -> pd.Series:
+        # Charge and mobility arrive categorical from the loader, and to_numeric
+        # will not take a categorical directly.
+        return pd.to_numeric(report[column].astype("object"), errors="coerce")
+
+    if not PRECURSOR_COLUMNS.issubset(report.columns) or windows.empty:
+        return pd.Series(None, index=report.index, dtype="object")
+
+    # One row per precursor rather than per identification: the answer depends on
+    # the m/z, the charge and the mobility, none of which vary by run or channel,
+    # and a report can carry a million rows against a few thousand precursors.
+    columns = {name: numeric(name) for name in ("Precursor.Mz", "Precursor.Charge")}
+    if "IM" in report.columns:
+        columns["IM"] = numeric("IM")
+
+    frame = pd.DataFrame(columns, index=report.index)
+    unique = frame.drop_duplicates()
+
+    mz = unique["Precursor.Mz"].to_numpy(dtype=float)
+    charge = unique["Precursor.Charge"].to_numpy(dtype=float)
+    top = mz + isotopes * ISOTOPE_STEP / charge
+
+    starts = windows[WINDOW_MASS_COLUMNS[0]].to_numpy(dtype=float)
+    ends = windows[WINDOW_MASS_COLUMNS[1]].to_numpy(dtype=float)
+
+    isolated = (mz[:, None] >= starts) & (mz[:, None] <= ends)
+    whole = isolated & (top[:, None] <= ends)
+
+    mobile = set(WINDOW_MOBILITY_COLUMNS).issubset(windows.columns) and (
+        "IM" in unique.columns
+    )
+    if mobile and (unique["IM"] > 0).any():
+        # A PASEF window is a patch of the m/z by mobility plane, so both have to
+        # match. Isotopes share the precursor's charge and so its mobility.
+        mobility = unique["IM"].to_numpy(dtype=float)
+        low = windows[WINDOW_MOBILITY_COLUMNS[0]].to_numpy(dtype=float)
+        high = windows[WINDOW_MOBILITY_COLUMNS[1]].to_numpy(dtype=float)
+        within = (mobility[:, None] >= low) & (mobility[:, None] <= high)
+        isolated, whole = isolated & within, whole & within
+
+    # None unless some window isolated it, and 'whole' implies 'isolated', so
+    # writing the stronger answer second is what settles the overlap.
+    envelope = np.full(len(unique), None, dtype=object)
+    envelope[isolated.any(axis=1)] = "Split"
+    envelope[whole.any(axis=1)] = "Intact"
+
+    unique = unique.assign(Envelope=envelope)
+
+    # Back onto every identification of each precursor. A left merge keeps the
+    # report's row order, so the values line up with the index they came from.
+    spread = frame.merge(unique, on=list(frame.columns), how="left")
+
+    return pd.Series(spread["Envelope"].to_numpy(), index=report.index)

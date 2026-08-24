@@ -6,6 +6,7 @@ Submodules
     models: Data, Report and the processing metadata
     processor: dtype narrowing, derived columns, labelling information
     matrix: pivot processed data into a quantitative matrix
+    isolation: what a DIA window design did to a precursor's envelope
     operations: small pure functions
     logging: the package logger and the Logged base class
     io: parquet interchange for frames passed between stages
@@ -13,11 +14,12 @@ Submodules
 """
 
 from .io import frame_exists, read_frame, write_frame
+from .isolation import envelope_split
 from .loader import DataLoader
 from .logging import Logged, configure_logging
 from .matrix import MatrixBuilder
 from .models import Data, Processing, Report
-from .operations import cv
+from .operations import cv, jaccard_index
 from .pipeline import NullQueue, Stage
 from .processor import DataProcessor, Narrower, narrow
 from .reader import read
@@ -35,7 +37,9 @@ __all__ = [
     "Stage",
     "configure_logging",
     "cv",
+    "envelope_split",
     "frame_exists",
+    "jaccard_index",
     "narrow",
     "read",
     "read_frame",

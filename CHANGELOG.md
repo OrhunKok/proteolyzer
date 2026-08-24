@@ -7,6 +7,30 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Added
+
+- `core.envelope_split` says whether a precursor's isotopic envelope was isolated
+  whole by a DIA window design, or split across the edge of one. Where part of the
+  envelope is fragmented in another window, the MS2 spectrum covers less of the
+  signal than the MS1 quantitation was measured over — a property of the method
+  and the precursor rather than of the sample, and worth ruling out before a
+  quantitative difference is read as biology.
+
+  Moved from streamlit-DO-MS, which had the only copy and could ask the question
+  only from inside a dashboard. Verified against the original over 400 random
+  window designs before the copy there is dropped.
+
+  Note that `Precursor.Mz` is not in the core's DIA-NN column subset, that subset
+  being a pipeline's rather than a dashboard's, so the caller supplies the frame:
+  one without the columns is answered with nothing rather than a guess.
+
+- `core.jaccard_index`, how far two masks agree — what they share over what either
+  has. Also from streamlit-DO-MS, where it compares the precursors two labelling
+  channels or two runs identified. `nan` for two empty masks, where the original
+  divided by zero.
+
 ## v0.2.2
 
 ### Fixed

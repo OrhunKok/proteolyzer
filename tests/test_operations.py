@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from proteolyzer.core.operations import cv, per_distinct
+from proteolyzer.core.operations import cv, jaccard_index, per_distinct
 
 
 def test_cv_matches_manual_calculation():
@@ -92,3 +92,31 @@ def test_per_distinct_calls_the_function_once_per_distinct_value():
     per_distinct(record)(column)
 
     assert seen == ["AAA", "BB"]
+
+
+def test_jaccard_index_is_the_shared_over_the_union():
+    left = [True, True, True, False]
+    right = [True, True, False, False]
+
+    assert jaccard_index(left, right) == pytest.approx(2 / 3)
+
+
+def test_jaccard_index_of_identical_masks_is_one():
+    mask = [True, False, True]
+
+    assert jaccard_index(mask, mask) == 1.0
+
+
+def test_jaccard_index_of_disjoint_masks_is_zero():
+    assert jaccard_index([True, False], [False, True]) == 0.0
+
+
+def test_jaccard_index_of_two_empty_masks_is_nan():
+    """0/0: there is nothing for them to be similar about, and nan aggregates."""
+    assert np.isnan(jaccard_index([False, False], [False, False]))
+
+
+def test_jaccard_index_reads_counts_as_presence():
+    """The masks come off columns that may be counts rather than flags, and the
+    question asked of them is which precursors are there at all."""
+    assert jaccard_index([3, 0, 7], [1, 0, 0]) == pytest.approx(0.5)
