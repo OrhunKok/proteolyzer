@@ -3,12 +3,9 @@
 from proteolyzer.core.formats import Config as CoreConfig
 
 
-def test_core_format_blocks_are_dicts_and_sets():
+def test_a_block_describes_the_format_and_nothing_else():
     cfg = CoreConfig()
-    assert isinstance(cfg.DIANN.LOAD_COLS, dict)
-    assert isinstance(cfg.DIANN.LOAD_COLS["report"], set)
-    assert cfg.DIANN.LOAD_COLS["report.stats"] is None
-    assert cfg.DIANN.LOAD_COLS["report"] == cfg.DIANN.LOAD_COLS["report-first-pass"]
+    assert cfg.DIANN.FILES
     assert cfg.MaxQuant.COLS_RENAME_MAPPING["Experiment"] == "Run"
 
 
@@ -29,24 +26,27 @@ def test_every_engine_block_is_well_formed():
         block = getattr(cfg, name)
         assert block.FILES, name
         assert block.FILE_EXTENSIONS, name
-        assert set(block.LOAD_COLS) <= set(block.FILES), name
-        assert all(
-            columns is None or isinstance(columns, set)
-            for columns in block.LOAD_COLS.values()
-        ), name
         assert all(extension.startswith(".") for extension in block.FILE_EXTENSIONS), (
             name
         )
 
 
-def test_the_maxquant_tables_besides_evidence_have_subsets():
-    """A file with no subset is read whole, and allPeptides runs to several GB."""
+def test_no_block_carries_a_column_subset():
+    """Which columns to keep is the caller's, not the format's -- one list cannot
+    be right for a dashboard and a pipeline at once, and carrying one here meant
+    every consumer either took a subset built for somebody else or overrode it.
+    ``Data.cols_to_load`` is where a project says what it wants."""
     cfg = CoreConfig()
-    for name in ("allPeptides", "msScans", "msmsScans"):
-        assert isinstance(cfg.MaxQuant.LOAD_COLS[name], set), name
-        assert "Raw file" in cfg.MaxQuant.LOAD_COLS[name], name
+    engines = [name for name in vars(cfg) if hasattr(getattr(cfg, name), "FILES")]
 
-    # evidence names the run Experiment; the rest name it Raw file.
+    for name in engines:
+        assert not hasattr(getattr(cfg, name), "LOAD_COLS"), name
+
+
+def test_the_maxquant_tables_name_the_run_differently():
+    """evidence names the run Experiment; the rest name it Raw file."""
+    cfg = CoreConfig()
+    assert cfg.MaxQuant.COLS_RENAME_MAPPING["Experiment"] == "Run"
     assert cfg.MaxQuant.COLS_RENAME_MAPPING["Raw file"] == "Run"
 
 
@@ -56,8 +56,3 @@ def test_jmod_and_fragpipe_map_onto_the_canonical_names():
     assert cfg.JMod.COLS_RENAME_MAPPING["stripped_seq"] == "Stripped.Sequence"
     assert cfg.FragPipe.COLS_RENAME_MAPPING["Spectrum File"] == "Run"
     assert cfg.FragPipe.COLS_RENAME_MAPPING["Peptide"] == "Stripped.Sequence"
-
-    # Both write their identifications under one name per file, so a subset is
-    # an intersection with whatever that workflow wrote.
-    assert "plex_Area" in cfg.JMod.LOAD_COLS["filtered_IDs"]
-    assert "Hyperscore" in cfg.FragPipe.LOAD_COLS["psm"]

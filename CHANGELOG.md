@@ -7,6 +7,42 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Changed — breaking
+
+- **The core no longer decides which columns you get.** `LOAD_COLS` is gone from
+  every format block, and a file is read whole unless the caller names columns.
+  `Data.cols_to_load` is where a project states its own list.
+
+  Which columns matter is a fact about the project reading the file, not about
+  the file: a dashboard plots the m/z and injection time a pipeline never looks
+  at, and a pipeline wants quantities no panel shows. The 260 names across 29
+  tables that lived here were contributed by one consumer, which had already
+  overridden two of them because "the core's own subset is a pipeline's rather
+  than a dashboard's". A shared list that every sharer overrides is not shared.
+
+  **What a consumer has to do.** If you passed `cols_to_load`, nothing changes —
+  you already stated your own list. If you passed `extra_cols_to_load` and
+  relied on it meaning *the core's subset plus mine*, you will now get every
+  column: correct, and wider. Move that list to `cols_to_load` to get a narrow
+  frame back. To recover exactly what you had, install v0.3.0 and dump it:
+
+  ```python
+  from proteolyzer.core.formats import Config
+  {t: sorted(c) if c else None
+   for t, c in Config().DIANN.LOAD_COLS.items()}   # or MaxQuant, JMod, FragPipe
+  ```
+
+- `extra_cols_to_load` on its own no longer narrows anything, there being no base
+  subset for it to be extra to. It widens `cols_to_load` where both are given.
+
+### Removed
+
+- `Config().<engine>.LOAD_COLS`. Format recognition (`FILES`, `FILE_EXTENSIONS`),
+  the canonical rename mapping and the categorical exclusions all stay — those
+  are facts about the format, true for everyone who reads it.
+
 ## v0.3.0
 
 ### Added

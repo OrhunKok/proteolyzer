@@ -132,7 +132,7 @@ class DataLoader(Logged):
         return df.rename(columns=self.cols_rename_mapping)
 
     def _cols_to_load(self, all_cols) -> list:
-        """Intersect the file's columns with the configured subset.
+        """Intersect the file's columns with the subset the caller asked for.
 
         Keeps the order the columns appear in the file, so repeated loads of the
         same file always produce the same column order.

@@ -11,10 +11,18 @@ from proteolyzer.core.models import Data
 
 
 def test_parquet_load_honours_the_column_subset(report_parquet):
-    """Regression: the configured subset never reached the loader."""
-    loaded = Data(source=report_parquet).load()
+    """Regression: the subset the caller asks for never reached the loader."""
+    loaded = Data(source=report_parquet, cols_to_load={"Precursor.Id"}).load()
     assert "Precursor.Id" in loaded.columns
     assert "Q.Value" not in loaded.columns
+
+
+def test_parquet_load_keeps_every_column_when_none_are_asked_for(
+    report_parquet, label_free_report
+):
+    """The core holds no list of its own, so nothing is dropped by default."""
+    loaded = Data(source=report_parquet).load()
+    assert set(loaded.columns) == set(label_free_report.columns)
 
 
 def test_parquet_load_keeps_file_column_order(report_parquet, label_free_report):
@@ -31,7 +39,7 @@ def test_load_all_columns(report_parquet, label_free_report):
 def test_tsv_load_and_subset(tmp_path, label_free_report):
     path = tmp_path / "report.tsv"
     label_free_report.to_csv(path, sep="\t", index=False)
-    loaded = Data(source=path).load()
+    loaded = Data(source=path, cols_to_load={"Run", "Precursor.Id"}).load()
     assert "Q.Value" not in loaded.columns
     assert len(loaded) == len(label_free_report)
 
@@ -199,7 +207,7 @@ def test_named_stream_is_read_as_a_table(label_free_report):
     buffer = io.StringIO(label_free_report.to_csv(sep="\t", index=False))
     buffer.name = "report.tsv"
 
-    loader = DataLoader(Data(source=buffer))
+    loader = DataLoader(Data(source=buffer, cols_to_load={"Run", "Precursor.Id"}))
 
     assert len(loader.data) == len(label_free_report)
     assert "Q.Value" not in loader.data.columns
@@ -218,7 +226,7 @@ def test_a_jmod_table_is_recognised_and_subset(tmp_path, jmod_ids):
     path = tmp_path / "filtered_IDs.csv"
     jmod_ids.to_csv(path, index=False)
 
-    data = Data(source=path)
+    data = Data(source=path, cols_to_load={"file_name", "stripped_seq", "z", "rt"})
     assert data.input_type == "JMod"
 
     loaded = data.load()
@@ -234,7 +242,7 @@ def test_a_jmod_parquet_reads_the_same_way(tmp_path, jmod_ids):
 
     loaded = Data(source=path).load()
     assert loaded.source.input_type == "JMod"
-    assert "unused_column" not in loaded.columns
+    assert "unused_column" in loaded.columns
 
 
 def test_a_fragpipe_psm_table_is_recognised_and_subset(tmp_path, fragpipe_psms):
@@ -245,12 +253,14 @@ def test_a_fragpipe_psm_table_is_recognised_and_subset(tmp_path, fragpipe_psms):
     assert data.input_type == "FragPipe"
 
     loaded = data.load()
-    assert "Unused Column" not in loaded.columns
+    # Recognised, renamed, and nothing withheld: the caller says what it wants.
+    assert "Unused Column" in loaded.columns
     assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
 
 
-def test_the_maxquant_tables_besides_evidence_are_subset(tmp_path):
-    """Regression: with no subset configured, every column was read."""
+def test_a_maxquant_table_is_read_whole_unless_asked_otherwise(tmp_path):
+    """allPeptides runs to several GB, and narrowing it is the caller's call --
+    the core cannot know which of its columns this project plots."""
     frame = pd.DataFrame(
         {
             "Raw file": ["run1", "run2"],
@@ -265,7 +275,11 @@ def test_the_maxquant_tables_besides_evidence_are_subset(tmp_path):
     frame.to_csv(path, sep="\t", index=False)
 
     loaded = Data(source=path).load()
-    assert not [column for column in loaded.columns if column.startswith("Unused")]
+    assert [column for column in loaded.columns if column.startswith("Unused")]
+
+    asked = Data(source=path, cols_to_load={"Raw file", "Retention time"}).load()
+    # Onto the canonical names: 'Raw file' is 'Run' and 'Retention time' is 'RT'.
+    assert set(asked.columns) == {"Run", "RT"}
     assert "Run" in loaded.columns
 
 
@@ -290,18 +304,18 @@ def test_a_file_matching_two_engines_says_which(tmp_path, monkeypatch):
 
 
 def test_cols_to_load_replaces_the_configured_subset(report_parquet):
-    """A caller that wants less than LOAD_COLS names, rather than more."""
+    """A caller naming the columns its own project reads."""
     loaded = Data(source=report_parquet, cols_to_load={"Run", "Precursor.Id"}).load()
     assert set(loaded.columns) == {"Run", "Precursor.Id"}
 
 
-def test_cols_to_load_wins_over_extras_and_loses_to_load_all(report_parquet):
+def test_extras_widen_cols_to_load_and_both_lose_to_load_all(report_parquet):
     loaded = Data(
         source=report_parquet,
         cols_to_load={"Run"},
         extra_cols_to_load={"Q.Value"},
     ).load()
-    assert set(loaded.columns) == {"Run"}
+    assert set(loaded.columns) == {"Run", "Q.Value"}
 
     everything = Data(
         source=report_parquet, cols_to_load={"Run"}, load_all_columns=True
@@ -322,8 +336,9 @@ def test_the_file_can_keep_its_own_column_names(tmp_path, label_free_report):
     assert "Experiment" in as_written.columns and "Run" not in as_written.columns
 
 
-def test_extras_are_honoured_for_a_file_with_no_configured_subset(tmp_path):
-    """Regression: asking for two columns of such a file read all of them."""
+def test_extras_on_their_own_still_read_the_file_whole(tmp_path):
+    """There is no base subset for them to be extra to. Answering with the extras
+    alone would drop every other column without the caller having said so."""
     frame = pd.DataFrame(
         {
             "Raw file": ["run1"],
@@ -335,4 +350,5 @@ def test_extras_are_honoured_for_a_file_with_no_configured_subset(tmp_path):
     frame.to_csv(path, sep="\t", index=False)
 
     loaded = Data(source=path, extra_cols_to_load={"Raw file", "Kept"}).load()
-    assert set(loaded.columns) == {"Run", "Kept"}
+    assert {"Run", "Kept"} <= set(loaded.columns)
+    assert [column for column in loaded.columns if column.startswith("Unused")]

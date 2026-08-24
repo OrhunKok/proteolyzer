@@ -12,25 +12,34 @@ Detection walks whatever blocks are there, so adding an engine is a block and no
 other change. It used to name DIANN and MaxQuant, which is why adding JMod and
 FragPipe touched `models.py` at all.
 
-**`LOAD_COLS` is per file, and a subset is an intersection.** A search writes
-what its workflow produced: no IonQuant means no `Intensity`, no timsTOF means no
-`Ion Mobility`, and JMod's parquet has seventeen of the columns its csv has. So
-the loader intersects what was asked for with what the file has, and a consumer
-checks a column arrived rather than assuming.
+**Which columns to keep is the caller's, and this package keeps no list.** A
+format block says what the file *is* -- which names it goes by, how its columns
+map onto the canonical schema, which must stay numeric. It used to say which
+columns were worth reading as well, 260 of them across 29 tables, contributed
+from the dashboard so that four repositories would not each carry their own.
 
-**`cols_to_load` replaces the subset; `extra_cols_to_load` adds to it.** The
-configured subset is a floor, which is right for a pipeline and wrong for a
-consumer that wants four columns of a large report. Precedence:
-`load_all_columns`, then `cols_to_load`, then the configured subset plus extras.
+That was the wrong seam. Which columns matter is a fact about the project doing
+the reading, not about the file: a dashboard plots the m/z and the injection time
+a pipeline never looks at, and a pipeline wants quantities no panel shows. The
+tell was that the one consumer the lists came from had already overridden two of
+them, with a comment saying the core's subset "is a pipeline's rather than a
+dashboard's". A shared list that every sharer overrides is a shared list in name.
+
+So the core reads the file whole and `Data.cols_to_load` is where a project says
+otherwise. A reader that silently drops a column is worse than a wide frame: the
+column is gone with nothing said, and the caller who needed it finds out from a
+`KeyError` three functions later.
+
+**A subset is an intersection.** A search writes what its workflow produced: no
+IonQuant means no `Intensity`, no timsTOF means no `Ion Mobility`, and JMod's
+parquet has seventeen of the columns its csv has. So the loader intersects what
+was asked for with what the file has, and a consumer checks a column arrived
+rather than assuming.
 
 **`rename=False` exists for consumers written against the engine's own names.**
 This package normalizes every engine onto one schema, which is the right default
 and the wrong one for a dashboard whose twenty-five pages say `Retention time`
 and `Modified sequence`. Reversing the mapping afterwards is what it was doing.
-
-**A file with no configured subset honours the asked-for columns.** It used to
-read everything, so asking for two columns of an `allPeptides.txt` read all sixty
-of them, and that file runs to several GB.
 
 ## Narrowing
 
