@@ -8,7 +8,7 @@ only added a layer to look through.
 
 The tables come from the UniMod export in ``proteolyzer/resources``, read on
 first use rather than at import, so importing the package costs nothing. See
-``tools/unimod`` for how those files are regenerated.
+``proteolyzer.unimod`` for how those files are regenerated.
 """
 
 import functools
