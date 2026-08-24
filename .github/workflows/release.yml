@@ -40,6 +40,35 @@ jobs:
           echo "tag $tag, built $built"
           test "$tag" = "$built"
 
+      # `gh release upload` needs a release to already exist and says only
+      # 'release not found' when there is none. Every release up to v0.2.1 was
+      # made in the web UI, which creates the tag as a side effect, so the tag
+      # push always arrived after the release and the gap never showed. v0.2.2
+      # was tagged from a terminal instead: the build went red and the tag stood
+      # for a day with no wheel behind it, which is the one thing a tag here is
+      # for. So make the release rather than assume it.
+      - name: Make sure there is a release to attach to
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME is already there"
+            exit 0
+          fi
+          # The notes are the CHANGELOG section for this version, which is
+          # written by hand and says what a consumer has to do about it.
+          awk -v want="## $GITHUB_REF_NAME" \
+              '$0 == want {inside = 1; next} /^## / {inside = 0} inside' \
+              CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" --notes-file notes.md
+          else
+            echo "::warning::no CHANGELOG section for $GITHUB_REF_NAME"
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+
       - name: Attach them to the release
         env:
           GH_TOKEN: ${{ github.token }}
