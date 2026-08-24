@@ -607,3 +607,33 @@ def test_the_same_upload_can_be_read_twice(blind_run):
 
     assert len(again.map_data()) == len(first.map_data())
     assert again.stages["05/output.log"] == UNREAD
+
+
+def test_a_preparation_that_skipped_steps_still_maps_its_cells():
+    """Not every run does every step, and the missing ones are not an error.
+
+    The run this was written from has its cells, one label and one pickup, and no
+    DMSO, quench or dispense at all -- which is what the reader said of it, and
+    what it should say. Every end-to-end case here uses `blind_run`, which has all
+    six, so the absent side of each step was never read.
+    """
+    sparse = [
+        Upload("02/output.log", cells_log()),
+        Upload("02/table.xls", cells_table()),
+        Upload("03/output.log", label_log()),
+        Upload("05/output.log", pickup_log()),
+    ]
+    mapping = CoordinatesMapping(sparse, "mTRAQ", 3)
+    metadata = mapping.map_data()
+
+    assert "DMSO" not in mapping.parsed_data
+    assert "Quench" not in mapping.parsed_data
+
+    # The cells are all there, once each, with where they went.
+    assert len(metadata) > 0
+    assert not metadata.duplicated(["Target", "Field", "XPos", "YPos"]).any()
+    assert metadata["Diameter"].notna().any()
+
+    # And the steps that did run are still read, rather than dropped with them.
+    assert "Drops.Label" in metadata.columns
+    assert len(mapping.map_stats()) > 0
