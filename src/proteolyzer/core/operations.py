@@ -59,3 +59,27 @@ def cv(data: Sequence[float] | np.ndarray, min_datapoints: int = 3) -> float:
     if mean == 0:
         return np.nan
     return np.std(data, ddof=1) / mean
+
+
+def jaccard_index(
+    left: Sequence[bool] | np.ndarray, right: Sequence[bool] | np.ndarray
+) -> float:
+    """How much two masks agree: what they share over what either of them has.
+
+    Written for asking how far two labelling channels, or two runs, identified
+    the same precursors -- where the answer wanted is the overlap rather than
+    either count on its own.
+
+    Both are read as boolean masks over the same ordered set, so they have to be
+    the same length and aligned. Returns ``nan`` for two empty masks, where the
+    ratio is 0/0 and there is nothing to be similar about.
+
+    >>> jaccard_index([True, True, False], [True, False, False])
+    0.5
+    """
+    left = np.asarray(left, dtype=bool)
+    right = np.asarray(right, dtype=bool)
+    union = int(np.logical_or(left, right).sum())
+    if union == 0:
+        return np.nan
+    return float(np.logical_and(left, right).sum() / union)
