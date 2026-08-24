@@ -48,23 +48,35 @@ def test_unknown_input_type_loads_every_column(tmp_path, label_free_report):
     assert data.cols_rename_mapping == {}
 
 
-def test_cols_subset_comes_from_config(report_parquet):
-    subset = Data(source=report_parquet).cols_subset
-    assert "Precursor.Id" in subset
-    assert "Q.Value" not in subset
+def test_nothing_is_subset_unless_the_caller_asks(report_parquet):
+    """The core keeps no list of its own, so the default is every column."""
+    assert Data(source=report_parquet).cols_subset is None
 
 
-def test_extra_cols_are_added_to_the_subset(report_parquet):
-    data = Data(source=report_parquet, extra_cols_to_load="Q.Value")
-    assert "Q.Value" in data.cols_subset
-    assert "Precursor.Id" in data.cols_subset
+def test_cols_to_load_is_how_a_project_states_its_columns(report_parquet):
+    subset = Data(source=report_parquet, cols_to_load={"Precursor.Id"}).cols_subset
+    assert subset == {"Precursor.Id"}
+
+
+def test_extras_widen_a_stated_subset(report_parquet):
+    data = Data(
+        source=report_parquet,
+        cols_to_load={"Precursor.Id"},
+        extra_cols_to_load="Q.Value",
+    )
+    assert data.cols_subset == {"Precursor.Id", "Q.Value"}
+
+
+def test_extras_alone_still_mean_every_column(report_parquet):
+    """There is no base subset for them to be extra to any more, and answering
+    with the extras alone would silently drop everything else."""
+    assert Data(source=report_parquet, extra_cols_to_load="Q.Value").cols_subset is None
 
 
 @pytest.mark.parametrize("extra", [["Q.Value"], {"Q.Value"}, ("Q.Value",)])
 def test_extra_cols_accept_any_string_collection(report_parquet, extra):
-    assert Data(source=report_parquet, extra_cols_to_load=extra).cols_subset >= {
-        "Q.Value"
-    }
+    data = Data(source=report_parquet, cols_to_load={"Run"}, extra_cols_to_load=extra)
+    assert data.cols_subset >= {"Q.Value"}
 
 
 def test_extra_cols_reject_non_strings(report_parquet):
@@ -72,8 +84,9 @@ def test_extra_cols_reject_non_strings(report_parquet):
         Data(source=report_parquet, extra_cols_to_load=[1, 2])
 
 
-def test_load_all_columns_overrides_the_subset(report_parquet):
-    assert Data(source=report_parquet, load_all_columns=True).cols_subset is None
+def test_load_all_columns_overrides_a_stated_subset(report_parquet):
+    data = Data(source=report_parquet, cols_to_load={"Run"}, load_all_columns=True)
+    assert data.cols_subset is None
 
 
 def test_file_stats_only_exist_for_paths(report_parquet):
@@ -226,6 +239,6 @@ def test_read_is_the_entry_point(report_parquet):
     import proteolyzer as pz
 
     assert isinstance(pz.read(report_parquet), Report)
-    assert len(pz.read(report_parquet, load_all_columns=True).columns) > len(
-        pz.read(report_parquet).columns
+    assert len(pz.read(report_parquet).columns) > len(
+        pz.read(report_parquet, cols_to_load={"Run", "Precursor.Id"}).columns
     )

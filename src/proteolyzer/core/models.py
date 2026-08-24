@@ -40,16 +40,25 @@ class Data(BaseModel):
 
     source: object = Field(..., description="Path or file-like object.")
     load_all_columns: bool = Field(
-        False, description="Whether to load all columns from the file."
+        False,
+        description=(
+            "Load every column, overriding any the caller named. Redundant "
+            "unless one was named: reading the file whole is the default."
+        ),
     )
     extra_cols_to_load: set[str] | None = Field(
-        None, description="Additional columns to load."
+        None,
+        description=(
+            "Columns to add to cols_to_load. On its own it widens a request "
+            "that is already every column, so it changes nothing."
+        ),
     )
     cols_to_load: set[str] | None = Field(
         None,
         description=(
-            "Columns to load, replacing the configured subset rather than "
-            "adding to it. For a caller that wants less than LOAD_COLS names."
+            "The columns to read, for a project that wants fewer than the "
+            "file has. Which those are is the project's to say -- the core "
+            "keeps no list of its own. Names the file lacks are ignored."
         ),
     )
     rename: bool = Field(
@@ -203,36 +212,26 @@ class Data(BaseModel):
     def cols_subset(self) -> set[str] | None:
         """Columns to read, or ``None`` to read everything.
 
-        ``load_all_columns`` wins, then ``cols_to_load``, which replaces the
-        configured subset; otherwise the configured subset with
-        ``extra_cols_to_load`` added. Whichever it is, the loader intersects it
-        with the columns the file actually has.
+        ``None`` -- every column -- unless the caller named some. Which columns
+        matter is the caller's to say and nothing here knows it: the core no
+        longer carries a subset per file, because one list cannot be right for a
+        dashboard and a pipeline at once. ``cols_to_load`` is the list;
+        ``extra_cols_to_load`` adds to it, and on its own only widens a request
+        that is already everything.
+
+        Whichever it is, the loader intersects it with the columns the file
+        actually has, so naming one that is not there is not an error.
         """
         if self.load_all_columns:
             return None
 
-        if self.cols_to_load:
-            return set(self.cols_to_load)
-
-        if self.input_type == "Unknown":
-            # Nothing describes this file, so a subset would be guesswork --
-            # unless the caller asked for one above.
-            return set(self.extra_cols_to_load) if self.extra_cols_to_load else None
-
-        cols = getattr(getattr(CONFIG, self.input_type, None), "LOAD_COLS", {}).get(
-            self.file_name
-        )
-
-        if cols is None:
-            # No subset configured for this file. Asked-for columns are still
-            # asked for: reading everything instead is how a caller after four
-            # columns of an allPeptides.txt ends up reading sixty.
-            return set(self.extra_cols_to_load) if self.extra_cols_to_load else None
-
+        wanted = set(self.cols_to_load or ())
         if self.extra_cols_to_load:
-            return set(cols) | set(self.extra_cols_to_load)
+            # Extras on their own mean nothing now that the base is everything,
+            # and a caller that only passes them still gets everything.
+            wanted = (wanted | set(self.extra_cols_to_load)) if wanted else set()
 
-        return set(cols)
+        return wanted or None
 
     @computed_field
     @cached_property

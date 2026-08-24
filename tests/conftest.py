@@ -100,7 +100,7 @@ def jmod_ids() -> pd.DataFrame:
             "MS1_Area": np.linspace(1e5, 1e7, rows),
             "Qvalue": np.linspace(0.001, 0.01, rows),
             "pep_len": [8] * rows,
-            # Not in the configured subset, so subsetting has something to drop.
+            # Something for a cols_to_load test to leave behind.
             "unused_column": np.arange(rows, dtype=float),
         }
     )
