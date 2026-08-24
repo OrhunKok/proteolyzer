@@ -7,7 +7,7 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
-## Unreleased
+## v0.3.0
 
 ### Added
 
