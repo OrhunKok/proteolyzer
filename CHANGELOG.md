@@ -7,6 +7,22 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## v0.2.2
+
+### Fixed
+
+- A cellenONE folder yields one table of cells, not two. The instrument writes
+  two tables with the same fifty-two columns — the cells it printed, and every
+  droplet it detected on the way — and they are told apart by what fraction of
+  their rows say which target, field and position a cell went to. That fraction
+  was computed after short rows had been discarded, and a droplet that was never
+  placed is exactly a short row: of the 6797 rows one real geoprops table had,
+  6770 were dropped before the ratio was taken, which then came to 1 for both
+  tables. So a reordered export was read as a second table of cells in every
+  folder that had one. Only the half line a capped read ends on is dropped now.
+  A consumer reading a run with reordered exports gets fewer cells than before,
+  and every cell it loses is one the instrument never printed.
+
 ## v0.2.1
 
 ### Fixed

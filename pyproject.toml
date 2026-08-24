@@ -82,7 +82,8 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-# The UniMod CSVs only; the database they are built from lives in tools/unimod.
+# The UniMod CSVs only; the database they are built from is not shipped at all,
+# being 5 MB against their 221 KB. `proteolyzer.unimod` builds it on first use.
 "*" = ["resources/*.csv", "py.typed"]
 
 [tool.setuptools_scm]

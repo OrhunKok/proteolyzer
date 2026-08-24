@@ -42,10 +42,11 @@ from the settings, and decoder stopped importing at all for two days
   the wheel — a GitHub source archive carries no `.git`, so setuptools-scm falls
   back and every tag installs as `0.0.0`, which pip cannot compare. What the
   release still owes by hand is the tag, the wheel, and that changelog entry;
-  making sure the consumers notice is not. Both of them run a `pin-check`
-  workflow that compares their pin against this repository's latest release
-  every Monday and hands their own worker a pull request carrying the wheel URL
-  and the notes.
+  making sure the consumers notice is not. Both of them run an `upstream.yml`
+  workflow every Monday that compares their pin against this repository's latest
+  release, moves it, runs their own suites against the new wheel, and opens a
+  pull request saying whether they passed — a red pull request naming the
+  release beats silence.
 - **`make test-downstream`**, which runs their suites against this working tree
   when they are checked out under `downstream/`. That checkout is a session's,
   made by hand for the afternoon it's needed — not a CI fixture, since both
