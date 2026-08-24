@@ -7,7 +7,7 @@ import pytest
 
 import proteolyzer as pz
 from proteolyzer.core.models import Data, Report
-from proteolyzer.core.processor import DataProcessor
+from proteolyzer.core.processor import DataProcessor, _LabelGenerator
 
 
 def _process(frame: pd.DataFrame, tmp_path, **kwargs):
@@ -462,3 +462,78 @@ def test_the_processor_runs_the_same_steps_as_the_narrower():
         ].dtype
         == pz.narrow(frame.copy(), input_type="DIANN")["Precursor.Charge"].dtype
     )
+
+
+def _label_generator(labelled_report, tmp_path) -> _LabelGenerator:
+    """A label generator over labelled data, for the defensive paths below.
+
+    These branches are what the labelling gives up on rather than guesses at, and
+    valid input never reaches them -- so they are reached by handing the method
+    the shape it refuses, which is the only way to see that it refuses.
+    """
+    path = tmp_path / "report.parquet"
+    labelled_report.to_parquet(path)
+    processor = DataProcessor(Data(source=path, load_all_columns=True).load())
+    processor._check_labelfree()
+    return _LabelGenerator(processor)
+
+
+def test_a_matrix_with_a_repeated_index_is_refused(labelled_report, tmp_path, caplog):
+    """One identifier cannot hold two rows of labelling: which one is the label?"""
+    generator = _label_generator(labelled_report, tmp_path)
+    repeated = pd.DataFrame({"mTRAQ.Channel": ["0", "8"]}, index=["A", "A"])
+
+    with caplog.at_level("ERROR"):
+        assert generator._validate_matrix_shape(repeated) is None
+
+    assert generator.labels_complete is False
+    assert "not the expected shape" in caplog.text
+
+
+def test_no_matrix_at_all_is_refused(labelled_report, tmp_path):
+    generator = _label_generator(labelled_report, tmp_path)
+
+    assert generator._validate_matrix_shape(None) is None
+    assert generator.labels_complete is False
+
+
+def test_offsets_that_disagree_on_one_peptide_are_refused(
+    labelled_report, tmp_path, caplog
+):
+    """Two rows of one identifier offset differently average to something that is
+    not an offset -- 4 and 5 give 4.5, and no channel sits there."""
+    generator = _label_generator(labelled_report, tmp_path)
+    matches = pd.DataFrame(
+        {"Index": [0, 0], "Label": ["mTRAQ", "mTRAQ"], "Offset": [4, 5]}
+    )
+    counts = pd.DataFrame({"mTRAQ.Count": [2]}, index=pd.Index([0], name="Index"))
+
+    with caplog.at_level("ERROR"):
+        assert generator._label_offset(matches, counts) is None
+
+    assert generator.labels_complete is False
+    assert "not uniform" in caplog.text
+
+
+def test_counts_and_offsets_about_different_labels_are_refused(
+    labelled_report, tmp_path, caplog
+):
+    """The offsets are divided by the counts positionally, so counting one label
+    and offsetting another would divide the wrong pair and say nothing."""
+    generator = _label_generator(labelled_report, tmp_path)
+    matches = pd.DataFrame({"Index": [0], "Label": ["mTRAQ"], "Offset": [8]})
+    counts = pd.DataFrame({"TMT.Count": [1]}, index=pd.Index([0], name="Index"))
+
+    with caplog.at_level("ERROR"):
+        assert generator._label_offset(matches, counts) is None
+
+    assert generator.labels_complete is False
+    assert "same column order" in caplog.text
+
+
+def test_offsets_without_counts_give_up_quietly(labelled_report, tmp_path):
+    """_label_counts has already said why; saying it twice is noise."""
+    generator = _label_generator(labelled_report, tmp_path)
+    matches = pd.DataFrame({"Index": [0], "Label": ["mTRAQ"], "Offset": [8]})
+
+    assert generator._label_offset(matches, None) is None

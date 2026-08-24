@@ -26,6 +26,13 @@ dependencies = [
     "scienceplots",
     "adjusttext",
     "chardet",
+    # `.xlsx` is a routed extension in core.loader, so pandas reaches for openpyxl
+    # to read one. A dependency rather than an extra because the routing is the
+    # promise: a caller handed a spreadsheet and an ImportError from pandas has
+    # been told the format is supported and then that it is not. It is ~250 KB of
+    # pure Python, and pandas imports it inside read_excel, so importing
+    # proteolyzer does not pay for it -- test_package_boundaries keeps that true.
+    "openpyxl",
 ]
 
 dynamic = ["version"]
@@ -45,11 +52,6 @@ unimod = [
 ]
 dev = [
     "mypy",
-    # `.xlsx` is a routed extension in core.loader, so pandas reaches for
-    # openpyxl to read one. It is not a runtime dependency and a bare install
-    # cannot open a spreadsheet -- but the test for that path skipped everywhere,
-    # here and in CI both, which is the wrong way to hold that line.
-    "openpyxl",
     "pandas-stubs",
     "pre-commit",
     "pytest",
