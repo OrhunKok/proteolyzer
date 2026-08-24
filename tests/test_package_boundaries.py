@@ -27,7 +27,13 @@ OPTIONAL_DEPENDENCIES = (
 
 #: Core dependencies that are still only needed by one subpackage, so importing
 #: the package should not pay for them.
-DEFERRED_CORE_DEPENDENCIES = ("matplotlib", "seaborn", "scienceplots", "adjustText")
+DEFERRED_CORE_DEPENDENCIES = (
+    "matplotlib",
+    "openpyxl",
+    "scienceplots",
+    "seaborn",
+    "adjustText",
+)
 
 
 def _imported_after(statement: str, candidates) -> list[str]:

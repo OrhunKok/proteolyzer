@@ -7,6 +7,23 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Changed
+
+- `openpyxl` is a dependency rather than absent. `.xlsx` is a routed extension in
+  `core.loader`, so a caller handed a spreadsheet was told the format is supported
+  and then given an `ImportError` from pandas. It is ~250 KB of pure Python and
+  pandas imports it inside `read_excel`, so importing proteolyzer still does not
+  pay for it — `tests/test_package_boundaries.py` keeps that true.
+
+### Fixed
+
+- The droplet-table fixture writes short rows, as the instrument does. Nothing
+  changes for a caller; what changes is that the suite would now catch the defect
+  released in v0.2.2 — a reordered geoprops export read as a second table of
+  cells — instead of needing a real run directory to find it.
+
 ## v0.4.0
 
 ### Changed — breaking
