@@ -45,6 +45,11 @@ unimod = [
 ]
 dev = [
     "mypy",
+    # `.xlsx` is a routed extension in core.loader, so pandas reaches for
+    # openpyxl to read one. It is not a runtime dependency and a bare install
+    # cannot open a spreadsheet -- but the test for that path skipped everywhere,
+    # here and in CI both, which is the wrong way to hold that line.
+    "openpyxl",
     "pandas-stubs",
     "pre-commit",
     "pytest",
