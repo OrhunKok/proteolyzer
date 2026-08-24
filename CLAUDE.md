@@ -57,13 +57,23 @@ from the settings, and decoder stopped importing at all for two days
   release beats silence.
 - **`make test-downstream`**, which runs their suites against this working tree
   when they are checked out under `downstream/`. That checkout is a session's,
-  made by hand for the afternoon it's needed — not a CI fixture, since both
-  consumers are private and giving a workflow run the credentials to clone them
-  would hand the network an authority it needs nowhere else. So this is a tool
-  for a session to run before a release it's unsure of, not a gate wired into
-  one: it skips a consumer that isn't checked out rather than failing on it,
-  which is right for a command a person reaches for and wrong for a gate that
-  is supposed to block.
+  made by hand for the afternoon it's needed — not a CI fixture. **This
+  repository is public and an Actions log is world-readable**, so running two
+  private repositories' suites here would publish their test names, their paths
+  and their failure output. The leak would not be a credential; it would be the
+  console. That is why it is not wired in, and it does not stop being true when
+  the credential problem is solved — the agent's App could clone them today.
+
+  The integration signal exists already, from the side that can have it: each
+  consumer's `upstream.yml` runs on Mondays, moves its pin to the newest release,
+  runs its own suites against that wheel and opens a pull request saying whether
+  they passed — in a private repository, where that output belongs.
+
+  What this command adds over that is narrow and worth having: the working tree,
+  before a release, rather than a published wheel after one. So it is a tool for
+  a session to reach for when it is unsure, not a gate: it skips a consumer that
+  isn't checked out rather than failing on it, which is right for the first and
+  wrong for the second.
 
 Breaking something on purpose is fine. Breaking it silently is what the tags are
 against: bump the minor, write down what moved and what it is now, and say what a
