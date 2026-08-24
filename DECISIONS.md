@@ -164,3 +164,42 @@ another door: a fourth project, the App not installed, the token step failing,
 the run carrying on, and a pull request with no checks that looks exactly like a
 pull request that passed. So the fallback annotates the run. Silence was the
 defect; falling back is not.
+
+## What may span repositories
+
+**A credential may be shared. Content may not.** What was torn out on 2026-08-23
+was a repository the others ran code from — an installer, a capability index, two
+session hooks, a reusable workflow. Its defect was never that it was shared. It
+was that it was *content which had to be kept current*, and misled silently when
+it was not: the index once named a member living on a branch that had been
+deleted.
+
+One thing added since spans all three repositories: the `personal-claude-agent`
+GitHub App, so their pull requests carry checks. That is a shared credential, and
+it is worth naming as the exception rather than letting it pass unremarked. It is
+allowed because it has no content — nothing to pull, nothing to go stale, no
+version to be behind. Delete it and every repository still works: the token step
+fails, the run carries on with `GITHUB_TOKEN`, and an annotation says so. The test
+for the next thing that wants to span repositories is that question. *Can it be
+out of date?* A credential cannot. A column list, a capability index and a
+reusable workflow all can, and every one of them was.
+
+**Code moves here only when a second consumer wants it.** `envelope_split` came
+because it reads the canonical schema and any DIA pipeline wants it. `quirks.py`
+was proposed the same day and refused: its helpers read each engine's *raw*
+column names, which exist only because streamlit-DO-MS loads with `rename=False`,
+and decoder mentions no FragPipe, MaxQuant or JMod anywhere. One consumer means
+"written once, upstream" buys a release to coordinate and nothing else — the same
+argument that removed `LOAD_COLS` in v0.4.0. That call is closer than it looks
+and is worth making out loud each time, because the pull toward putting things
+here is exactly what built the last network.
+
+**An issue filed elsewhere is not the bus.** The old one was two labels and a
+workflow calling a shared worker, and it needed all three repositories to agree
+on it. Opening an issue in the repository a change belongs to is GitHub, not
+infrastructure: nothing here reaches out, nothing there depends on this. Pushing
+a branch to another repository *is* reaching out, and was done once, on
+2026-08-24, to give `streamlit-DO-MS` and `decoder` the App token step — because
+their own agents are refused write access to `.github/workflows/` and could not
+do it themselves. That is the shape of the exception: a person, once, where the
+sanctioned path is closed by design.
