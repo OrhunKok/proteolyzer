@@ -151,3 +151,16 @@ An App installation token is minted per run, dies with it, is scoped to the
 repository, and is still a `Bot`. With no App configured the step fails and the
 run continues on `GITHUB_TOKEN`: the issue is still worked and the pull request
 still opened, and the only thing lost is the checks on it.
+
+**The App is installed per repository, and the fallback says so.** "All
+repositories" would mean a project added later works without anyone remembering,
+which is the whole of the argument for it. Against: the App's reach is what a
+leaked private key reaches, and the account holds repositories that will never
+have an agent, including forks of other people's work. Installing on the three
+that do keeps the key's blast radius to the three it is already stored in.
+
+That leaves one hazard, and it is the one this step exists to prevent arriving by
+another door: a fourth project, the App not installed, the token step failing,
+the run carrying on, and a pull request with no checks that looks exactly like a
+pull request that passed. So the fallback annotates the run. Silence was the
+defect; falling back is not.
