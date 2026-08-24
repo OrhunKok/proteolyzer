@@ -261,9 +261,20 @@ class CoordinatesMapping(Logged):
         except ValueError:
             return False
 
-        # Short rows include the half line a capped read ends on.
+        # The half line a capped read ends on is the last one, and only that one
+        # is dropped. A short row is otherwise a droplet the instrument never
+        # placed, which is what the table of all droplets is almost entirely made
+        # of and exactly what the ratio below is measuring: discarding every short
+        # row left the ratio computed over the placed rows alone, so it came to 1
+        # for both tables and a run's geoprops table was read as a second table of
+        # cells in every folder it had one.
         rows = [line.split("\t") for line in lines[1:]]
-        rows = [row for row in rows if len(row) > max(where)]
+        if rows and len(rows[-1]) <= max(where):
+            rows = rows[:-1]
+
+        def value(row: list[str], column: int) -> str:
+            """One cell of a row, empty where the row stops short of it."""
+            return row[column].strip() if column < len(row) else ""
 
         # One channel's rows, because the instrument writes a row per cell per
         # imaging channel and the ratio below is over cells rather than over
@@ -271,7 +282,7 @@ class CoordinatesMapping(Logged):
         # preparation has; otherwise whichever channel it imaged in, so a
         # fluorescence-only export is still recognised as the cells.
         channels = [
-            row[where[0]].strip().lower() for row in rows if row[where[0]].strip()
+            value(row, where[0]).lower() for row in rows if value(row, where[0])
         ]
         if not channels:
             return False
@@ -282,9 +293,9 @@ class CoordinatesMapping(Logged):
             else max(set(channels), key=channels.count)
         )
 
-        imaged = [row for row in rows if row[where[0]].strip().lower() == channel]
+        imaged = [row for row in rows if value(row, where[0]).lower() == channel]
         placed = [
-            row for row in imaged if all(row[column].strip() for column in where[1:])
+            row for row in imaged if all(value(row, column) for column in where[1:])
         ]
 
         return bool(imaged) and ((len(placed) / len(imaged)) >= PLACED_ENOUGH)
