@@ -256,13 +256,20 @@ def droplet_table():
     """
     lines = cells_table().splitlines()
     header, placed = lines[0], lines[1:]
-    blank = ["Transmission", "2", "21.01.2026", "11:00:00"] + [""] * (
-        len(header.split("\t")) - 4
-    )
+    # A droplet that was never placed stops *before* the columns that would say
+    # where it went. It is a short row, not a full row carrying blanks, and a real
+    # geoprops export is short rows almost to the last: one had 6797 of them in
+    # the read window against 27 full ones.
+    #
+    # That distinction is the whole test. Writing these padded to full width is
+    # what let a reader discard every short row as malformed and then take its
+    # placed-row ratio over what was left -- which is the placed rows, giving 1
+    # for this file and 1 for the cells, so a reordered geoprops export was read
+    # as a second table of cells in every folder of a real run while this suite
+    # stayed green. See DECISIONS.md.
+    stub = "\t".join(["Transmission", "2", "21.01.2026", "11:00:00"])
 
-    return (
-        "\n".join([header] + ["\t".join(blank)] * (len(placed) * 200) + placed) + "\n"
-    )
+    return "\n".join([header] + [stub] * (len(placed) * 200) + placed) + "\n"
 
 
 def sorted_upload(files, stages=None):
