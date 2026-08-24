@@ -13,6 +13,14 @@ make types       # mypy
 make docs        # mkdocs build
 ```
 
+`make install` installs `.[dev]`, which is enough for `make lint` and
+`make types`. `make test` also wants the `unimod` extra — without it,
+`sqlalchemy` is missing and the unimod tests silently don't run — so run
+`pip install -e '.[dev,unimod]'` first. `make docs` needs the `docs` extra,
+`pip install -e '.[docs]'`, which `make install` does not pull in; CI's docs
+job installs it separately for that reason, and a contributor running the
+gate doesn't need mkdocs.
+
 `make test`, `make lint` and `make types` are the gate: all three, green, before
 a pull request. CI runs them on every push, the suite on three platforms, and
 builds the docs `--strict` besides. `make test-downstream` is not part of it —
