@@ -95,12 +95,41 @@ jobs:
       - if: steps.creds.outputs.have == 'yes'
         run: pip install --upgrade pip && pip install -e '.[dev]'
 
+      # A pull request opened with GITHUB_TOKEN gets no checks at all. Actions
+      # does not fire workflows for events that token creates -- its own loop
+      # prevention -- so `ci.yml` never runs on the branch even though it
+      # triggers on pull_request. The gate does run, inside this job, but the
+      # pull request shows a blank check list, which is the wrong way round: the
+      # reviewer sees no evidence of work that was in fact tested.
+      #
+      # An App installation token fixes that, and is the right credential rather
+      # than merely a working one. The token is minted per run and dies with it;
+      # it is scoped to this repository rather than to everything the account
+      # owns; and it keeps `user.type == 'Bot'` true, which the loop guard on
+      # this job depends on. A personal access token would do the first thing and
+      # neither of the others -- it would make the agent look like a person, and
+      # an issue this repository's agent files elsewhere would then be picked up
+      # by that repository's agent as if a person had filed it, which is the loop
+      # the guard is there to stop.
+      #
+      # Configured with two secrets, AGENT_APP_ID and AGENT_APP_PRIVATE_KEY. With
+      # neither, this step fails and the run carries on with GITHUB_TOKEN: the
+      # agent still works the issue and still opens the pull request, and the
+      # only thing missing is the checks on it.
+      - id: token
+        if: steps.creds.outputs.have == 'yes'
+        continue-on-error: true
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.AGENT_APP_ID }}
+          private-key: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
+
       - if: steps.creds.outputs.have == 'yes'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.token.outputs.token || secrets.GITHUB_TOKEN }}
 
           # Without this the agent is denied its tools and finishes having done
           # nothing: one run spent 36 turns hitting twenty permission denials.

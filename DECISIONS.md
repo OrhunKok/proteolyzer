@@ -131,3 +131,23 @@ something is actually to be published, and not before.
 only files it lists" found `msScans` in `LOAD_COLS` and missing from `FILES`,
 which meant a `msScans.txt` was not recognised as MaxQuant output at all and came
 back as one undelimited column. No example-based test was going to ask that.
+
+**The agent opens pull requests as a GitHub App, not as a person.** A pull
+request opened with `GITHUB_TOKEN` gets no checks: Actions does not fire
+workflows for events that token creates. `ci.yml` triggers on `pull_request` and
+still never ran on one the agent opened, so the gate ran inside the agent's own
+job and the pull request showed a blank check list — work that had been tested,
+with no evidence of it where a reviewer looks.
+
+A personal access token fixes that and costs two things worth more. It is scoped
+to everything the account owns rather than to one repository, and it makes the
+agent a `User`. The guard on the agent job is `github.event.issue.user.type !=
+'Bot'`, and the model here is that a change belonging elsewhere is filed as an
+issue in that repository — so with a PAT, an issue this agent files is picked up
+by that repository's agent as though a person had filed it. That is the loop the
+guard exists to stop, and a PAT opens it while looking like a fix.
+
+An App installation token is minted per run, dies with it, is scoped to the
+repository, and is still a `Bot`. With no App configured the step fails and the
+run continues on `GITHUB_TOKEN`: the issue is still worked and the pull request
+still opened, and the only thing lost is the checks on it.
