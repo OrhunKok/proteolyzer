@@ -1,0 +1,153 @@
+name: Review
+
+# A pull request opened here is read and commented on, so that one arriving while
+# nobody is looking does not sit unread. It does not approve, request changes or
+# merge: the comment is for a person, and merging stays a person's.
+#
+# Separate from agent.yml rather than another job in it, for one reason that
+# matters: **this job may not write to the repository.** agent.yml needs
+# `contents: write` to push the branch it works on. A reviewer needs none, and
+# with none it cannot loop -- see below. Two jobs with different authority are
+# two files.
+#
+# Why this cannot become an agent reviewing its own work forever: the only thing
+# it is able to do is write a comment, and a comment emits no `pull_request`
+# event. `opened` and `synchronize` come from opening a pull request and pushing
+# to it, and nothing here can do either. So a bot-authored pull request is
+# reviewed exactly once per push, which is the point -- agent.yml opens most of
+# the pull requests here, and those are the ones most worth a second reading by
+# something that did not just write them.
+#
+# Credentials: the same CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY agent.yml
+# uses. With neither, this does nothing and says nothing -- an unreviewed pull
+# request is the state we were already in, and a red run on every one of them
+# would be noise about a known configuration.
+on:
+  pull_request:
+    # ready_for_review as well as the obvious three: a pull request opened as a
+    # draft and later marked ready fires only that, and would otherwise wait for
+    # its next push to be read -- which is this workflow's own failure, arriving
+    # by a door it had left open.
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Per pull request, and superseded by its own next push: a review of a diff that
+# has already moved on is worse than no review, and the comment would land under
+# the one for the newer diff.
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  read:
+    # Drafts are work in progress by definition.
+    if: github.event.pull_request.draft == false
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read         # to read the diff, and nothing else
+      pull-requests: write   # to leave the comment
+      actions: read          # to see whether CI passed on this pull request
+      id-token: write        # the action asks for this in its own example, and
+                             # without it the first run here finished in ten
+                             # turns having posted nothing
+
+    steps:
+      - id: creds
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$OAUTH" ] || [ -n "$KEY" ]; then
+            echo "have=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      # So the reviewer can run the gate rather than take the pull request's word
+      # for it. Reading a diff says what changed; running the suite says whether
+      # it works.
+      - if: steps.creds.outputs.have == 'yes'
+        run: pip install --upgrade pip && pip install -e '.[dev,unimod]'
+
+      - if: steps.creds.outputs.have == 'yes'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Read/Glob/Grep to read the tree, Bash to run the gate, and the
+          # inline-comment tool the action supplies for a remark against a line.
+          # The first run here had bare `Bash` and no inline tool, took ten turns
+          # and left no comment.
+          claude_args: |
+            --allowedTools Read,Glob,Grep,Bash,mcp__github_inline_comment__create_inline_comment
+            --max-turns 40
+
+          additional_permissions: |
+            actions: read
+
+          prompt: |
+            Pull request #${{ github.event.pull_request.number }} in this
+            repository is open. Read it and leave one comment saying what you
+            found, with `gh pr comment`. Posting that comment is the deliverable:
+            a run that reads everything and says nothing has failed.
+
+            Read CLAUDE.md and DECISIONS.md first. They say what this repository
+            is, what its gate is, and which choices were deliberate -- a pull
+            request undoing a decision recorded there is the most useful thing
+            you can catch, and the hardest to see from the diff alone.
+
+            Then read the diff, and check the things a diff does not show:
+
+            - Does the claim hold? Run the gate. If the change says it fixes
+              something, find the test that would have failed before it and
+              satisfy yourself that it would have. A test that passes either way
+              is the failure this repository has already had once -- see the
+              droplet fixture in DECISIONS.md.
+            - Two repositories pin a wheel from here, so ask what a consumer
+              sees. A new column or argument is additive; a rename, a changed
+              default or a narrowed return is not, and needs a CHANGELOG entry
+              saying what to do about it.
+            - Is anything here one consumer's business rather than this
+              repository's? DECISIONS.md says when code belongs upstream.
+
+            Say plainly whether you would merge it. Be specific about what you
+            checked and what you did not -- "the gate is green and I did not
+            exercise the cellenONE path" is worth more than a summary of the
+            diff, which the reader can already see.
+
+            You may not push, merge or approve, and you do not need to: the
+            comment is the whole job. If you find nothing wrong, say that in a
+            sentence rather than inventing something.
+
+      # A run that dies -- the turn ceiling, a bad credential, the action itself
+      # -- otherwise leaves a red check and no comment, on a check that is not
+      # required for merge and so is easy not to look at. Twice on the day this
+      # was written the reviewer failed silently and it was noticed only because
+      # somebody happened to be watching the run. That is the thing this workflow
+      # exists to stop.
+      - if: failure()
+        name: Say that the review did not finish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "$GITHUB_REPOSITORY" --body \
+            "The reviewer started on this and did not finish: $RUN
+
+            Nothing was read, so this pull request is unreviewed rather than
+            approved. The usual causes are the turn ceiling (\`--max-turns\` in
+            \`.github/workflows/review.yml\`) and a missing Claude credential." \
+            || echo "could not comment on the pull request"

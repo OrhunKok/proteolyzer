@@ -106,3 +106,11 @@ repository, using this repository's `CLAUDE.md` and `DECISIONS.md` as its brief.
 Nothing outside this repository is involved, and nothing here reaches into
 another repository: a change that belongs elsewhere is filed as an issue there
 and worked by that repository's own agent.
+
+A pull request opened here is read and commented on by
+`.github/workflows/review.yml`, so one arriving while nobody is looking does not
+sit unread. It comments and stops — no approving, no merging, and it is granted
+`contents: read` so it could not push if it tried. **Merging stays a person's**,
+which is the whole reason it is a second workflow rather than a second job in the
+first: two repositories pin a wheel from here, and a change reaching them before
+anyone read it is the failure the tags exist against.
