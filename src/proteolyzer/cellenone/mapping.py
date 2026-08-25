@@ -578,6 +578,15 @@ class CoordinatesMapping(Logged):
                         for name, count in df["Source"].value_counts().items()
                     }
                 )
+
+                # A pickup is a destination plate, and the plate a run writes is
+                # its position rather than its identity -- one destination plate
+                # is mounted, so it reads 1 for every real pickup. The file that
+                # did the dispensing is what tells two plates apart, so it has to
+                # survive past here, onto the cell it placed.
+                if key == "Pickup":
+                    df["Pickup.Source"] = df["Source"]
+
                 df = df.drop("Source", axis=1)
 
             if key == "Pickup":
@@ -745,10 +754,19 @@ class CoordinatesMapping(Logged):
                 plate_mapping = dict(
                     zip(exploded["MappedGeo"], exploded["Plate"], strict=True)
                 )
+                # Which pickup placed the cell, so that a well shared by two
+                # destination plates does not collapse into one key: see
+                # DECISIONS.md and the `Pickup.Source` column it produces.
+                source_mapping = dict(
+                    zip(
+                        exploded["MappedGeo"],
+                        exploded["Pickup.Source"],
+                        strict=True,
+                    )
+                )
                 geo_df["Well"] = geo_df.index.map(well_mapping)
                 geo_df["Plate"] = geo_df.index.map(plate_mapping)
-                # geo_df['Well.Pickup'] = geo_df.index.map(well_mapping)
-                # geo_df['Plate.Pickup'] = geo_df.index.map(plate_mapping)
+                geo_df["Pickup.Source"] = geo_df.index.map(source_mapping)
 
             droplets = pd.concat([geo_df, droplets], axis=0)
 

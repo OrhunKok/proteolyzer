@@ -189,6 +189,23 @@ def pickup_log(started=500, run_id=""):
     )
 
 
+def pickup_field(field, wells, started=500, run_id=""):
+    """One pickup file, all of it landing on a single field of the slide.
+
+    Two files calling this with the same well names and different fields are
+    two destination plates: the same well letter, placed by two different
+    dispensing runs.
+    """
+    return log(
+        started,
+        [
+            dispensing(started + 2, well, 1, field, x, y)
+            for well, (x, y) in zip(wells, SLIDE, strict=True)
+        ],
+        run_id=run_id,
+    )
+
+
 def cells_log(started=100, run_id=""):
     """The imaging log: chamber readings and no dispensing at all."""
     return log(started, [], run_id=run_id)
@@ -439,6 +456,36 @@ def test_a_pickup_log_the_name_says_nothing_about_still_has_its_plate():
     )
 
     assert set(plates.parsed_data["Pickup"]["Plate"]) == {1}
+
+
+def test_a_well_shared_by_two_plates_still_says_which_placed_it():
+    """Two pickups, two destination plates, the same well name on each.
+
+    `Plate` cannot tell them apart -- it is the plate's position in the run,
+    which is 1 for both -- so the file that did the dispensing has to.
+    """
+    wells = ["A1", "A2", "A3", "B1", "B2", "B3"]
+    mapping = CoordinatesMapping(
+        [
+            Upload("02/table.xls", cells_table()),
+            Upload("02/output.log", cells_log()),
+            Upload("05/pickup_plate1.log", pickup_field(1, wells)),
+            Upload("06/pickup_plate2.log", pickup_field(2, wells)),
+        ],
+        "mTRAQ",
+        3,
+    )
+    metadata = mapping.map_data()
+
+    field1 = metadata[metadata["Field"] == 1]
+    field2 = metadata[metadata["Field"] == 2]
+
+    # Two different pickups placed these cells, and the well names alone say
+    # nothing about which -- both fields draw from the same well letters.
+    assert set(field1["Well"]) & set(wells)
+    assert set(field2["Well"]) & set(wells)
+    assert (field1["Pickup.Source"] == "05/pickup_plate1.log").all()
+    assert (field2["Pickup.Source"] == "06/pickup_plate2.log").all()
 
 
 def test_a_step_run_twice_is_a_step_redone():
