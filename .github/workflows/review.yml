@@ -24,7 +24,11 @@ name: Review
 # would be noise about a known configuration.
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    # ready_for_review as well as the obvious three: a pull request opened as a
+    # draft and later marked ready fires only that, and would otherwise wait for
+    # its next push to be read -- which is this workflow's own failure, arriving
+    # by a door it had left open.
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # Per pull request, and superseded by its own next push: a review of a diff that
 # has already moved on is worse than no review, and the comment would land under
@@ -126,3 +130,24 @@ jobs:
             You may not push, merge or approve, and you do not need to: the
             comment is the whole job. If you find nothing wrong, say that in a
             sentence rather than inventing something.
+
+      # A run that dies -- the turn ceiling, a bad credential, the action itself
+      # -- otherwise leaves a red check and no comment, on a check that is not
+      # required for merge and so is easy not to look at. Twice on the day this
+      # was written the reviewer failed silently and it was noticed only because
+      # somebody happened to be watching the run. That is the thing this workflow
+      # exists to stop.
+      - if: failure()
+        name: Say that the review did not finish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "$GITHUB_REPOSITORY" --body \
+            "The reviewer started on this and did not finish: $RUN
+
+            Nothing was read, so this pull request is unreviewed rather than
+            approved. The usual causes are the turn ceiling (\`--max-turns\` in
+            \`.github/workflows/review.yml\`) and a missing Claude credential." \
+            || echo "could not comment on the pull request"
