@@ -93,6 +93,16 @@ not, because a quench log names the label it is quenching.
 each file is and read again to parse it, and a consumed buffer parses as an empty
 file.
 
+**`Plate` is a position, not an identity, so `map_data()` also carries
+`Pickup.Source`.** One destination plate is mounted at a time, so the column
+the instrument writes reads 1 for every real pickup — a prep spanning several
+plates writes 1 for each of them, and their wells then collide: `A1` from
+plate one and `A1` from plate two become one key. The file that did the
+dispensing is what tells them apart, and `log_parse` already stamps every row
+with it to settle a redo against the attempt it replaced; `Pickup.Source` is
+that same value, kept instead of dropped, carried through the nearest-cell
+match onto the geoprops row it placed.
+
 ## Packaging and release
 
 **Optional subpackages are imported on first attribute access.** A bare core

@@ -9,6 +9,15 @@ first they knew of the last rename was an ImportError.
 
 ## Unreleased
 
+### Added
+
+- `cellenone.CoordinatesMapping.map_data()` carries a `Pickup.Source` column: the
+  pickup file (or Run ID) whose dispensing placed each cell. `Plate` is the
+  destination plate's position in the run rather than its identity — one plate
+  is mounted at a time, so it reads 1 for every real pickup — so a preparation
+  spanning several plates had no way to tell `A1` on one from `A1` on another.
+  `Pickup.Source` does.
+
 ### Changed
 
 - `openpyxl` is a dependency rather than absent. `.xlsx` is a routed extension in
