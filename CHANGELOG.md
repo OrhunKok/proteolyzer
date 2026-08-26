@@ -7,6 +7,18 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Added
+
+- `cellenone.CoordinatesMapping.map_data()` carries `ImageFile`, and one column
+  per further imaging channel — `ImageFile.Green` beside it. cellenONE
+  photographs each cell it prints and names the file in the geoprops table; that
+  name was being dropped, and it is the only link from a cell to its picture.
+  Unwrapped from the `=HYPERLINK("...")` a spreadsheet writes, so a consumer gets
+  a file name relative to the run folder rather than a formula. Missing for a cell
+  that was never printed, which is most of them.
+
 ## v0.5.0
 
 ### Added

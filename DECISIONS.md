@@ -103,6 +103,20 @@ with it to settle a redo against the attempt it replaced; `Pickup.Source` is
 that same value, kept instead of dropped, carried through the nearest-cell
 match onto the geoprops row it placed.
 
+**The image of a printed cell is carried, and unwrapped on the way.** cellenONE
+photographs each cell it prints and names the file in the geoprops table, which is
+the only link from a row to a picture -- nothing else in an export carries one, and
+it used to be dropped on the way through `xls_parse`. It arrives as a spreadsheet
+formula rather than a path, `=HYPERLINK("26_Printed_T1_F1_R9_C1_(A-1)_Trans...")`,
+so it is unwrapped to the bare name, which is relative to the run folder.
+
+Only a *printed* cell is photographed: on the run this was written from, 1,260 of
+160,091 rows carried one, being 630 cells in two channels. So a caller gets the
+transmission view and the viability view of a cell that was kept, and nothing at
+all for the ones that were not -- which is worth knowing before anyone plans to
+learn viability from these images, because the dye is read in exclude mode and the
+excluded cells are never photographed.
+
 ## Packaging and release
 
 **Optional subpackages are imported on first attribute access.** A bare core
