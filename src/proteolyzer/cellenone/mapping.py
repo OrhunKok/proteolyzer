@@ -884,7 +884,28 @@ class CoordinatesMapping(Logged):
             )
             df["SampleName"] = np.repeat(sample_name, len(df))
             df["Source"] = file.name
-            df = df.drop(["Plate", "Well", "ImageFile", "Background"], axis=1)
+
+            # cellenONE names the image it took of each printed cell, but writes
+            # the name as a spreadsheet formula rather than a path:
+            #
+            #     =HYPERLINK("26_Printed_T1_F1_R9_C1_(A-1)_Trans_name_Run.png")
+            #
+            # Unwrapped to the bare file name, which is what it is: relative to
+            # the run folder the table came from, so a caller joins it to that.
+            # A row with no image -- which is most of them, since only a printed
+            # cell is photographed -- comes out missing rather than as a formula.
+            #
+            # Kept rather than dropped because it is the only link from a cell to
+            # its picture, and nothing else in the export carries one. It is in
+            # MEASURED, so a run imaged in two channels comes out with ImageFile
+            # and ImageFile.Green beside each other -- the transmission view and
+            # the viability view of one cell.
+            if "ImageFile" in df.columns:
+                df["ImageFile"] = df["ImageFile"].str.extract(
+                    r'"([^"]+)"', expand=False
+                )
+
+            df = df.drop(["Plate", "Well", "Background"], axis=1)
 
             dispense_dfs.append(df)
 

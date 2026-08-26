@@ -256,7 +256,11 @@ def cells_table(channels=("Transmission",)):
                             "200",
                             "1",
                             "A1",
-                            f"img_{channel}.png",
+                            # As the instrument writes it: a spreadsheet
+                            # formula, not a path. A bare name here would have
+                            # let the reader hand a caller `=HYPERLINK(...)`
+                            # and no test would have minded.
+                            f'=HYPERLINK("{field}_{x}_{y}_Printed_{channel}.png")',
                             "10",
                         ]
                     )
@@ -684,3 +688,30 @@ def test_a_preparation_that_skipped_steps_still_maps_its_cells():
     # And the steps that did run are still read, rather than dropped with them.
     assert "Drops.Label" in metadata.columns
     assert len(mapping.map_stats()) > 0
+
+
+def test_the_image_of_each_printed_cell_is_carried_through():
+    """cellenONE photographs a cell it prints, and names the file in the table.
+
+    It is the only link from a row to a picture -- nothing else in an export
+    carries one -- and it arrives as a spreadsheet formula rather than a name.
+    """
+    run = [
+        Upload("02/output.log", cells_log()),
+        Upload("02/table.xls", cells_table(channels=("Transmission", "Green"))),
+    ]
+    metadata = CoordinatesMapping(run, "mTRAQ", 3).map_data()
+
+    # One column per imaging channel: the transmission view of the cell and,
+    # beside it, the view the viability dye is read in.
+    assert "ImageFile" in metadata.columns
+    assert "ImageFile.Green" in metadata.columns
+
+    # Unwrapped from =HYPERLINK("..."), because a caller wants a file name.
+    names = metadata["ImageFile"].dropna()
+    assert len(names) > 0
+    assert all(name.endswith(".png") for name in names)
+    assert not any("HYPERLINK" in name for name in names)
+
+    green = metadata["ImageFile.Green"].dropna()
+    assert all("Green" in name for name in green)
