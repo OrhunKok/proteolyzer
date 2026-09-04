@@ -66,6 +66,9 @@ class DataLoader(Logged):
         if self.cols_rename_mapping:
             self.data = self._rename_cols()
 
+        if self.built_cols:
+            self.data = self._build_cols()
+
         if verbose:
             self._memory_check(self.data)
 
@@ -80,6 +83,10 @@ class DataLoader(Logged):
     @property
     def cols_rename_mapping(self) -> dict:
         return self.file.cols_rename_mapping
+
+    @property
+    def built_cols(self) -> dict:
+        return self.file.built_cols
 
     @property
     def cols_subset(self):
@@ -130,6 +137,43 @@ class DataLoader(Logged):
             return df
         self.logger.info(f"Renaming columns in {self.INPUT_TYPE} input")
         return df.rename(columns=self.cols_rename_mapping)
+
+    def _build_cols(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
+        """Add the canonical columns this format does not write for itself.
+
+        A Spectronaut report has no one column for the precursor, so the format
+        block says which of its own columns make one and they are joined here, as
+        text, in the order given. Runs after the rename and only when renaming,
+        so both sides are in the core's vocabulary.
+
+        Skipped where the file already carries the column -- an export that was
+        configured to write it is taken at its word -- and where a column it
+        would be built from was not read, which is the same intersection every
+        other subset is: a caller that asked for two columns of a report is told
+        what could not be built out of them rather than handed a third.
+        """
+        df = self.data if df is None else df
+
+        for name, parts in self.built_cols.items():
+            if name in df.columns:
+                continue
+
+            missing = [part for part in parts if part not in df.columns]
+            if missing:
+                self.logger.info(
+                    f"Not building {name}: {self.INPUT_TYPE} builds it out of "
+                    f"{list(parts)}, and this frame has no {missing}."
+                )
+                continue
+
+            built = df[parts[0]].astype(str)
+            for part in parts[1:]:
+                built = built + df[part].astype(str)
+
+            df[name] = built
+            self.logger.info(f"Built {name} out of {list(parts)}.")
+
+        return df
 
     def _cols_to_load(self, all_cols) -> list:
         """Intersect the file's columns with the subset the caller asked for.

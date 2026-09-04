@@ -107,6 +107,45 @@ def jmod_ids() -> pd.DataFrame:
 
 
 @pytest.fixture
+def spectronaut_report() -> pd.DataFrame:
+    """A Spectronaut report, under Spectronaut's own column names.
+
+    Long format, one row a precursor a run, with the things a real export has
+    that no other format here does: names carrying a space and brackets, booleans
+    where DIA-NN writes 1/0, a quantity column spanning three orders of magnitude
+    from 2.54 up, and the isolation window each precursor was taken in. No
+    ``EG.PrecursorId``, as the export this was written from had none.
+    """
+    rows = 6
+    return pd.DataFrame(
+        {
+            "R.FileName": ["run1", "run2"] * (rows // 2),
+            "PG.ProteinGroups": [f"P{i:05d}" for i in range(rows)],
+            "PG.Quantity": np.linspace(1e5, 1e7, rows),
+            "PG.Qvalue": np.linspace(0.0001, 0.001, rows),
+            "PG.Cscore (Run-Wise)": np.linspace(1.0, 4.0, rows),
+            "PEP.StrippedSequence": [f"PEPTIDEK{i}" for i in range(rows)],
+            "PEP.NrOfMissedCleavages": [0, 1] * (rows // 2),
+            "PEP.IsProteotypic": [True, False] * (rows // 2),
+            "EG.ModifiedSequence": [f"_PEPTIDEK{i}_" for i in range(rows)],
+            "EG.ApexRT": np.linspace(10.0, 40.0, rows),
+            "EG.RTPredicted": np.linspace(10.5, 40.5, rows),
+            "EG.Qvalue": np.linspace(0.001, 0.01, rows),
+            "EG.PEP": np.linspace(0.001, 0.05, rows),
+            "EG.IsDecoy": [False] * rows,
+            "FG.Charge": [2, 3] * (rows // 2),
+            "FG.PrecMz": np.linspace(400.0, 900.0, rows),
+            # 2.54 and 400,000 in the one column, as a real export has.
+            "FG.Quantity": [2.54, 43.7, 812.25, 9134.5, 87021.0, 400000.0],
+            # Which of the method's isolation windows took the precursor.
+            "FG.PrecWindowNumber": [1, 17, 42, 3, 58, 60],
+            # Something for a cols_to_load test to leave behind.
+            "EG.TotalQuantity (Settings)": np.linspace(1e4, 1e6, rows),
+        }
+    )
+
+
+@pytest.fixture
 def fragpipe_psms() -> pd.DataFrame:
     """A FragPipe/Philosopher psm.tsv, under FragPipe's own column names."""
     rows = 6

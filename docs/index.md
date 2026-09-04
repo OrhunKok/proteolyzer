@@ -3,15 +3,15 @@
 ![Proteolyzer](assets/proteolyzer_logo.svg){ width="420" }
 
 A Python package for processing, analyzing and visualizing proteomics data. It
-reads DIA-NN and MaxQuant output, normalizes it into a consistent shape, and
-provides the domain pipelines used for single-cell sample preparation and amino
-acid substitution discovery.
+reads DIA-NN, Spectronaut, MaxQuant, JMod and FragPipe output, normalizes it into
+a consistent shape, and provides the domain pipelines used for single-cell sample
+preparation and amino acid substitution discovery.
 
 ## What it does
 
-- **Data loading** — Parquet, TSV/CSV, Excel and plaintext, with per-format
-  column subsetting so only the columns you need are read, through pyarrow's
-  multithreaded parser where it can be used.
+- **Data loading** — Parquet, TSV/CSV, Excel and plaintext, through pyarrow's
+  multithreaded parser where it can be used, reading only the columns the caller
+  asks for.
 - **Data processing** — dtype narrowing, derived columns, missed-cleavage
   flags, per-run identification counts, and automatic detection of labelled
   (mTRAQ/SILAC/TMT) precursors.

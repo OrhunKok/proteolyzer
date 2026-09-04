@@ -8,10 +8,11 @@ what was done to it.
 
 import datetime
 import logging
+import re
 from dataclasses import dataclass, fields, replace
 from functools import cached_property
 from pathlib import Path
-from typing import IO
+from typing import IO, Any
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
@@ -31,6 +32,29 @@ _ENGINES: tuple[str, ...] = tuple(
 logger = logging.getLogger(__name__)
 
 SourceType = Path | IO[str] | IO[bytes]
+
+
+def _claims(block: Any, file_name: str, extension: str) -> bool:
+    """Whether a format block recognizes a file by this name and extension.
+
+    By exact name for every engine that names its own output, which is most of
+    them. Spectronaut stamps its export with the date, the time and the name of
+    the analysis, so there is no name to list and ``FILE_PATTERNS`` says what the
+    stem has to look like instead.
+
+    A pattern has to match the stem *in full*: matching from the start would take
+    the ``..._Report.setup`` written beside a report for the report itself.
+    """
+    if extension not in block.FILE_EXTENSIONS:
+        return False
+
+    if file_name in block.FILES:
+        return True
+
+    return any(
+        re.fullmatch(pattern, file_name)
+        for pattern in getattr(block, "FILE_PATTERNS", ())
+    )
 
 
 class Data(BaseModel):
@@ -176,8 +200,7 @@ class Data(BaseModel):
         matched = [
             name
             for name in _ENGINES
-            if self.file_name in getattr(CONFIG, name).FILES
-            and self.file_extension in getattr(CONFIG, name).FILE_EXTENSIONS
+            if _claims(getattr(CONFIG, name), self.file_name, self.file_extension)
         ]
 
         if len(matched) > 1:
@@ -241,6 +264,25 @@ class Data(BaseModel):
 
         config_block = getattr(CONFIG, self.input_type, None)
         return getattr(config_block, "COLS_RENAME_MAPPING", {})
+
+    @computed_field
+    @cached_property
+    def built_cols(self) -> dict:
+        """Canonical columns to build after the rename, and what out of.
+
+        For a format that writes no column of its own for something the rest of
+        the package keys on; see :class:`~proteolyzer.core.formats.Spectronaut`,
+        whose report carries no precursor identifier.
+
+        Empty when the file keeps its own column names, because these are stated
+        in the core's vocabulary and a caller who asked not to be given that
+        vocabulary has not asked for a column named in it either.
+        """
+        if not self.rename:
+            return {}
+
+        config_block = getattr(CONFIG, self.input_type, None)
+        return getattr(config_block, "BUILT_COLS", {})
 
     def load(self) -> Report:
         """Read the source into memory."""

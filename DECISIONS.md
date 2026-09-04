@@ -12,6 +12,30 @@ Detection walks whatever blocks are there, so adding an engine is a block and no
 other change. It used to name DIANN and MaxQuant, which is why adding JMod and
 FragPipe touched `models.py` at all.
 
+**A file is recognized by name, or by pattern where there is no name to match.**
+Four of the five engines name their own output, so `FILES` is a list of exact
+names and that is the whole of it. Spectronaut stamps its export with the date,
+the time and the name of the analysis — `20260901_164751_..._Report.tsv` — so
+`FILE_PATTERNS` says what the stem has to look like instead. Two details are
+load-bearing. The pattern matches the stem *in full*, because Spectronaut writes
+a `..._Report.setup.txt` beside the report and a prefix match takes one for the
+other. And it is case-sensitive, because DIA-NN's `report.tsv` is one capital
+letter from a bare `Report.tsv`: detection refuses to choose between two
+claimants, so a pattern that reached another block's name would not mis-read that
+engine's output, it would make it unreadable. An invariant test walks every name
+every block lists and asserts exactly one block claims it.
+
+**A format may say how to build a column it does not write.** A Spectronaut
+report has no one column for the precursor — `EG.PrecursorId` is not in every
+export — and `Precursor.Id` is what the rest of this package keys on;
+`DataProcessor` asks for it in its constructor, before a single one of its own
+steps runs. So `BUILT_COLS` is joined in the loader, after the rename and only
+when renaming: the names on both sides are the core's vocabulary, and
+`rename=False` is a caller saying it does not want that vocabulary. It is skipped
+where the file already carries the column, and where a column it would be built
+from was not read — the same intersection every subset is, told to the caller
+rather than guessed around.
+
 **Which columns to keep is the caller's, and this package keeps no list.** A
 format block says what the file *is* -- which names it goes by, how its columns
 map onto the canonical schema, which must stay numeric. It used to say which
