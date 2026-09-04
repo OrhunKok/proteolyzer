@@ -1,8 +1,11 @@
 """Input-format configuration for the core loading/processing pipeline.
 
-Each search-engine block describes the files proteolyzer recognizes, how their
-columns map onto the canonical proteolyzer names, and which of them must stay
-numeric. All of that is a fact about the format, true for everyone who reads it.
+Each search-engine block describes the files proteolyzer recognizes -- by name,
+or by pattern where the engine stamps the name with the moment it wrote it --
+how their columns map onto the canonical proteolyzer names, which of them must
+stay numeric, and any canonical column the format does not write that can be
+built out of ones it does. All of that is a fact about the format, true for
+everyone who reads it.
 
 **Which columns to keep is not here, deliberately.** It is a fact about the
 project doing the reading rather than about the file: a dashboard plots the m/z
@@ -137,6 +140,84 @@ class FragPipe:
 
 
 @dataclass(frozen=True)
+class Spectronaut:
+    """A Spectronaut report: long format, one row a precursor a run.
+
+    Columns are prefixed by the level they belong to -- ``E.`` the experiment,
+    ``R.`` a run, ``PG.`` a protein group, ``PEP.`` a peptide, ``EG.`` an
+    elution group, ``FG.`` a fragment group, which is a precursor.
+
+    A report is configurable column by column, so what one lab's export holds is
+    not what another's does: 78 columns in the one this was written from. That
+    makes the intersection :meth:`~proteolyzer.core.loader.DataLoader._cols_to_load`
+    already takes load-bearing rather than convenient -- naming a column the
+    analysis did not write must not fail the read.
+
+    Two things measured off that export -- 13 runs, 173,443 rows, 174 MB, tab
+    separated -- are worth knowing before reading one:
+
+    ``FG.Quantity`` spans 2.54 to 400,000 in the one column, so it is not on the
+    scale a DIA-NN area is. ``round_large_floats`` would throw away a fifth of a
+    precursor quantified at 2.54, and must stay off for this format, as it is by
+    default for every format.
+
+    ``FG.PrecWindowNumber`` says which of the method's isolation windows took the
+    precursor, which no other report read here states -- grouping by it recovers
+    the window scheme with no design file to hand. It is an integer, and a number
+    is never made categorical, so nothing has to keep it out of that.
+    """
+
+    #: The table, under the name it goes by when Spectronaut has not stamped it.
+    FILES: list[str] = field(default_factory=lambda: ["Report"])
+    #: Spectronaut writes ``<date>_<time>_<analysis>_Report.tsv``, so no fixed
+    #: name can match a real export. Matched against the stem in full rather
+    #: than from its start, so the ``..._Report.setup`` written beside it is not
+    #: taken for the report; and case-sensitively, because DIA-NN's
+    #: ``report.tsv`` differs from a bare ``Report.tsv`` by the one letter, and
+    #: a file two blocks claim is an error rather than a guess.
+    FILE_PATTERNS: list[str] = field(default_factory=lambda: [r".*_Report"])
+    FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".tsv"])
+    COLS_RENAME_MAPPING: dict[str, str] = field(
+        default_factory=lambda: {
+            "R.FileName": "Run",
+            "EG.ModifiedSequence": "Modified.Sequence",
+            "PEP.StrippedSequence": "Stripped.Sequence",
+            "FG.Charge": "Precursor.Charge",
+            "FG.PrecMz": "Precursor.Mz",
+            "FG.Quantity": "Precursor.Quantity",
+            "EG.ApexRT": "RT",
+            "EG.RTPredicted": "Predicted.RT",
+            "EG.iRTEmpirical": "iRT",
+            "EG.Qvalue": "Q.Value",
+            "EG.PEP": "PEP",
+            "PG.ProteinGroups": "Protein.Group",
+            "PG.ProteinAccessions": "Protein.Ids",
+            # PG.Quantity is absent because it is already the canonical name:
+            # the schema is DIA-NN's own, and the two agree on this one.
+            "PG.Qvalue": "PG.Q.Value",
+            "PEP.NrOfMissedCleavages": "Missed.Cleavages",
+            # True and False, where DIA-NN writes 1 and 0. The name is the same
+            # on both sides of the rename and the dtype is not, so a caller
+            # comparing one against 0 has to say `== False` instead.
+            "PEP.IsProteotypic": "Proteotypic",
+            "EG.IsDecoy": "Decoy",
+        }
+    )
+    #: There is no EG.PrecursorId in every export -- there was none in the one
+    #: this was written from -- so the identifier the rest of the package keys
+    #: on is built from the two columns a fragment group always has. Stated
+    #: under the canonical names, since it is built after the rename.
+    BUILT_COLS: dict[str, tuple[str, ...]] = field(
+        default_factory=lambda: {
+            "Precursor.Id": ("Modified.Sequence", "Precursor.Charge")
+        }
+    )
+    #: Nothing. The columns worth keeping out are the quantitative ones, and
+    #: they are numbers, which are never converted whatever this says.
+    EXCLUDE_CAT_CONVERSION: set[str] = field(default_factory=set)
+
+
+@dataclass(frozen=True)
 class Config:
     COL_MEDIAN_THRESHOLD: int = 100
     #: Fraction of a column's memory that turning it categorical has to save
@@ -149,3 +230,4 @@ class Config:
     MaxQuant: MaxQuant = field(default_factory=MaxQuant)
     JMod: JMod = field(default_factory=JMod)
     FragPipe: FragPipe = field(default_factory=FragPipe)
+    Spectronaut: Spectronaut = field(default_factory=Spectronaut)

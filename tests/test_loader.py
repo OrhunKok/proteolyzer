@@ -258,6 +258,162 @@ def test_a_fragpipe_psm_table_is_recognised_and_subset(tmp_path, fragpipe_psms):
     assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
 
 
+#: What Spectronaut writes an export as: the date, the time, the name of the
+#: analysis, and only then the table.
+STAMPED_REPORT = "20260901_164751_2026-08-27_CF_PD_GluC_30min_Report.tsv"
+
+
+def test_a_spectronaut_report_is_recognised_by_its_ending(tmp_path, spectronaut_report):
+    """No fixed name could match one: Spectronaut stamps the export with the
+    moment it was written and the name of the analysis."""
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "Spectronaut"
+
+    loaded = data.load()
+    assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
+    assert len(loaded) == len(spectronaut_report)
+
+
+def test_a_spectronaut_report_that_was_never_stamped_is_recognised_too(
+    tmp_path, spectronaut_report
+):
+    path = tmp_path / "Report.tsv"
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+    assert Data(source=path).input_type == "Spectronaut"
+
+
+def test_a_diann_report_is_not_taken_for_a_spectronaut_one(tmp_path, label_free_report):
+    """They differ by one capital letter and share an extension, so the pattern
+    is matched case-sensitively. Two claimants would be refused outright."""
+    path = tmp_path / "report.tsv"
+    label_free_report.to_csv(path, sep="\t", index=False)
+    assert Data(source=path).input_type == "DIANN"
+
+
+def test_the_file_beside_a_spectronaut_report_is_not_the_report(tmp_path):
+    """Spectronaut writes a `..._Report.setup.txt` next to it. The pattern is
+    matched against the whole stem, so a prefix of one is not a match."""
+    path = tmp_path / "20260901_164751_GluC_30min_Report.setup.txt"
+    path.write_text("some setup\n")
+    assert Data(source=path).input_type == "Unknown"
+
+
+def test_a_spectronaut_precursor_identifier_is_built(tmp_path, spectronaut_report):
+    """The report has no one column for it -- EG.PrecursorId is not in every
+    export -- so it comes from the modified sequence and the charge."""
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path).load()
+
+    assert loaded["Precursor.Id"].tolist() == [
+        f"_PEPTIDEK{i}_{charge}"
+        for i, charge in enumerate([2, 3] * (len(spectronaut_report) // 2))
+    ]
+
+
+def test_an_export_that_carries_its_own_identifier_keeps_it(
+    tmp_path, spectronaut_report
+):
+    """A report can be configured to write EG.PrecursorId, and one that did is
+    taken at its word rather than overwritten."""
+    spectronaut_report["EG.PrecursorId"] = [
+        f"_PEPTIDEK{i}_.2" for i in range(len(spectronaut_report))
+    ]
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path).load()
+
+    # Nothing maps EG.PrecursorId, so it arrives under its own name and the
+    # built column is the one the rest of the package keys on.
+    assert loaded["Precursor.Id"].iloc[0] == "_PEPTIDEK0_2"
+    assert loaded["EG.PrecursorId"].iloc[0] == "_PEPTIDEK0_.2"
+
+
+def test_nothing_is_built_for_a_caller_keeping_the_file_s_own_names(
+    tmp_path, spectronaut_report
+):
+    """`Precursor.Id` is a name in the core's vocabulary, and rename=False asks
+    for the file's. The dashboard reads this format that way."""
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path, rename=False).load()
+
+    assert "Precursor.Id" not in loaded.columns
+    assert {"R.FileName", "EG.ModifiedSequence", "FG.Charge"} <= set(loaded.columns)
+
+
+def test_a_column_the_identifier_needs_can_simply_not_be_there(
+    tmp_path, spectronaut_report, caplog
+):
+    """A subset is an intersection, and so is this: the caller is told what could
+    not be built rather than handed a column built out of half of it."""
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(
+        source=path, cols_to_load={"R.FileName", "EG.ModifiedSequence"}
+    ).load()
+
+    assert "Precursor.Id" not in loaded.columns
+    assert "Not building Precursor.Id" in caplog.text
+
+
+def test_a_spectronaut_subset_may_name_a_column_the_export_lacks(
+    tmp_path, spectronaut_report
+):
+    """A report is configurable column by column, so a list written against one
+    lab's export names columns another's does not have."""
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(
+        source=path,
+        cols_to_load={
+            "R.FileName",
+            "FG.Quantity",
+            # Neither is in this export, and neither is an error.
+            "FG.MS1Quantity",
+            "EG.IonMobility",
+        },
+    ).load()
+
+    assert set(loaded.columns) == {"Run", "Precursor.Quantity"}
+
+
+def test_spectronaut_column_names_carrying_spaces_and_brackets_survive(
+    tmp_path, spectronaut_report
+):
+    path = tmp_path / STAMPED_REPORT
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    loaded = Data(source=path).load()
+
+    assert "PG.Cscore (Run-Wise)" in loaded.columns
+    assert "EG.TotalQuantity (Settings)" in loaded.columns
+
+
+def test_a_spectronaut_report_read_from_an_upload(spectronaut_report):
+    """An upload is read twice -- once for the header, once for the body -- and
+    is dispatched on the name it carries rather than on a path."""
+    buffer = io.StringIO(spectronaut_report.to_csv(sep="\t", index=False))
+    buffer.name = STAMPED_REPORT
+
+    data = Data(
+        source=buffer, cols_to_load={"R.FileName", "EG.ModifiedSequence", "FG.Charge"}
+    )
+    assert data.input_type == "Spectronaut"
+
+    loaded = data.load()
+    assert len(loaded) == len(spectronaut_report)
+    assert loaded["Precursor.Id"].iloc[0] == "_PEPTIDEK0_2"
+
+
 def test_a_maxquant_table_is_read_whole_unless_asked_otherwise(tmp_path):
     """allPeptides runs to several GB, and narrowing it is the caller's call --
     the core cannot know which of its columns this project plots."""

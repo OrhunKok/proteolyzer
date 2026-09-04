@@ -8,19 +8,33 @@ import proteolyzer as pz
 report = pz.read("report.parquet")
 ```
 
-`read` recognizes known DIA-NN and MaxQuant file names and reads only the
-columns configured for them. Use `load_all_columns=True` for everything, or
-`extra_cols_to_load=[...]` to add to the default set.
+Five search engines are recognized — DIA-NN, Spectronaut, MaxQuant, JMod and
+FragPipe — and a file is read whole unless the caller names the columns it
+wants. Which columns matter is a fact about the project doing the reading, so
+this package keeps no list of its own:
 
 ```python
-pz.read("report.tsv", load_all_columns=True)
-pz.read("report.tsv", extra_cols_to_load=["Q.Value", "Predicted.RT"])
+pz.read("report.tsv", cols_to_load={"Run", "Precursor.Id", "Ms1.Area"})
+pz.read("report.tsv", cols_to_load={...}, extra_cols_to_load=["Q.Value"])
 ```
+
+A subset is intersected with the columns the file actually has, so naming one an
+analysis did not write is not an error — check a column arrived rather than
+assuming it did.
 
 Parquet, TSV, CSV, Excel and plaintext are dispatched on the file extension,
 and a file-like object works in place of a path as long as it has a `name` to
 dispatch on. Which search engine produced a file is detected from its name and
-extension, and can be overridden with `INPUT_TYPE=`.
+extension, and can be overridden with `INPUT_TYPE=`. Most engines name their own
+output; Spectronaut stamps its report with the date, the time and the name of the
+analysis, so that one is recognized by the ending of the name instead.
+
+Columns are renamed onto proteolyzer's own vocabulary, and a canonical column the
+format does not write is built where the format says how to: a Spectronaut report
+carries no precursor identifier, so `Precursor.Id` is built from its modified
+sequence and its charge. `rename=False` keeps the file's own column names, and
+leaves the built columns out with them — they are named in a vocabulary that
+caller has asked not to be given.
 
 Delimited files are read with pyarrow's multithreaded parser where its peak
 memory is affordable, and with the stock parser otherwise — see

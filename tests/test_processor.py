@@ -194,6 +194,35 @@ def test_rounding_large_floats_is_opt_in(label_free_report, tmp_path, caplog):
     assert "discarding their fractional part" in caplog.text
 
 
+def test_a_spectronaut_report_processes_end_to_end(spectronaut_report, tmp_path):
+    """The identifier the whole pipeline keys on is built as the file is read,
+    because DataProcessor asks for it before any of its own steps run."""
+    path = tmp_path / "20260901_164751_GluC_30min_Report.tsv"
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    processed = Data(source=path).load().process()
+
+    assert processed.source.input_type == "Spectronaut"
+    assert processed.processing.label_free is True
+    assert processed.n_identifications == len(spectronaut_report)
+    assert {"Peptide.Length", "Trypsin.Miscleavages"} <= set(processed.columns)
+    assert processed.summary()["Precursors"].sum() == len(spectronaut_report)
+
+
+def test_a_spectronaut_quantity_keeps_its_low_end(spectronaut_report, tmp_path):
+    """2.54 and 400,000 share the column, so what a DIA-NN area could afford
+    this cannot: rounding the low end throws away a fifth of it. Nothing has to
+    be configured for that -- round_large_floats is off for every format -- and
+    this pins the consequence for the one it would cost the most."""
+    path = tmp_path / "20260901_164751_GluC_30min_Report.tsv"
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    quantity = Data(source=path).load().process().frame["Precursor.Quantity"]
+
+    assert quantity.min() == pytest.approx(2.54)
+    assert quantity.max() == pytest.approx(400000.0)
+
+
 # ------------------------------------------------- single-precision narrowing
 
 

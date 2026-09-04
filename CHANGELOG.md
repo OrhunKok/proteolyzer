@@ -11,6 +11,48 @@ first they knew of the last rename was an ImportError.
 
 ### Added
 
+- **Spectronaut is the fifth format read.** `Config().Spectronaut` describes the
+  long-format report — one row a precursor a run — and `pz.read` recognizes,
+  reads and renames one like any other engine's output.
+
+  ```python
+  pz.read("20260901_164751_GluC_30min_Report.tsv")            # onto our names
+  pz.read(upload, INPUT_TYPE="Spectronaut", cols_to_load={...}, rename=False)
+  ```
+
+  Three things about this format that are not true of the other four:
+
+  **The name is stamped, so it is matched by pattern.** Spectronaut writes
+  `<date>_<time>_<analysis>_Report.tsv` and no fixed name could match that, so a
+  block may now carry `FILE_PATTERNS` beside `FILES` — a regex over the stem,
+  matched in full. Only Spectronaut has one. It is matched case-sensitively,
+  because DIA-NN's `report.tsv` is one capital letter from a bare `Report.tsv`
+  and a file two blocks claim is refused rather than guessed at.
+
+  **The report carries no precursor identifier**, `EG.PrecursorId` not being in
+  every export, so `Precursor.Id` is built out of `EG.ModifiedSequence` and
+  `FG.Charge` as the file is read — which is where it has to happen, since
+  `process()` asks for that column before any of its own steps run. A block says
+  what to build and out of what in `BUILT_COLS`, and `Data.built_cols` is empty
+  under `rename=False`: those names are the core's vocabulary, and a caller
+  keeping the file's own has not asked for it.
+
+  **A quantity is not on the scale another engine's is** — 2.54 and 400,000 in
+  the one column — so `round_large_floats` would take a fifth off the low end of
+  it. It is off by default, as it is for every format, and there is now a test
+  that says so about this one.
+
+  Written from a measured export: 13 runs, 173,443 rows, 174 MB, tab separated,
+  CRLF, 78 columns. What one holds is configurable column by column, so the
+  intersection `cols_to_load` already takes is load-bearing here rather than
+  convenient — a list written against one lab's export names columns another's
+  does not have.
+
+  **What a consumer has to do.** Nothing, unless it was reading a
+  `..._Report.tsv` as an unrecognized file: that now comes back under the
+  canonical names rather than the file's own. Pass `rename=False` to keep them.
+  `streamlit-DO-MS` already reads every format that way.
+
 - `cellenone.CoordinatesMapping.map_data()` carries `ImageFile`, and one column
   per further imaging channel — `ImageFile.Green` beside it. cellenONE
   photographs each cell it prints and names the file in the geoprops table; that

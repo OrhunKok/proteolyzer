@@ -7,17 +7,17 @@
 # Proteolyzer
 
 Proteolyzer is a Python package for processing, analyzing, and visualizing
-proteomics data. It reads DIA-NN and MaxQuant output, normalizes it into a
-consistent shape, and provides the domain pipelines used for single-cell
-sample preparation and amino acid substitution discovery.
+proteomics data. It reads DIA-NN, Spectronaut, MaxQuant, JMod and FragPipe
+output, normalizes it into a consistent shape, and provides the domain pipelines
+used for single-cell sample preparation and amino acid substitution discovery.
 
 **Documentation:** <https://OrhunKok.github.io/proteolyzer/>
 
 ## Features
 
-- **Data loading** — Parquet, TSV/CSV, Excel and plaintext, with per-format
-  column subsetting so only the columns you need are read, through pyarrow's
-  multithreaded parser where it can be used.
+- **Data loading** — Parquet, TSV/CSV, Excel and plaintext, through pyarrow's
+  multithreaded parser where it can be used, reading only the columns the caller
+  asks for.
 - **Data processing** — dtype narrowing, derived columns, missed-cleavage
   flags, per-run identification counts, and automatic detection of labelled
   (mTRAQ/SILAC/TMT) precursors.
@@ -78,9 +78,11 @@ matrix = (
 )
 ```
 
-`read` recognizes known DIA-NN/MaxQuant file names and reads only the columns
-configured for them. Use `load_all_columns=True` for everything, or
-`extra_cols_to_load=[...]` to add to the default set.
+`read` recognizes five search engines' output — DIA-NN, Spectronaut, MaxQuant,
+JMod and FragPipe — by name, or by the ending of the name where the engine
+stamps it with the moment it was written, as Spectronaut does. A file is read
+whole unless the caller names the columns it wants with `cols_to_load=`, which
+is intersected with the columns the file actually has.
 
 A `Report` is a frozen wrapper around three things: the `frame`, the `source`
 it was read from, and the `processing` that produced it (`None` until
