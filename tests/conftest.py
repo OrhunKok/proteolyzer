@@ -107,6 +107,28 @@ def jmod_ids() -> pd.DataFrame:
 
 
 @pytest.fixture
+def spectronaut_report() -> pd.DataFrame:
+    """A Spectronaut long-format report, under Spectronaut's own column names."""
+    rows = 6
+    return pd.DataFrame(
+        {
+            "R.FileName": ["run1", "run2"] * (rows // 2),
+            "EG.ModifiedSequence": [f"_PEPTIDEK{i}_" for i in range(rows)],
+            "PEP.StrippedSequence": [f"PEPTIDEK{i}" for i in range(rows)],
+            "FG.Charge": [2, 3] * (rows // 2),
+            "FG.PrecMz": np.linspace(400.0, 900.0, rows),
+            "EG.ApexRT": np.linspace(10.0, 40.0, rows),
+            "FG.Quantity": np.linspace(2.54, 400_000.0, rows),
+            "PG.ProteinGroups": [f"P{i:05d}" for i in range(rows)],
+            "EG.Qvalue": np.linspace(0.001, 0.01, rows),
+            "FG.PrecWindowNumber": [1, 2] * (rows // 2),
+            # Something for a cols_to_load test to leave behind.
+            "EG.TotalQuantity (Settings)": np.arange(rows, dtype=float),
+        }
+    )
+
+
+@pytest.fixture
 def fragpipe_psms() -> pd.DataFrame:
     """A FragPipe/Philosopher psm.tsv, under FragPipe's own column names."""
     rows = 6

@@ -258,6 +258,27 @@ def test_a_fragpipe_psm_table_is_recognised_and_subset(tmp_path, fragpipe_psms):
     assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
 
 
+def test_a_spectronaut_report_is_recognised_by_pattern_and_subset(
+    tmp_path, spectronaut_report
+):
+    """No exact name matches every export, so the timestamped name still has
+    to be recognised -- and a column the caller does not ask for still has
+    to be dropped, exactly as for the other engines."""
+    path = tmp_path / "20260901_164751_2026-08-27_CF_PD_GluC_30min_Report.tsv"
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    data = Data(
+        source=path, cols_to_load={"R.FileName", "PEP.StrippedSequence", "FG.Charge"}
+    )
+    assert data.input_type == "Spectronaut"
+
+    loaded = data.load()
+    assert "EG.TotalQuantity (Settings)" not in loaded.columns
+    # Onto the canonical names, as every other engine is.
+    assert {"Run", "Stripped.Sequence", "Precursor.Charge"} <= set(loaded.columns)
+    assert len(loaded) == len(spectronaut_report)
+
+
 def test_a_maxquant_table_is_read_whole_unless_asked_otherwise(tmp_path):
     """allPeptides runs to several GB, and narrowing it is the caller's call --
     the core cannot know which of its columns this project plots."""

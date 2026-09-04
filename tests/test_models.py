@@ -39,6 +39,17 @@ def test_input_type_detected_from_name_and_extension(report_parquet):
     assert data.input_type == "DIANN"
 
 
+def test_input_type_matched_by_pattern_not_just_exact_name(
+    tmp_path, spectronaut_report
+):
+    """Spectronaut's name carries a timestamp, so FILES cannot list it and the
+    stem is matched against FILE_PATTERN instead."""
+    path = tmp_path / "20260901_164751_2026-08-27_CF_PD_GluC_30min_Report.tsv"
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+    data = Data(source=path)
+    assert data.input_type == "Spectronaut"
+
+
 def test_unknown_input_type_loads_every_column(tmp_path, label_free_report):
     path = tmp_path / "something_else.parquet"
     label_free_report.to_parquet(path)

@@ -1,5 +1,7 @@
 """The input-format descriptors must be well-formed."""
 
+import re
+
 from proteolyzer.core.formats import Config as CoreConfig
 
 
@@ -17,14 +19,19 @@ def test_the_format_descriptors_no_longer_nest_reference_data():
 
 
 def test_every_engine_block_is_well_formed():
-    """Whatever the engines are, each describes itself the same way."""
+    """Whatever the engines are, each describes itself the same way.
+
+    FILES is how most of them say which files they claim; a block with no
+    exact name to give -- Spectronaut's carries a timestamp -- says so with
+    FILE_PATTERN instead, so a block must have one or the other.
+    """
     cfg = CoreConfig()
     engines = [name for name in vars(cfg) if hasattr(getattr(cfg, name), "FILES")]
-    assert {"DIANN", "MaxQuant", "JMod", "FragPipe"} <= set(engines)
+    assert {"DIANN", "MaxQuant", "JMod", "FragPipe", "Spectronaut"} <= set(engines)
 
     for name in engines:
         block = getattr(cfg, name)
-        assert block.FILES, name
+        assert block.FILES or getattr(block, "FILE_PATTERN", ""), name
         assert block.FILE_EXTENSIONS, name
         assert all(extension.startswith(".") for extension in block.FILE_EXTENSIONS), (
             name
@@ -56,3 +63,27 @@ def test_jmod_and_fragpipe_map_onto_the_canonical_names():
     assert cfg.JMod.COLS_RENAME_MAPPING["stripped_seq"] == "Stripped.Sequence"
     assert cfg.FragPipe.COLS_RENAME_MAPPING["Spectrum File"] == "Run"
     assert cfg.FragPipe.COLS_RENAME_MAPPING["Peptide"] == "Stripped.Sequence"
+
+
+def test_spectronaut_maps_onto_the_canonical_names():
+    cfg = CoreConfig()
+    assert cfg.Spectronaut.COLS_RENAME_MAPPING["R.FileName"] == "Run"
+    assert cfg.Spectronaut.COLS_RENAME_MAPPING["PEP.StrippedSequence"] == (
+        "Stripped.Sequence"
+    )
+    assert cfg.Spectronaut.COLS_RENAME_MAPPING["FG.Charge"] == "Precursor.Charge"
+    # Precursor.Id has no source column here -- EG.ModifiedSequence and
+    # FG.Charge would have to be combined to build one -- so it is not a
+    # rename and is left out.
+    assert "Precursor.Id" not in cfg.Spectronaut.COLS_RENAME_MAPPING.values()
+
+
+def test_spectronaut_file_pattern_matches_a_timestamped_report():
+    """No exact name can match every export, so it is a pattern, not a name."""
+    cfg = CoreConfig()
+    assert not cfg.Spectronaut.FILES
+    assert re.fullmatch(
+        cfg.Spectronaut.FILE_PATTERN,
+        "20260901_164751_2026-08-27_CF_PD_GluC_30min_Report",
+    )
+    assert not re.fullmatch(cfg.Spectronaut.FILE_PATTERN, "report")

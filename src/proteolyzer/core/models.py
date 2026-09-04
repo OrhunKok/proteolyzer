@@ -8,10 +8,11 @@ what was done to it.
 
 import datetime
 import logging
+import re
 from dataclasses import dataclass, fields, replace
 from functools import cached_property
 from pathlib import Path
-from typing import IO
+from typing import IO, Protocol
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
@@ -31,6 +32,12 @@ _ENGINES: tuple[str, ...] = tuple(
 logger = logging.getLogger(__name__)
 
 SourceType = Path | IO[str] | IO[bytes]
+
+
+class _FormatBlock(Protocol):
+    """What every block on :class:`~proteolyzer.core.formats.Config` has."""
+
+    FILES: list[str]
 
 
 class Data(BaseModel):
@@ -161,6 +168,19 @@ class Data(BaseModel):
             "Last Accessed": _utc(stat.st_atime),
         }
 
+    def _matches_name(self, block: _FormatBlock) -> bool:
+        """Whether this file's name is one `block` claims.
+
+        Most formats list exact names in FILES. Spectronaut's carry a
+        timestamp -- ``<date>_<time>_<analysis>_Report.tsv`` -- so no exact
+        name can match every export, and FILE_PATTERN matches the stem by
+        regex instead. A block only has to set the one it needs.
+        """
+        if self.file_name in block.FILES:
+            return True
+        pattern = getattr(block, "FILE_PATTERN", "")
+        return bool(pattern) and re.fullmatch(pattern, self.file_name) is not None
+
     @computed_field
     @cached_property
     def input_type(self) -> str:
@@ -176,8 +196,8 @@ class Data(BaseModel):
         matched = [
             name
             for name in _ENGINES
-            if self.file_name in getattr(CONFIG, name).FILES
-            and self.file_extension in getattr(CONFIG, name).FILE_EXTENSIONS
+            if self.file_extension in getattr(CONFIG, name).FILE_EXTENSIONS
+            and self._matches_name(getattr(CONFIG, name))
         ]
 
         if len(matched) > 1:

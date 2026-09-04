@@ -137,6 +137,50 @@ class FragPipe:
 
 
 @dataclass(frozen=True)
+class Spectronaut:
+    #: Spectronaut names a report ``<date>_<time>_<analysis>_Report.tsv``, so
+    #: no exact name can match every export the way FILES matches the other
+    #: engines'. FILES stays empty and the file's stem is matched against
+    #: FILE_PATTERN instead.
+    FILE_PATTERN: str = r".*_?Report$"
+    FILES: list[str] = field(default_factory=list)
+    FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".tsv"])
+    COLS_RENAME_MAPPING: dict[str, str] = field(
+        default_factory=lambda: {
+            "R.FileName": "Run",
+            "EG.ModifiedSequence": "Modified.Sequence",
+            "PEP.StrippedSequence": "Stripped.Sequence",
+            "FG.Charge": "Precursor.Charge",
+            "FG.PrecMz": "Precursor.Mz",
+            "EG.ApexRT": "RT",
+            "EG.RTPredicted": "Predicted.RT",
+            "EG.iRTEmpirical": "iRT",
+            "FG.Quantity": "Precursor.Quantity",
+            "PG.ProteinGroups": "Protein.Group",
+            "PG.ProteinAccessions": "Protein.Ids",
+            "EG.Qvalue": "Q.Value",
+            "EG.PEP": "PEP",
+            "PG.Qvalue": "PG.Q.Value",
+            "PEP.IsProteotypic": "Proteotypic",
+            "EG.IsDecoy": "Decoy",
+            #: Precursor.Id is not here: this export carries no
+            #: EG.PrecursorId, and building one is EG.ModifiedSequence +
+            #: FG.Charge -- two columns, not a rename.
+        }
+    )
+    #: Quantities in this format measured 2.54 to 400,000 in one column, and
+    #: FG.PrecWindowNumber is the isolation window a precursor was taken
+    #: from -- both lose their meaning made categorical.
+    EXCLUDE_CAT_CONVERSION: set[str] = field(
+        default_factory=lambda: {
+            "Precursor.Quantity",
+            "PG.Quantity",
+            "FG.PrecWindowNumber",
+        }
+    )
+
+
+@dataclass(frozen=True)
 class Config:
     COL_MEDIAN_THRESHOLD: int = 100
     #: Fraction of a column's memory that turning it categorical has to save
@@ -149,3 +193,4 @@ class Config:
     MaxQuant: MaxQuant = field(default_factory=MaxQuant)
     JMod: JMod = field(default_factory=JMod)
     FragPipe: FragPipe = field(default_factory=FragPipe)
+    Spectronaut: Spectronaut = field(default_factory=Spectronaut)
