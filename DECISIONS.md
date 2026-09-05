@@ -213,6 +213,31 @@ the run carrying on, and a pull request with no checks that looks exactly like a
 pull request that passed. So the fallback annotates the run. Silence was the
 defect; falling back is not.
 
+**The reviewer names the one App in `allowed_bots`, rather than `'*'`.**
+`claude-code-action` refuses a run a bot started unless the bot is named, and its
+default names none — so from the day `review.yml` was written until 2026-09-05,
+every pull request `agent.yml` opened went unreviewed. Those are most of the pull
+requests here and the ones the workflow was written for: its own header argues a
+bot-authored pull request is exactly what is "most worth a second reading by
+something that did not just write them". The reasoning was right and the action's
+default quietly overrode it. Two releases were cut in between.
+
+`'*'` would have fixed it in a character, and the action's own warning is why
+not: on a public repository it lets external Apps invoke the reviewer with
+prompts they control, and this repository is public. Naming one App costs a line
+the day a second is added.
+
+Naming it widens nothing. `agent.yml` runs on the `agent` label, applying a label
+needs write access, and it refuses an issue a bot filed — so a pull request from
+this App already traces back to a collaborator deciding to start it. The reviewer
+still cannot push, approve or merge, which is what actually bounds it.
+
+**How it hid is the part worth keeping.** The failure was loud in the only place
+nobody looks: a red check on a job that is not required for merge, on a pull
+request whose other seven checks were green. The fallback comment did its job and
+said "unreviewed rather than approved" — and that comment sat unread too. A check
+that fails open is not the same as a check that fails visibly.
+
 ## What may span repositories
 
 **A credential may be shared. Content may not.** What was torn out on 2026-08-23
