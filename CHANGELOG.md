@@ -7,6 +7,36 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Added
+
+- `core.envelope_room(report, windows)`: which window isolated each precursor
+  and how much room it left the envelope, rather than only the verdict
+  `envelope_split` already gave. Returns a frame of `Window` and `Room` (m/z
+  from M+2 to that window's upper edge, negative where the envelope was split,
+  NaN where no window isolated it). `envelope_split` is now a thin wrapper over
+  it — the sign of `Room` is exactly its verdict — so `streamlit-DO-MS` no
+  longer has to re-derive the window index from `ISOTOPE_STEP` and
+  `ENVELOPE_ISOTOPES` to say which window a plot should widen.
+
+  **`Window` is a position, so it is `windows.iloc[w]`, not `windows.loc[w]`.**
+  The two are the same only while the design still has its original index, and
+  a caller that filtered its windows has one that does not — where `.loc` is
+  then a `KeyError`, or the wrong window with nothing said. It is -1 where no
+  window isolated the precursor, which is a sentinel a position can carry and a
+  label could not.
+
+### Fixed
+
+- `envelope_split` (and now `envelope_room`) deduped precursors on ion
+  mobility whenever the report carried an `IM` column, even for an m/z-only
+  window design that never reads it. Mobility is measured per identification,
+  so as a dedupe key it barely dedupes at all — on a measured 1.04M-row
+  report, 1,040,711 unique rows against 169,697 without it, a 9x slowdown for
+  an identical answer. The key now only includes `IM` when the design itself
+  carries `WINDOW_MOBILITY_COLUMNS`.
+
 ## v0.6.0
 
 ### Added
