@@ -86,6 +86,25 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+          # Without this the action refuses a run a bot started, and the pull
+          # requests agent.yml opens -- most of the ones here, and the ones this
+          # workflow was written for -- went unreviewed. The header above had
+          # already argued they were safe to read; the action's own default is
+          # what stopped it, and it stopped it silently enough that it took a
+          # person reading a red check to notice.
+          #
+          # The one App, named, rather than '*'. The action's own warning is that
+          # on a public repository '*' lets external Apps invoke it with prompts
+          # they control, and this repository is public. Naming it costs one line
+          # the day a second App is added and buys the whole of that.
+          #
+          # It widens nothing. agent.yml runs on the `agent` label, applying a
+          # label needs write access, and it refuses an issue a bot filed -- so a
+          # pull request from this App already traces back to a collaborator
+          # deciding to start it. Matching lowercases and drops a trailing
+          # '[bot]', so this entry covers `personal-claude-agent[bot]` too.
+          allowed_bots: "personal-claude-agent"
+
           # Read/Glob/Grep to read the tree, Bash to run the gate, and the
           # inline-comment tool the action supplies for a remark against a line.
           # The first run here had bare `Bash` and no inline tool, took ten turns
