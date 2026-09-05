@@ -7,7 +7,7 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
-## Unreleased
+## v0.7.0
 
 ### Added
 
@@ -36,6 +36,12 @@ first they knew of the last rename was an ImportError.
   report, 1,040,711 unique rows against 169,697 without it, a 9x slowdown for
   an identical answer. The key now only includes `IM` when the design itself
   carries `WINDOW_MOBILITY_COLUMNS`.
+
+  What you get back depends on how many identifications your report holds per
+  precursor, since that is the whole of what the dedupe was failing to do: 9x on
+  that report, and 2.3x measured independently on 300k rows over 5k precursors.
+  It bites any m/z-only design read alongside a report that has an `IM` column,
+  which is every `--export-windows` file off a timsTOF.
 
 ## v0.6.0
 
