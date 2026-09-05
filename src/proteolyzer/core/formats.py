@@ -153,6 +153,13 @@ class Spectronaut:
     already takes load-bearing rather than convenient -- naming a column the
     analysis did not write must not fail the read.
 
+    Parquet and tab-separated text, because Spectronaut writes either and
+    parquet is what it writes by default. The two are one report in two
+    serializations rather than two formats: the same names, the same rename
+    mapping, the same built identifier, and a test asserting a report read both
+    ways comes back the same. Which is read is decided by the extension, so a
+    caller does nothing to pick.
+
     Two things measured off that export -- 13 runs, 173,443 rows, 174 MB, tab
     separated -- are worth knowing before reading one:
 
@@ -176,7 +183,11 @@ class Spectronaut:
     #: ``report.tsv`` differs from a bare ``Report.tsv`` by the one letter, and
     #: a file two blocks claim is an error rather than a guess.
     FILE_PATTERNS: list[str] = field(default_factory=lambda: [r".*_Report"])
-    FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".tsv"])
+    #: Both, and the pattern is over the stem so it does not care which. The
+    #: case-sensitivity above carries more weight now than it did: DIA-NN
+    #: claims ``.parquet`` too, and its ``report.parquet`` is one capital
+    #: letter from a bare ``Report.parquet``.
+    FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".parquet", ".tsv"])
     COLS_RENAME_MAPPING: dict[str, str] = field(
         default_factory=lambda: {
             "R.FileName": "Run",

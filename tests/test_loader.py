@@ -262,6 +262,10 @@ def test_a_fragpipe_psm_table_is_recognised_and_subset(tmp_path, fragpipe_psms):
 #: analysis, and only then the table.
 STAMPED_REPORT = "20260901_164751_2026-08-27_CF_PD_GluC_30min_Report.tsv"
 
+#: The same export as parquet, which is what Spectronaut writes by default. The
+#: stem is identical, which is the point -- the pattern does not care.
+STAMPED_PARQUET = "20260901_164751_2026-08-27_CF_PD_GluC_30min_Report.parquet"
+
 
 def test_a_spectronaut_report_is_recognised_by_its_ending(tmp_path, spectronaut_report):
     """No fixed name could match one: Spectronaut stamps the export with the
@@ -412,6 +416,63 @@ def test_a_spectronaut_report_read_from_an_upload(spectronaut_report):
     loaded = data.load()
     assert len(loaded) == len(spectronaut_report)
     assert loaded["Precursor.Id"].iloc[0] == "_PEPTIDEK0_2"
+
+
+def test_a_spectronaut_parquet_is_recognised_and_read(tmp_path, spectronaut_report):
+    """Parquet is what Spectronaut writes by default, so it is the shape most
+    exports actually arrive in."""
+    path = tmp_path / STAMPED_PARQUET
+    spectronaut_report.to_parquet(path, index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "Spectronaut"
+
+    loaded = data.load()
+    assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
+    assert loaded["Precursor.Id"].iloc[0] == "_PEPTIDEK0_2"
+    assert len(loaded) == len(spectronaut_report)
+
+
+def test_a_diann_parquet_is_not_taken_for_a_spectronaut_one(
+    tmp_path, label_free_report
+):
+    """Both formats claim `.parquet` now, so the only thing keeping DIA-NN's
+    `report.parquet` out of Spectronaut's hands is the capital letter. A file
+    two blocks claimed would be refused outright rather than guessed at, so this
+    failing would take DIA-NN's most common input down, not Spectronaut's."""
+    path = tmp_path / "report.parquet"
+    label_free_report.to_parquet(path, index=False)
+
+    assert Data(source=path).input_type == "DIANN"
+
+
+def test_the_two_spectronaut_serializations_read_the_same(tmp_path, spectronaut_report):
+    """One report in two containers, not two formats. Whichever a lab exports,
+    the frame that comes back is the same one -- names, values and dtypes."""
+    tsv = tmp_path / STAMPED_REPORT
+    parquet = tmp_path / STAMPED_PARQUET
+    spectronaut_report.to_csv(tsv, sep="\t", index=False)
+    spectronaut_report.to_parquet(parquet, index=False)
+
+    pd.testing.assert_frame_equal(
+        Data(source=tsv).load().frame, Data(source=parquet).load().frame
+    )
+
+
+def test_a_spectronaut_parquet_subset_may_name_a_column_the_export_lacks(
+    tmp_path, spectronaut_report
+):
+    """A report is configurable column by column whichever way it is written,
+    so the intersection has to hold on this path too."""
+    path = tmp_path / STAMPED_PARQUET
+    spectronaut_report.to_parquet(path, index=False)
+
+    loaded = Data(
+        source=path,
+        cols_to_load={"R.FileName", "FG.Quantity", "FG.MS1Quantity", "EG.IonMobility"},
+    ).load()
+
+    assert set(loaded.columns) == {"Run", "Precursor.Quantity"}
 
 
 def test_a_maxquant_table_is_read_whole_unless_asked_otherwise(tmp_path):
