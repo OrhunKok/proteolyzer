@@ -7,6 +7,30 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Added
+
+- **Spectronaut reports are read as parquet as well as tab-separated text**,
+  parquet being what Spectronaut writes by default. Same names, same rename
+  mapping, same built `Precursor.Id`; the extension decides which reader runs
+  and a caller does nothing to pick. There is a test asserting the same report
+  written both ways comes back as the same frame, values and dtypes.
+
+  v0.6.0 claimed `.tsv` alone because the export the format was measured from
+  was tab separated, which made the *default* export unrecognized: it read as
+  `Unknown`, so the frame came back under Spectronaut's own column names with a
+  warning rather than onto the canonical schema.
+
+  **What a consumer has to do.** Nothing, unless it was reading a
+  `..._Report.parquet` as an unrecognized file, which now comes back renamed —
+  `rename=False` keeps the file's own names, as `streamlit-DO-MS` does.
+
+  Note that DIA-NN also claims `.parquet`, so its `report.parquet` and a bare
+  Spectronaut `Report.parquet` are now one capital letter apart on the same
+  extension. Detection is case-sensitive and refuses a file two formats claim,
+  so this is pinned by a test rather than left to chance.
+
 ## v0.7.0
 
 ### Added
