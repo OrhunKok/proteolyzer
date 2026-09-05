@@ -7,8 +7,9 @@ every question worth asking is about an edge.
 """
 
 import pandas as pd
+import pytest
 
-from proteolyzer.core import envelope_split
+from proteolyzer.core import envelope_room, envelope_split
 
 
 def windows() -> pd.DataFrame:
@@ -92,3 +93,52 @@ def test_the_same_precursor_identified_again_gets_the_same_answer():
 
     assert list(answer) == ["Split", "Split", "Intact"]
     assert list(answer.index) == [7, 8, 9]
+
+
+def test_envelope_room_names_the_window_that_isolated_it():
+    """Case 0: well inside the first window, M+2 short of its upper edge."""
+    room = envelope_room(precursors(), windows())
+
+    assert room["Window"][0] == 0
+    assert room["Room"][0] == pytest.approx(700.0 - (500.0 + 2 * 1.00336 / 2))
+
+
+def test_envelope_room_is_negative_where_the_envelope_split():
+    """Case 3: the last window's own edge, isolated but the isotopes run past it."""
+    room = envelope_room(precursors(), windows())
+
+    assert room["Window"][3] == 1
+    assert room["Room"][3] < 0
+
+
+def test_envelope_room_is_minus_one_and_nan_where_no_window_isolated_it():
+    room = envelope_room(precursors(), windows())
+
+    assert room["Window"][4] == -1
+    assert pd.isna(room["Room"][4])
+    assert room["Window"][5] == -1
+    assert pd.isna(room["Room"][5])
+
+
+def test_the_sign_of_room_is_envelope_splits_own_verdict():
+    """envelope_split is a wrapper over envelope_room -- checked row for row
+    rather than assumed from reading the wrapper."""
+    frame = precursors()
+    room = envelope_room(frame, windows())
+    split = envelope_split(frame, windows())
+
+    for index in frame.index:
+        if room["Window"][index] < 0:
+            assert pd.isna(split[index])
+        elif room["Room"][index] >= 0:
+            assert split[index] == "Intact"
+        else:
+            assert split[index] == "Split"
+
+
+def test_a_frame_without_the_columns_gets_no_window_either():
+    lacking = precursors().drop(columns="Precursor.Mz")
+    room = envelope_room(lacking, windows())
+
+    assert (room["Window"] == -1).all()
+    assert room["Room"].isna().all()

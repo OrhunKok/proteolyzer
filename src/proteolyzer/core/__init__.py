@@ -14,7 +14,7 @@ Submodules
 """
 
 from .io import frame_exists, read_frame, write_frame
-from .isolation import envelope_split
+from .isolation import envelope_room, envelope_split
 from .loader import DataLoader
 from .logging import Logged, configure_logging
 from .matrix import MatrixBuilder
@@ -37,6 +37,7 @@ __all__ = [
     "Stage",
     "configure_logging",
     "cv",
+    "envelope_room",
     "envelope_split",
     "frame_exists",
     "jaccard_index",

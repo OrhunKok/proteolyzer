@@ -36,6 +36,95 @@ WINDOW_MASS_COLUMNS: tuple[str, str] = ("Start Mass [m/z]", "End Mass [m/z]")
 WINDOW_MOBILITY_COLUMNS: tuple[str, str] = ("Start IM [1/K0]", "End IM [1/K0]")
 
 
+def envelope_room(
+    report: pd.DataFrame,
+    windows: pd.DataFrame,
+    isotopes: int = ENVELOPE_ISOTOPES,
+) -> pd.DataFrame:
+    """Which window isolated each precursor, and how much room it left its envelope.
+
+    'Window' indexes into windows, -1 where none isolated it. 'Room' is the m/z
+    from M+2 to that window's upper edge, negative where part of the envelope was
+    fragmented elsewhere, NaN where no window isolated it. Aligned to the
+    report's index.
+
+    Windows overlap, so more than one may isolate a precursor by m/z and, where
+    the design carries mobility, by ion mobility too. Walking them in ascending
+    upper edge and letting the last one to claim a precursor win picks the same
+    window `envelope_split` used to call 'whole' on -- the one with the most
+    room, because ``max(ends[isolated]) >= top`` is the same statement as
+    ``any(isolated & (top <= ends))`` -- without building a precursors-by-windows
+    matrix to get there.
+    """
+
+    def numeric(column: str) -> pd.Series:
+        # Charge and mobility arrive categorical from the loader, and to_numeric
+        # will not take a categorical directly.
+        return pd.to_numeric(report[column].astype("object"), errors="coerce")
+
+    empty = pd.DataFrame(
+        {
+            "Window": pd.Series(-1, index=report.index, dtype="int64"),
+            "Room": pd.Series(np.nan, index=report.index, dtype="float64"),
+        }
+    )
+
+    if not PRECURSOR_COLUMNS.issubset(report.columns) or windows.empty:
+        return empty
+
+    # Only worth keying on mobility when the design carries it -- otherwise it is
+    # measured per identification and barely dedupes at all.
+    mobile = set(WINDOW_MOBILITY_COLUMNS).issubset(windows.columns) and (
+        "IM" in report.columns
+    )
+
+    # One row per precursor rather than per identification: the answer depends on
+    # the m/z, the charge and the mobility, none of which vary by run or channel,
+    # and a report can carry a million rows against a few thousand precursors.
+    columns = {name: numeric(name) for name in ("Precursor.Mz", "Precursor.Charge")}
+    if mobile:
+        columns["IM"] = numeric("IM")
+
+    frame = pd.DataFrame(columns, index=report.index)
+    unique = frame.drop_duplicates()
+
+    mz = unique["Precursor.Mz"].to_numpy(dtype=float)
+    charge = unique["Precursor.Charge"].to_numpy(dtype=float)
+    top = mz + isotopes * ISOTOPE_STEP / charge
+
+    starts = windows[WINDOW_MASS_COLUMNS[0]].to_numpy(dtype=float)
+    ends = windows[WINDOW_MASS_COLUMNS[1]].to_numpy(dtype=float)
+
+    mobility = low = high = None
+    if mobile and (unique["IM"] > 0).any():
+        # A PASEF window is a patch of the m/z by mobility plane, so both have to
+        # match. Isotopes share the precursor's charge and so its mobility.
+        mobility = unique["IM"].to_numpy(dtype=float)
+        low = windows[WINDOW_MOBILITY_COLUMNS[0]].to_numpy(dtype=float)
+        high = windows[WINDOW_MOBILITY_COLUMNS[1]].to_numpy(dtype=float)
+
+    window_idx = np.full(len(unique), -1, dtype=np.int64)
+    room = np.full(len(unique), np.nan, dtype=np.float64)
+
+    for i in np.argsort(ends):
+        isolated = (mz >= starts[i]) & (mz <= ends[i])
+        if mobility is not None and low is not None and high is not None:
+            isolated &= (mobility >= low[i]) & (mobility <= high[i])
+        window_idx[isolated] = i
+        room[isolated] = ends[i] - top[isolated]
+
+    unique = unique.assign(Window=window_idx, Room=room)
+
+    # Back onto every identification of each precursor. A left merge keeps the
+    # report's row order, so the values line up with the index they came from.
+    spread = frame.merge(unique, on=list(frame.columns), how="left")
+
+    return pd.DataFrame(
+        {"Window": spread["Window"].to_numpy(), "Room": spread["Room"].to_numpy()},
+        index=report.index,
+    )
+
+
 def envelope_split(
     report: pd.DataFrame,
     windows: pd.DataFrame,
@@ -58,58 +147,15 @@ def envelope_split(
     Returns ``'Intact'``, ``'Split'``, or ``None`` where the design covers no
     window the precursor could have come from -- aligned to the report's own
     index, so the answer can be assigned straight back onto it.
+
+    A thin wrapper over `envelope_room`: the sign of its `Room` is this verdict,
+    positive meaning the window's upper edge reached M+2 or past it.
     """
 
-    def numeric(column: str) -> pd.Series:
-        # Charge and mobility arrive categorical from the loader, and to_numeric
-        # will not take a categorical directly.
-        return pd.to_numeric(report[column].astype("object"), errors="coerce")
+    room = envelope_room(report, windows, isotopes)
 
-    if not PRECURSOR_COLUMNS.issubset(report.columns) or windows.empty:
-        return pd.Series(None, index=report.index, dtype="object")
+    envelope = pd.Series(None, index=report.index, dtype="object")
+    isolated = room["Window"] >= 0
+    envelope[isolated] = np.where(room.loc[isolated, "Room"] >= 0, "Intact", "Split")
 
-    # One row per precursor rather than per identification: the answer depends on
-    # the m/z, the charge and the mobility, none of which vary by run or channel,
-    # and a report can carry a million rows against a few thousand precursors.
-    columns = {name: numeric(name) for name in ("Precursor.Mz", "Precursor.Charge")}
-    if "IM" in report.columns:
-        columns["IM"] = numeric("IM")
-
-    frame = pd.DataFrame(columns, index=report.index)
-    unique = frame.drop_duplicates()
-
-    mz = unique["Precursor.Mz"].to_numpy(dtype=float)
-    charge = unique["Precursor.Charge"].to_numpy(dtype=float)
-    top = mz + isotopes * ISOTOPE_STEP / charge
-
-    starts = windows[WINDOW_MASS_COLUMNS[0]].to_numpy(dtype=float)
-    ends = windows[WINDOW_MASS_COLUMNS[1]].to_numpy(dtype=float)
-
-    isolated = (mz[:, None] >= starts) & (mz[:, None] <= ends)
-    whole = isolated & (top[:, None] <= ends)
-
-    mobile = set(WINDOW_MOBILITY_COLUMNS).issubset(windows.columns) and (
-        "IM" in unique.columns
-    )
-    if mobile and (unique["IM"] > 0).any():
-        # A PASEF window is a patch of the m/z by mobility plane, so both have to
-        # match. Isotopes share the precursor's charge and so its mobility.
-        mobility = unique["IM"].to_numpy(dtype=float)
-        low = windows[WINDOW_MOBILITY_COLUMNS[0]].to_numpy(dtype=float)
-        high = windows[WINDOW_MOBILITY_COLUMNS[1]].to_numpy(dtype=float)
-        within = (mobility[:, None] >= low) & (mobility[:, None] <= high)
-        isolated, whole = isolated & within, whole & within
-
-    # None unless some window isolated it, and 'whole' implies 'isolated', so
-    # writing the stronger answer second is what settles the overlap.
-    envelope = np.full(len(unique), None, dtype=object)
-    envelope[isolated.any(axis=1)] = "Split"
-    envelope[whole.any(axis=1)] = "Intact"
-
-    unique = unique.assign(Envelope=envelope)
-
-    # Back onto every identification of each precursor. A left merge keeps the
-    # report's row order, so the values line up with the index they came from.
-    spread = frame.merge(unique, on=list(frame.columns), how="left")
-
-    return pd.Series(spread["Envelope"].to_numpy(), index=report.index)
+    return envelope
