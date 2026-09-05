@@ -13,13 +13,19 @@ first they knew of the last rename was an ImportError.
 
 - `core.envelope_room(report, windows)`: which window isolated each precursor
   and how much room it left the envelope, rather than only the verdict
-  `envelope_split` already gave. Returns a frame of `Window` (an index into
-  `windows`, -1 where none isolated it) and `Room` (m/z from M+2 to that
-  window's upper edge, negative where the envelope was split, NaN where no
-  window isolated it). `envelope_split` is now a thin wrapper over it — the
-  sign of `Room` is exactly its verdict — so `streamlit-DO-MS` no longer has to
-  re-derive the window index from `ISOTOPE_STEP` and `ENVELOPE_ISOTOPES` to
-  say which window a plot should widen.
+  `envelope_split` already gave. Returns a frame of `Window` and `Room` (m/z
+  from M+2 to that window's upper edge, negative where the envelope was split,
+  NaN where no window isolated it). `envelope_split` is now a thin wrapper over
+  it — the sign of `Room` is exactly its verdict — so `streamlit-DO-MS` no
+  longer has to re-derive the window index from `ISOTOPE_STEP` and
+  `ENVELOPE_ISOTOPES` to say which window a plot should widen.
+
+  **`Window` is a position, so it is `windows.iloc[w]`, not `windows.loc[w]`.**
+  The two are the same only while the design still has its original index, and
+  a caller that filtered its windows has one that does not — where `.loc` is
+  then a `KeyError`, or the wrong window with nothing said. It is -1 where no
+  window isolated the precursor, which is a sentinel a position can carry and a
+  label could not.
 
 ### Fixed
 

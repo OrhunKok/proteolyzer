@@ -43,10 +43,16 @@ def envelope_room(
 ) -> pd.DataFrame:
     """Which window isolated each precursor, and how much room it left its envelope.
 
-    'Window' indexes into windows, -1 where none isolated it. 'Room' is the m/z
-    from M+2 to that window's upper edge, negative where part of the envelope was
-    fragmented elsewhere, NaN where no window isolated it. Aligned to the
-    report's index.
+    'Window' is a *position* in ``windows``, so it is ``windows.iloc[w]`` and not
+    ``windows.loc[w]`` -- the two part company the moment a caller hands over a
+    design it filtered, and ``.loc`` is then either a ``KeyError`` or, where the
+    labels happen to overlap the positions, the wrong window with nothing said.
+    It is -1 where no window isolated the precursor, which is a sentinel a
+    position can carry and a label could not.
+
+    'Room' is the m/z from M+2 to that window's upper edge, negative where part
+    of the envelope was fragmented elsewhere, NaN where no window isolated it.
+    Both are aligned to the report's index.
 
     Windows overlap, so more than one may isolate a precursor by m/z and, where
     the design carries mobility, by ion mobility too. Walking them in ascending
@@ -154,8 +160,16 @@ def envelope_split(
 
     room = envelope_room(report, windows, isotopes)
 
-    envelope = pd.Series(None, index=report.index, dtype="object")
-    isolated = room["Window"] >= 0
-    envelope[isolated] = np.where(room.loc[isolated, "Room"] >= 0, "Intact", "Split")
+    # Built as an object array and wrapped, rather than assigned into a Series,
+    # so the dtype handed back is the one every release up to v0.6.0 handed
+    # back. Assigning into an object Series leaves it object, where wrapping
+    # lets pandas infer -- which is `str` on pandas 3. Same values either way,
+    # and a consumer that has already pinned a dtype should not have to find
+    # out from a plot that it moved.
+    isolated = (room["Window"] >= 0).to_numpy()
+    envelope = np.full(len(report), None, dtype=object)
+    envelope[isolated] = np.where(
+        room["Room"].to_numpy()[isolated] >= 0, "Intact", "Split"
+    )
 
-    return envelope
+    return pd.Series(envelope, index=report.index)

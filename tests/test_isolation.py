@@ -6,6 +6,7 @@ of assertions rather than as tests. The window design here is deliberately small
 every question worth asking is about an edge.
 """
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -142,3 +143,31 @@ def test_a_frame_without_the_columns_gets_no_window_either():
 
     assert (room["Window"] == -1).all()
     assert room["Room"].isna().all()
+
+
+def test_the_window_is_a_position_and_not_a_label():
+    """A design the caller filtered no longer has an index of 0..n-1, and the
+    two readings of 'Window' part company there: `.iloc` is the window that
+    isolated the precursor, `.loc` is a KeyError -- or, where the labels happen
+    to overlap the positions, a different window with nothing said."""
+    filtered = windows().iloc[1:]
+    assert list(filtered.index) == [1]
+
+    # Case 3 sits at 999.5, inside the second window, which is the only one left.
+    window = envelope_room(precursors(), filtered)["Window"][3]
+
+    assert window == 0
+    assert filtered.iloc[window]["Start Mass [m/z]"] == 700.0
+    with pytest.raises(KeyError):
+        filtered.loc[window]
+
+
+def test_the_verdict_keeps_the_dtype_a_caller_already_has():
+    """envelope_split became a wrapper over envelope_room, and a wrapper must
+    not quietly change what it hands back. Pinned against what pandas infers for
+    the same values rather than against a dtype by name, so it still says
+    something when pandas next changes its mind about strings."""
+    answer = envelope_split(precursors(), windows())
+    inferred = pd.Series(np.array(answer.tolist(), dtype=object), index=answer.index)
+
+    assert answer.dtype == inferred.dtype
