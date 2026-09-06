@@ -7,6 +7,32 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## v0.12.0
+
+### Added
+
+- **A table too narrow to sign by an overlap of names is claimed by its whole
+  shape.** v0.11.0 recognized four of DIA-NN's five tables by their columns and
+  said the `xic` export could not be: `pr`, `feature`, `rt`, `value` are four
+  words that belong to nobody, and one of them is JMod's. That was giving up too
+  early — what separates them is not *which* of those names is present but that
+  **all** of them are and there is almost nothing else, four columns against
+  JMod's thirty-four.
+
+  A format block may now carry `NARROW_SIGNATURES`, and both halves have to
+  hold: every declared column present, and the table about as narrow as
+  declared. Either half separates this pair on its own, which is the argument
+  for both — requiring the whole of a small schema is what works against another
+  engine sharing a name, and the width is the second lock against a frame that
+  carries those four words among two hundred others. Shape is asked before the
+  overlap, being the more specific claim, and both are still behind the name.
+
+  With it, the invariant test covers **every** real table of every engine with
+  no carve-out: twelve tables, one claimant each.
+
+  **What a consumer has to do.** Nothing; this reaches files that came back
+  `Unknown`. It removes the one limitation v0.11.0 shipped with.
+
 ## v0.11.0
 
 ### Added
@@ -30,16 +56,12 @@ first they knew of the last rename was an ImportError.
   (MaxQuant and FragPipe), `PEP` (MaxQuant and DIA-NN), `rt` (JMod and DIA-NN's
   XIC export).
 
-  A table too small and too plainly named for that — DIA-NN's `xic` export is
-  `pr`, `feature`, `rt`, `value`, one of which is JMod's — is claimed by its
-  whole shape instead: **all** of a declared schema present, in a table about as
-  narrow as declared. Either half separates `xic` from JMod on its own, since
-  JMod holds one of the four names and is eight times too wide.
-
   **What a consumer has to do.** Nothing. This only reaches files that came back
-  `Unknown`; anything recognized before is recognized the same way. One limit
+  `Unknown`; anything recognized before is recognized the same way. Two limits
   worth knowing: a name that *does* match still wins, so a table deliberately
-  renamed to another engine's filename is read as that engine.
+  renamed to another engine's filename is read as that engine; and DIA-NN's
+  `xic` export cannot be signed — its four columns are `pr`, `feature`, `rt`,
+  `value`, one of which is JMod's — so it stays recognized by name alone.
 
 ## v0.10.0
 
