@@ -8,7 +8,38 @@ with what to do about it, because two repositories depend on this one -- see the
 table in CLAUDE.md -- and the first they knew of the last rename was an
 ImportError.
 
-## v0.12.0
+## Unreleased
+
+### Fixed
+
+- **Text standing for a gap is read as a gap.** A delimited reader turns `NaN`
+  and an empty field into missing values itself; parquet stores the string it
+  was given. So the same report read the two ways disagreed about which cells
+  were empty — and the parquet one lied the worse way round, since `pd.isna`
+  says `False` of the string `"NaN"`, so a gap read as data all the way to
+  whatever plotted it. On a real Spectronaut export that was two columns,
+  one of them empty in every one of its 170,795 rows.
+
+  Only the two spellings that are not words. `NA` and `None` are left as they
+  were found: on that export `EG.InSourceFragmentationClass` is `"None"` in
+  168,532 rows of 170,795 with a real class in the rest, which makes it a
+  category and not an absence. A text reader nulls both by default, so the two
+  serializations still disagree about those two — agreeing means deciding
+  pandas' default is right, which is a wider change than this one.
+
+- Detection no longer raises where a file's columns match two formats. Two
+  blocks naming one file is this package's config contradicting itself and
+  still raises; two signatures matching is a fact about somebody's file — a
+  report joined to another engine's table, saved, read back — and that now
+  warns and reads as `Unknown`, which is what it did before v0.11.0.
+
+### Changed
+
+- `CHANGELOG.md` said three repositories depend on this one; there are two.
+  The quickstart in `README.md` and the docs still called recognition a matter
+  of the file name, which it has not been since v0.11.0.
+
+
 
 ### Added
 

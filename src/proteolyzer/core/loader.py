@@ -36,9 +36,31 @@ ASSUMED_AVAILABLE_MEMORY = 2 * 1024**3
 #: False of it, so a gap reads as data until somebody plots it.
 MISSING_TEXT = frozenset({"", "NaN", "nan", "NA", "N/A", "null", "None", "#N/A"})
 
+#: Text that is a gap written out rather than a value. `NaN` is
+#: ``str(float("nan"))`` and an empty field is an empty field: neither is a word
+#: anybody means, so nothing is lost by reading them as the gaps they are, and
+#: `pd.isna` saying False of the string "NaN" is how a gap comes to read as data.
+#:
+#: Deliberately not "NA" or "None", which a text reader also nulls and which
+#: *are* words: on the export this was written from, `EG.InSourceFragmentationClass`
+#: is "None" in 168,532 rows of 170,795 and a real class in the rest, so there it
+#: is a category and not an absence. Making parquet agree with text about those
+#: two means deciding pandas' default is right, which is a wider change than this.
+UNAMBIGUOUS_GAPS = frozenset({"NaN", "nan", ""})
+
 #: What a flag written as text says. Compared lower-cased.
 TRUE_TEXT = frozenset({"true", "1"})
 FALSE_TEXT = frozenset({"false", "0"})
+
+
+def is_text(column: pd.Series) -> bool:
+    """Whether a column holds text, rather than something already typed.
+
+    Both spellings: pandas reads a text column as its own string dtype, and as
+    object where something in it stopped it doing that.
+    """
+    dtype = column.dtype
+    return isinstance(dtype, pd.StringDtype) or pd.api.types.is_object_dtype(dtype)
 
 
 def _text(column: pd.Series) -> tuple[pd.Series, pd.Series]:
@@ -121,6 +143,10 @@ class DataLoader(Logged):
         """
         self.file = file
         self.data = self._auto_load()
+
+        # A text reader turns these into gaps itself, so this is what makes a
+        # parquet read agree with one about what a gap is.
+        self.data = self._close_text_gaps()
 
         # Before the rename, because these are named as the file names them --
         # which is also what makes them reach a caller reading with
@@ -211,6 +237,34 @@ class DataLoader(Logged):
         self.logger.info(f"Renaming columns in {self.INPUT_TYPE} input")
         return df.rename(columns=self.cols_rename_mapping)
 
+    def _close_text_gaps(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
+        """Read the text that means "no value" as no value.
+
+        A delimited reader does this for itself -- ``NaN`` and an empty field
+        both arrive as gaps out of ``read_csv`` -- and parquet does not, because
+        it stores the string it was given. So the same report read the two ways
+        disagreed about which cells were empty, and the parquet one lied the
+        worse way round: ``pd.isna`` says False of the string ``"NaN"``, so the
+        gap read as data all the way to whatever plotted it.
+
+        Only the two spellings that are not words. See :data:`UNAMBIGUOUS_GAPS`.
+        """
+        df = self.data if df is None else df
+
+        closed = {}
+        for col in df.columns:
+            if not is_text(df[col]):
+                continue
+            written_out = df[col].isin(UNAMBIGUOUS_GAPS)
+            if written_out.any():
+                df[col] = df[col].where(~written_out)
+                closed[col] = int(written_out.sum())
+
+        if closed:
+            self.logger.info(f"Read text standing for a gap as a gap: {closed}.")
+
+        return df
+
     def _retype_cols(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """Give back the dtype to columns the format wrote as text.
 
@@ -236,9 +290,7 @@ class DataLoader(Logged):
         retyped, refused = {}, {}
         for wanted, convert in converters:
             for col in wanted & set(df.columns):
-                if not isinstance(df[col].dtype, pd.StringDtype) and (
-                    df[col].dtype != object
-                ):
+                if not is_text(df[col]):
                     continue  # this export stored it properly already
 
                 converted = convert(df[col])
