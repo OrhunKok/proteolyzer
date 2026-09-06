@@ -3,7 +3,7 @@
 import re
 
 from proteolyzer.core.formats import Config as CoreConfig
-from proteolyzer.core.models import _claims
+from proteolyzer.core.models import _claims, _signed
 
 
 def _engines(cfg) -> list[str]:
@@ -143,14 +143,224 @@ def test_spectronaut_can_be_identified_without_its_name():
     assert len(signature) > 2, "one column matching cannot be enough to claim a file"
 
 
-def test_only_a_format_that_needs_one_carries_a_signature():
-    """Looking inside a file is for the formats whose names say nothing. An
-    engine that names its own output is claimed by the name, and adding a
-    signature it does not need is a way to start claiming other people's."""
+def test_every_format_can_be_recognised_without_its_name():
+    """A file name is a convention, not a fact about the file: people rename
+    what they download. Every engine carries a signature, so a report keeps
+    being read as one whatever it ends up called."""
     cfg = CoreConfig()
-    signed = [
-        name
-        for name in _engines(cfg)
-        if getattr(getattr(cfg, name), "COLUMN_SIGNATURE", frozenset())
-    ]
-    assert signed == ["Spectronaut"]
+    for name in _engines(cfg):
+        signature = getattr(getattr(cfg, name), "COLUMN_SIGNATURE", frozenset())
+        assert len(signature) > 2, f"{name} cannot be recognised by its columns"
+
+
+#: What each engine's tables actually hold, column for column. The DIA-NN report
+#: is read off the real one in `examples/`; the rest are the per-table lists
+#: `streamlit-DO-MS` keeps, which were themselves recovered from the `LOAD_COLS`
+#: this package carried through v0.3.x. Written down rather than derived from the
+#: signatures, because a signature checked against itself checks nothing.
+REAL_TABLES: dict[str, dict[str, set[str]]] = {
+    "MaxQuant": {
+        "evidence": {
+            "Raw file",
+            "Retention time",
+            "Retention length",
+            "PEP",
+            "Type",
+            "Intensity",
+            "m/z",
+            "Sequence",
+            "Charge",
+            "MS/MS count",
+            "Modified sequence",
+            "PIF",
+            "Missed cleavages",
+            "Experiment",
+            "Leading razor protein",
+            "Gene names",
+        },
+        "allPeptides": {
+            "Charge",
+            "Intensity",
+            "Mass",
+            "Mass deficit",
+            "Raw file",
+            "Retention length (FWHM)",
+            "Retention time",
+            "Type",
+            "m/z",
+        },
+        "msScans": {
+            "Ion injection time",
+            "MS/MS count",
+            "Raw file",
+            "Retention time",
+            "Total ion current",
+        },
+        "msmsScans": {
+            "Charge",
+            "Ion injection time",
+            "MS scan number",
+            "Modified sequence",
+            "Precursor apex offset time",
+            "Raw file",
+            "Sequence",
+        },
+        "proteinGroups": {
+            "Protein IDs",
+            "Majority protein IDs",
+            "Potential contaminant",
+            "Intensity",
+        },
+    },
+    "JMod": {
+        "filtered_IDs": {
+            "BestChannel_Qvalue",
+            "MS1_Area",
+            "MS1_Int",
+            "PredVal",
+            "Protein_Qvalue",
+            "Qvalue",
+            "channel",
+            "channels_matched",
+            "file_name",
+            "hyperscore",
+            "is_decoy",
+            "iso_cor",
+            "mz",
+            "pep_len",
+            "plex_Area",
+            "protein",
+            "rt",
+            "scribe_scores",
+            "seq",
+            "silac_channel",
+            "stripped_seq",
+            "tic",
+            "untag_prec",
+            "untag_seq",
+            "window_mz",
+            "z",
+            "frac_dia_int",
+        },
+    },
+    "FragPipe": {
+        "psm": {
+            "Assigned Modifications",
+            "Calibrated Observed M/Z",
+            "Charge",
+            "Delta Mass",
+            "Entry Name",
+            "Expectation",
+            "Gene",
+            "Hyperscore",
+            "Intensity",
+            "Ion Mobility",
+            "Modified Peptide",
+            "Nextscore",
+            "Number of Enzymatic Termini",
+            "Number of Missed Cleavages",
+            "Observed M/Z",
+            "Peptide",
+            "Peptide Length",
+            "PeptideProphet Probability",
+            "Protein",
+            "Protein ID",
+            "Retention",
+            "Spectrum",
+            "Spectrum File",
+        },
+        "protein": {
+            "Coverage",
+            "Description",
+            "Entry Name",
+            "Gene",
+            "Organism",
+            "Protein",
+            "Protein ID",
+            "Protein Probability",
+            "Razor Intensity",
+            "Razor Peptides",
+            "Razor Spectral Count",
+            "Top Peptide Probability",
+            "Total Intensity",
+            "Total Peptides",
+            "Total Spectral Count",
+            "Unique Intensity",
+            "Unique Peptides",
+            "Unique Spectral Count",
+        },
+    },
+    "Spectronaut": {
+        "Report": {
+            "R_FileName",
+            "EG_ModifiedSequence",
+            "PEP_StrippedSequence",
+            "FG_Charge",
+            "FG_Quantity",
+            "PG_ProteinGroups",
+            "EG_Qvalue",
+            "FG_XICDBID",
+            "PG_Cscore_(Run-Wise)",
+        },
+    },
+    "DIANN": {
+        "report": {
+            "Run.Index",
+            "Run",
+            "Channel",
+            "Precursor.Id",
+            "Modified.Sequence",
+            "Stripped.Sequence",
+            "Precursor.Charge",
+            "Precursor.Lib.Index",
+            "Proteotypic",
+            "Precursor.Mz",
+            "Protein.Ids",
+            "Protein.Group",
+            "Genes",
+            "RT",
+            "iRT",
+            "IM",
+            "Precursor.Quantity",
+            "Precursor.Normalised",
+            "Ms1.Area",
+            "Ms1.Normalised",
+            "PG.MaxLFQ",
+            "Q.Value",
+            "PEP",
+            "Global.Q.Value",
+            "Lib.Q.Value",
+            "PG.Q.Value",
+        },
+    },
+}
+
+
+def test_every_real_table_is_claimed_by_exactly_one_format():
+    """The invariant the signatures live or die by.
+
+    Detection refuses a file two formats claim, so a signature that reached
+    another engine's table would not mis-read one file -- it would make both
+    unreadable. `Charge` and `Intensity` are MaxQuant's and FragPipe's under the
+    same names, `PEP` is MaxQuant's and DIA-NN's, `rt` is JMod's and DIA-NN's:
+    four names that cannot be in any signature, and the reason to check the
+    tables rather than trust that nobody used them.
+    """
+    cfg = CoreConfig()
+    engines = _engines(cfg)
+
+    for engine, tables in REAL_TABLES.items():
+        for table, columns in tables.items():
+            claimants = [
+                name for name in engines if _signed(getattr(cfg, name), columns)
+            ]
+            assert claimants == [engine], f"{engine}/{table} claimed by {claimants}"
+
+
+def test_a_signature_is_not_satisfied_by_one_column_alone():
+    """One familiar name turns up in frames people derive from a report and
+    write back out; two together are what an engine's own output has."""
+    cfg = CoreConfig()
+    for name in _engines(cfg):
+        for column in getattr(cfg, name).COLUMN_SIGNATURE:
+            assert not _signed(getattr(cfg, name), {column}), column

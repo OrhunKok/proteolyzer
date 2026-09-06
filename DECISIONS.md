@@ -12,19 +12,33 @@ Detection walks whatever blocks are there, so adding an engine is a block and no
 other change. It used to name DIANN and MaxQuant, which is why adding JMod and
 FragPipe touched `models.py` at all.
 
-**A name that identifies nothing is answered by the file's own columns.**
-Spectronaut has no default output name at all — the analyst names the export —
-so the `..._Report` pattern below was a convention someone happened to follow,
-and a report called `GluC-30min.parquet` is as real as any. Where no block claims
-the name, `COLUMN_SIGNATURE` is matched against the columns, read from a parquet
-footer or one header line. It is the same call the cellenONE reader makes two
-sections down, for the same reason, and it was made there first: *names are
-unreliable*. The guards are that only a format which needs one carries a
-signature, so looking inside cannot start claiming another engine's output; that
-two columns have to match, because one distinctive name turns up in frames people
-derive and write back out; and that a peek which fails is answered with no
-columns rather than an exception, since deciding which reader to use is not the
-place to raise about a file.
+**Every format is identified by its columns; the name is only a shortcut.**
+A file name is a convention people depart from -- they rename what they
+downloaded, and Spectronaut has no default output name to depart from in the
+first place -- so `COLUMN_SIGNATURE` is what actually says which engine wrote a
+file, read from a parquet footer or one header line. The name is still asked
+first, so a file called what its engine calls it is claimed without being opened
+and every release before this behaved identically. It is the same call the
+cellenONE reader makes two sections down, and it was made there first: *names are
+unreliable.*
+
+The guards are what make it safe rather than clever. Two columns have to match,
+because one familiar name turns up in frames people derive from a report and
+write back out. A peek that fails is answered with no columns rather than an
+exception, since choosing a reader is not the place to raise about a file. And
+detection refuses a file two formats claim, which cuts both ways: a signature
+reaching another engine's table would not mis-read one file, it would make *both*
+unreadable -- so an invariant test walks every real table of every engine and
+asserts exactly one claims it. Four column names are shared between engines and
+can be in no signature at all: `Charge` and `Intensity` (MaxQuant and FragPipe),
+`PEP` (MaxQuant and DIA-NN), `rt` (JMod and DIA-NN's XIC export). That list is
+why the test checks the tables instead of trusting that nobody reached for them.
+
+What it does not do is override a name that matches. A FragPipe table renamed to
+`report.tsv` reads as DIA-NN, because the name is asked first and answers.
+Preferring the columns would mean opening every file to find out, and nothing
+here can tell a rename from a report; what it costs is the wrong rename mapping
+on a file somebody deliberately misnamed.
 
 **A format's names can depend on how it was serialized.** Spectronaut's
 tab-separated export writes `R.FileName` and its parquet export writes
