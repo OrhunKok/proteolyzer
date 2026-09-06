@@ -979,3 +979,65 @@ def test_a_name_two_formats_claim_is_still_an_error(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="matches multiple categories"):
         _ = Data(source=path).input_type
+
+
+# --- Text that means "no value" ------------------------------------------------
+
+
+def test_text_standing_for_a_gap_is_read_as_a_gap(tmp_path):
+    """A delimited reader does this itself; parquet stores the string it was
+    given. So the two disagreed about which cells were empty, and parquet lied
+    the worse way round -- `pd.isna` says False of the string "NaN", so the gap
+    read as data all the way to whatever plotted it."""
+    path = tmp_path / "GluC-30min.parquet"
+    pd.DataFrame(
+        {
+            "R_FileName": ["run1", "run2"],
+            "EG_ModifiedSequence": ["_PEPK_", "_SEQR_"],
+            "FG_Charge": [2, 3],
+            "EG_IsVerified": ["NaN", "NaN"],
+            "EG_InSourceFragmentationParentID": ["", "EG_12"],
+        }
+    ).to_parquet(path, index=False)
+
+    frame = Data(source=path, rename=False).load().frame
+
+    assert frame["EG_IsVerified"].isna().all()
+    assert pd.isna(frame["EG_InSourceFragmentationParentID"].iloc[0])
+    assert frame["EG_InSourceFragmentationParentID"].iloc[1] == "EG_12"
+
+
+def test_a_word_that_could_be_a_value_is_left_alone(tmp_path):
+    """`NA` and `None` are words, and on the export this was written from
+    `EG.InSourceFragmentationClass` is "None" in 168,532 rows of 170,795 with a
+    real class in the rest -- a category, not an absence. A text reader nulls
+    both by default, so the two serializations still disagree about these two;
+    agreeing means deciding pandas' default is right, which is a wider change
+    than this one and belongs to whoever knows the domain."""
+    path = tmp_path / "GluC-30min.parquet"
+    pd.DataFrame(
+        {
+            "R_FileName": ["run1", "run2"],
+            "EG_ModifiedSequence": ["_PEPK_", "_SEQR_"],
+            "FG_Charge": [2, 3],
+            "R_Fraction": ["NA", "NA"],
+            "EG_InSourceFragmentationClass": ["None", "SecondaryFragment"],
+        }
+    ).to_parquet(path, index=False)
+
+    frame = Data(source=path, rename=False).load().frame
+
+    assert frame["R_Fraction"].notna().all()
+    assert frame["EG_InSourceFragmentationClass"].iloc[0] == "None"
+
+
+def test_closing_a_gap_leaves_a_column_that_has_none_alone(tmp_path, jmod_ids):
+    """It runs on every read, so it has to cost nothing on a file with no text
+    sentinels in it -- which is every file any other engine writes."""
+    path = tmp_path / "filtered_IDs.csv"
+    jmod_ids.to_csv(path, index=False)
+
+    loaded = Data(source=path, rename=False).load().frame
+    expected = pd.read_csv(path)
+
+    pd.testing.assert_frame_equal(loaded, expected)
