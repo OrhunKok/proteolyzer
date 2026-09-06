@@ -139,6 +139,51 @@ class FragPipe:
     EXCLUDE_CAT_CONVERSION: set[str] = field(default_factory=lambda: {"Spectrum"})
 
 
+#: The report's columns onto the canonical schema, spelled the way the
+#: tab-separated export spells them. The parquet export writes the same report
+#: with ``_`` where this has ``.``, so :class:`Spectronaut` carries both
+#: spellings -- derived from this rather than written out twice, because two
+#: lists of seventeen names differing by one character is two lists that drift.
+#: Measured off both: an export of each was read and every key checked against
+#: what the file actually holds.
+_SPECTRONAUT_COLUMNS: dict[str, str] = {
+    "R.FileName": "Run",
+    "EG.ModifiedSequence": "Modified.Sequence",
+    "PEP.StrippedSequence": "Stripped.Sequence",
+    "FG.Charge": "Precursor.Charge",
+    "FG.PrecMz": "Precursor.Mz",
+    "FG.Quantity": "Precursor.Quantity",
+    "EG.ApexRT": "RT",
+    "EG.RTPredicted": "Predicted.RT",
+    "EG.iRTEmpirical": "iRT",
+    "EG.Qvalue": "Q.Value",
+    "EG.PEP": "PEP",
+    "PG.ProteinGroups": "Protein.Group",
+    "PG.ProteinAccessions": "Protein.Ids",
+    # PG.Quantity is absent because it is already the canonical name: the
+    # schema is DIA-NN's own, and the two agree on this one.
+    "PG.Qvalue": "PG.Q.Value",
+    "PEP.NrOfMissedCleavages": "Missed.Cleavages",
+    # True and False, where DIA-NN writes 1 and 0. The name is the same on both
+    # sides of the rename and the dtype is not, so a caller comparing one
+    # against 0 has to say `== False` instead.
+    "PEP.IsProteotypic": "Proteotypic",
+    "EG.IsDecoy": "Decoy",
+}
+
+
+def _both_spellings(mapping: dict[str, str]) -> dict[str, str]:
+    """`mapping` keyed by the text export's names and by the parquet's.
+
+    A rename mapping is applied by name, and a name the file does not carry
+    does nothing, so holding both costs a dict twice the size and buys not
+    having to know which serialization is being read.
+    """
+    return mapping | {
+        name.replace(".", "_"): canonical for name, canonical in mapping.items()
+    }
+
+
 @dataclass(frozen=True)
 class Spectronaut:
     """A Spectronaut report: long format, one row a precursor a run.
@@ -146,6 +191,12 @@ class Spectronaut:
     Columns are prefixed by the level they belong to -- ``E.`` the experiment,
     ``R.`` a run, ``PG.`` a protein group, ``PEP.`` a peptide, ``EG.`` an
     elution group, ``FG.`` a fragment group, which is a precursor.
+
+    **The separator depends on the serialization.** The tab-separated export
+    writes ``R.FileName``; the parquet export writes ``R_FileName``, and turns
+    the space in ``PG.Cscore (Run-Wise)`` into an underscore as well. A dot is
+    a path separator in a nested parquet schema, so the export spells it out of
+    the way. Both are the same report and both are mapped.
 
     A report is configurable column by column, so what one lab's export holds is
     not what another's does: 78 columns in the one this was written from. That
@@ -174,45 +225,48 @@ class Spectronaut:
     is never made categorical, so nothing has to keep it out of that.
     """
 
-    #: The table, under the name it goes by when Spectronaut has not stamped it.
+    #: A name the export sometimes goes by, not a name it must have. Kept
+    #: because a report exported as one is then recognized without opening it.
     FILES: list[str] = field(default_factory=lambda: ["Report"])
-    #: Spectronaut writes ``<date>_<time>_<analysis>_Report.tsv``, so no fixed
-    #: name can match a real export. Matched against the stem in full rather
-    #: than from its start, so the ``..._Report.setup`` written beside it is not
-    #: taken for the report; and case-sensitively, because DIA-NN's
-    #: ``report.tsv`` differs from a bare ``Report.tsv`` by the one letter, and
-    #: a file two blocks claim is an error rather than a guess.
+    #: ``<date>_<time>_<analysis>_Report`` is a shape an export often has and
+    #: never has to: **Spectronaut has no default output name** -- whoever runs
+    #: the analysis names it, and `GluC-30min.parquet` is as real an export as
+    #: any. So this is a shortcut, not the identification; COLUMN_SIGNATURE is
+    #: what actually settles it. Matched against the stem in full rather than
+    #: from its start, so a ``..._Report.setup`` beside a report is not taken
+    #: for it, and case-sensitively, because DIA-NN's ``report`` differs from a
+    #: bare ``Report`` by the one letter and a file two blocks claim is an
+    #: error rather than a guess.
     FILE_PATTERNS: list[str] = field(default_factory=lambda: [r".*_Report"])
-    #: Both, and the pattern is over the stem so it does not care which. The
-    #: case-sensitivity above carries more weight now than it did: DIA-NN
-    #: claims ``.parquet`` too, and its ``report.parquet`` is one capital
-    #: letter from a bare ``Report.parquet``.
+    #: Both. The pattern is over the stem, so it does not care which. DIA-NN
+    #: claims ``.parquet`` too, which is what the case-sensitivity above is
+    #: holding apart.
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".parquet", ".tsv"])
+    #: What identifies the report when its name cannot, which is the usual
+    #: case. Any two of these settle it: they are level-prefixed the way no
+    #: other engine read here prefixes anything, in either spelling, and a
+    #: report configured without one of them still carries the rest. This is
+    #: the same call the cellenONE reader makes for the same reason -- which
+    #: file is which is worked out from the file, because names are unreliable.
+    COLUMN_SIGNATURE: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            _both_spellings(
+                {
+                    name: name
+                    for name in (
+                        "R.FileName",
+                        "EG.ModifiedSequence",
+                        "PEP.StrippedSequence",
+                        "FG.Charge",
+                        "FG.Quantity",
+                        "PG.ProteinGroups",
+                    )
+                }
+            )
+        )
+    )
     COLS_RENAME_MAPPING: dict[str, str] = field(
-        default_factory=lambda: {
-            "R.FileName": "Run",
-            "EG.ModifiedSequence": "Modified.Sequence",
-            "PEP.StrippedSequence": "Stripped.Sequence",
-            "FG.Charge": "Precursor.Charge",
-            "FG.PrecMz": "Precursor.Mz",
-            "FG.Quantity": "Precursor.Quantity",
-            "EG.ApexRT": "RT",
-            "EG.RTPredicted": "Predicted.RT",
-            "EG.iRTEmpirical": "iRT",
-            "EG.Qvalue": "Q.Value",
-            "EG.PEP": "PEP",
-            "PG.ProteinGroups": "Protein.Group",
-            "PG.ProteinAccessions": "Protein.Ids",
-            # PG.Quantity is absent because it is already the canonical name:
-            # the schema is DIA-NN's own, and the two agree on this one.
-            "PG.Qvalue": "PG.Q.Value",
-            "PEP.NrOfMissedCleavages": "Missed.Cleavages",
-            # True and False, where DIA-NN writes 1 and 0. The name is the same
-            # on both sides of the rename and the dtype is not, so a caller
-            # comparing one against 0 has to say `== False` instead.
-            "PEP.IsProteotypic": "Proteotypic",
-            "EG.IsDecoy": "Decoy",
-        }
+        default_factory=lambda: _both_spellings(_SPECTRONAUT_COLUMNS)
     )
     #: There is no EG.PrecursorId in every export -- there was none in the one
     #: this was written from -- so the identifier the rest of the package keys

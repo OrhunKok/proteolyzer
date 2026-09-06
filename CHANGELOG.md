@@ -7,6 +7,41 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Fixed
+
+- **The Spectronaut rename mapping did not fire on a real parquet export.**
+  v0.8.0 added `.parquet` to the format and kept the tab-separated export's
+  column names, on the assumption that the two spell them the same way. They do
+  not: the parquet export writes `R_FileName` where the text one writes
+  `R.FileName`, and turns the space in `PG.Cscore (Run-Wise)` into an underscore
+  as well — a dot being a path separator in a nested parquet schema. So every
+  one of the seventeen mapped columns missed, and a report came back under the
+  file's own names with nothing renamed and no `Precursor.Id` built.
+
+  Both spellings are mapped now, derived from one list so they cannot drift.
+  Checked against a real 170,795-row export: all seventeen match.
+
+### Added
+
+- **A Spectronaut report is recognized by its columns, not its file name.**
+  Spectronaut has no default output name — whoever runs the analysis names the
+  export, so `GluC-30min.parquet` is as real a report as any, and the
+  `..._Report` pattern v0.6.0 leaned on was a convention rather than a rule.
+  A format block may now carry a `COLUMN_SIGNATURE`, and where no block claims
+  the name, the file's own columns are read and matched against it: a parquet
+  footer or one header line, so the usual case pays nothing.
+
+  This is the call the cellenONE reader already makes for the same reason —
+  which file is which is worked out from the file, because names are unreliable.
+  Only Spectronaut carries a signature, and two of its columns have to match, so
+  looking inside cannot start claiming another engine's output.
+
+  **What a consumer has to do.** Nothing. A file recognized before is recognized
+  the same way, by name, without being opened; this only reaches files that came
+  back `Unknown`.
+
 ## v0.8.0
 
 ### Added

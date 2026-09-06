@@ -118,3 +118,39 @@ def test_only_spectronaut_is_recognised_by_a_pattern():
         if getattr(getattr(cfg, name), "FILE_PATTERNS", ())
     ]
     assert patterned == ["Spectronaut"]
+
+
+def test_spectronaut_maps_both_spellings_of_its_names():
+    """The tab-separated export writes `R.FileName`, the parquet one writes
+    `R_FileName`, and the block carries both -- a rename mapping is applied by
+    name, so a name the file lacks does nothing and holding both costs a dict
+    twice the size."""
+    mapping = CoreConfig().Spectronaut.COLS_RENAME_MAPPING
+
+    for dotted, canonical in mapping.items():
+        assert mapping[dotted.replace(".", "_")] == canonical
+
+    assert mapping["R.FileName"] == mapping["R_FileName"] == "Run"
+    assert mapping["EG.Qvalue"] == mapping["EG_Qvalue"] == "Q.Value"
+
+
+def test_spectronaut_can_be_identified_without_its_name():
+    """It has no default output name -- the analyst names the export -- so the
+    columns have to be able to say what it is on their own."""
+    signature = CoreConfig().Spectronaut.COLUMN_SIGNATURE
+
+    assert {"R.FileName", "R_FileName"} <= signature
+    assert len(signature) > 2, "one column matching cannot be enough to claim a file"
+
+
+def test_only_a_format_that_needs_one_carries_a_signature():
+    """Looking inside a file is for the formats whose names say nothing. An
+    engine that names its own output is claimed by the name, and adding a
+    signature it does not need is a way to start claiming other people's."""
+    cfg = CoreConfig()
+    signed = [
+        name
+        for name in _engines(cfg)
+        if getattr(getattr(cfg, name), "COLUMN_SIGNATURE", frozenset())
+    ]
+    assert signed == ["Spectronaut"]

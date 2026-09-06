@@ -12,6 +12,30 @@ Detection walks whatever blocks are there, so adding an engine is a block and no
 other change. It used to name DIANN and MaxQuant, which is why adding JMod and
 FragPipe touched `models.py` at all.
 
+**A name that identifies nothing is answered by the file's own columns.**
+Spectronaut has no default output name at all — the analyst names the export —
+so the `..._Report` pattern below was a convention someone happened to follow,
+and a report called `GluC-30min.parquet` is as real as any. Where no block claims
+the name, `COLUMN_SIGNATURE` is matched against the columns, read from a parquet
+footer or one header line. It is the same call the cellenONE reader makes two
+sections down, for the same reason, and it was made there first: *names are
+unreliable*. The guards are that only a format which needs one carries a
+signature, so looking inside cannot start claiming another engine's output; that
+two columns have to match, because one distinctive name turns up in frames people
+derive and write back out; and that a peek which fails is answered with no
+columns rather than an exception, since deciding which reader to use is not the
+place to raise about a file.
+
+**A format's names can depend on how it was serialized.** Spectronaut's
+tab-separated export writes `R.FileName` and its parquet export writes
+`R_FileName`, a dot being a path separator in a nested parquet schema. v0.8.0
+shipped parquet support that assumed otherwise and silently renamed nothing.
+Both spellings are carried, derived from one list rather than written out twice,
+because two lists of seventeen names differing by one character is two lists that
+drift. A rename mapping is applied by name and a name the file lacks does
+nothing, so holding both costs a dict twice the size and buys never having to ask
+which serialization is in front of it.
+
 **A file is recognized by name, or by pattern where there is no name to match.**
 Four of the five engines name their own output, so `FILES` is a list of exact
 names and that is the whole of it. Spectronaut stamps its export with the date,
