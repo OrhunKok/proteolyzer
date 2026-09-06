@@ -8,7 +8,38 @@ with what to do about it, because two repositories depend on this one -- see the
 table in CLAUDE.md -- and the first they knew of the last rename was an
 ImportError.
 
-## v0.13.0
+## Unreleased
+
+### Fixed
+
+- **A word is not a gap.** `read_csv` nulls `NA`, `N/A`, `None`, `null` and
+  `NULL` by default, and this package took that default — so a text column
+  holding one of those words as a *value* came back empty. On a real Spectronaut
+  export `EG.InSourceFragmentationClass` is a three-state classification:
+
+  | value | rows | meaning |
+  |---|---|---|
+  | `Likely Parent` | 1,117 | fragmented in the source |
+  | `Likely Child` | 1,146 | a fragment of one, with its parent named |
+  | `None` | 168,532 | neither |
+
+  The third state was being erased into "not recorded" for 99% of the report,
+  and the same file read as parquet kept it — so the two serializations
+  disagreed about data, not just dtype. The readers now null exactly what
+  v0.13.0 defined as a gap, which is the machine artefacts (`NaN`, `<NA>`,
+  `#N/A`, `1.#IND`, an empty field) and no words at all. One definition, both
+  paths.
+
+  **What a consumer has to do.** Check any column you read from a delimited or
+  Excel file that uses a *word* for absence. `NA`, `None`, `null`, `NULL` and
+  `N/A` now arrive as those strings rather than as gaps — so `.isna()` over such
+  a column returns False where it used to return True, and a numeric column that
+  spells its holes `NA` (rather than leaving them empty) will come back as text.
+  An empty field is still a gap, so a column with ordinary holes in it is
+  unaffected; the four search engines whose output is read here all leave theirs
+  empty.
+
+
 
 ### Fixed
 
