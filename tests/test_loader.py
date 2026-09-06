@@ -569,3 +569,121 @@ def test_extras_on_their_own_still_read_the_file_whole(tmp_path):
     loaded = Data(source=path, extra_cols_to_load={"Raw file", "Kept"}).load()
     assert {"Run", "Kept"} <= set(loaded.columns)
     assert [column for column in loaded.columns if column.startswith("Unused")]
+
+
+# --- Spectronaut, as its parquet export actually arrives -----------------------
+#
+# Spectronaut has no default output name: whoever runs the analysis names the
+# export, so the file below is called what a real one was called, and nothing
+# about the name says what it is.
+
+ANALYST_NAMED = "GluC-30min.parquet"
+
+
+def test_a_spectronaut_parquet_is_recognised_by_its_columns_not_its_name(
+    tmp_path, spectronaut_parquet_report
+):
+    """The name settles nothing -- an analyst chose it -- so the columns do.
+    The same call the cellenONE reader makes: which file is which is worked out
+    from the file, because names are unreliable."""
+    path = tmp_path / ANALYST_NAMED
+    spectronaut_parquet_report.to_parquet(path, index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "Spectronaut"
+
+    loaded = data.load()
+    assert {"Run", "Stripped.Sequence", "Precursor.Charge", "RT"} <= set(loaded.columns)
+    assert loaded["Precursor.Id"].iloc[0] == "_PEPTIDEK0_2"
+
+
+def test_the_parquet_spelling_of_the_names_is_mapped_too(
+    tmp_path, spectronaut_parquet_report
+):
+    """`R_FileName`, not `R.FileName`. Every canonical column the tab-separated
+    export gives has to arrive from the parquet one as well, or the mapping is
+    right about a file nobody exports."""
+    path = tmp_path / ANALYST_NAMED
+    spectronaut_parquet_report.to_parquet(path, index=False)
+
+    loaded = Data(source=path).load()
+
+    assert {
+        "Run",
+        "Modified.Sequence",
+        "Stripped.Sequence",
+        "Precursor.Charge",
+        "Precursor.Mz",
+        "Precursor.Quantity",
+        "RT",
+        "Predicted.RT",
+        "Q.Value",
+        "PEP",
+        "Protein.Group",
+        "PG.Q.Value",
+        "Missed.Cleavages",
+        "Proteotypic",
+        "Decoy",
+    } <= set(loaded.columns)
+    # None of the mapped names survive under the file's own spelling ...
+    assert not {"R_FileName", "EG_ModifiedSequence", "FG_Charge"} & set(loaded.columns)
+    # ... and a column the schema has no canonical name for keeps the file's,
+    # rather than being mangled towards one or dropped for lacking one.
+    assert "EG_TotalQuantity_(Settings)" in loaded.columns
+
+
+def test_a_tab_separated_export_under_an_analyst_s_name_is_recognised_too(
+    tmp_path, spectronaut_report
+):
+    """Nothing about this is parquet's: the text export has no default name
+    either, and its columns say the same thing."""
+    path = tmp_path / "GluC-30min.tsv"
+    spectronaut_report.to_csv(path, sep="\t", index=False)
+
+    assert Data(source=path).input_type == "Spectronaut"
+
+
+def test_one_familiar_column_is_not_enough_to_claim_a_file(tmp_path):
+    """A signature of one would claim any frame somebody derived from a report
+    and wrote back out. Two together are what no other engine's output has."""
+    frame = pd.DataFrame({"FG_Charge": [2, 3], "Something.Else": [1.0, 2.0]})
+    path = tmp_path / "derived.parquet"
+    frame.to_parquet(path, index=False)
+
+    assert Data(source=path).input_type == "Unknown"
+
+
+def test_a_file_that_is_not_a_report_is_left_unknown(tmp_path, label_free_report):
+    """Looking inside must not start claiming other engines' output: a DIA-NN
+    report under a name nothing matches stays Unknown, as it did before."""
+    path = tmp_path / "something_else.parquet"
+    label_free_report.to_parquet(path, index=False)
+
+    assert Data(source=path).input_type == "Unknown"
+
+
+def test_peeking_at_a_stream_leaves_it_where_the_loader_expects_it(
+    spectronaut_parquet_report,
+):
+    """Reading the columns consumes an upload, and the loader is about to read
+    the same source from its start. An upload is what the dashboard passes."""
+    buffer = io.BytesIO()
+    spectronaut_parquet_report.to_parquet(buffer, index=False)
+    buffer.name = ANALYST_NAMED
+    buffer.seek(0)
+
+    data = Data(source=buffer)
+    assert data.input_type == "Spectronaut"
+
+    loaded = data.load()
+    assert len(loaded) == len(spectronaut_parquet_report)
+    assert loaded["Precursor.Id"].iloc[0] == "_PEPTIDEK0_2"
+
+
+def test_a_file_that_cannot_be_peeked_at_is_not_an_error(tmp_path):
+    """Deciding which reader to use is not the place to raise about a file. The
+    reader that follows will, and will say what it was trying to do."""
+    path = tmp_path / "truncated.parquet"
+    path.write_bytes(b"not a parquet file at all")
+
+    assert Data(source=path).input_type == "Unknown"

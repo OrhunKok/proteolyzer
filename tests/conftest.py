@@ -146,6 +146,21 @@ def spectronaut_report() -> pd.DataFrame:
 
 
 @pytest.fixture
+def spectronaut_parquet_report(spectronaut_report) -> pd.DataFrame:
+    """The same report under the names the *parquet* export gives it.
+
+    Spectronaut spells the level separator ``_`` there rather than ``.``, and
+    the space in ``PG.Cscore (Run-Wise)`` goes the same way -- a dot being a
+    path separator in a nested parquet schema. Derived from the tab-separated
+    fixture rather than written out again, because the point is that it is the
+    same report.
+    """
+    return spectronaut_report.rename(
+        columns=lambda name: name.replace(".", "_").replace(" ", "_")
+    )
+
+
+@pytest.fixture
 def fragpipe_psms() -> pd.DataFrame:
     """A FragPipe/Philosopher psm.tsv, under FragPipe's own column names."""
     rows = 6

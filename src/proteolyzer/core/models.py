@@ -9,12 +9,14 @@ what was done to it.
 import datetime
 import logging
 import re
+from collections.abc import Collection
 from dataclasses import dataclass, fields, replace
 from functools import cached_property
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, Any, cast
 
 import pandas as pd
+import pyarrow.parquet as pq
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from .formats import Config
@@ -32,6 +34,24 @@ _ENGINES: tuple[str, ...] = tuple(
 logger = logging.getLogger(__name__)
 
 SourceType = Path | IO[str] | IO[bytes]
+
+
+#: How many of a format's ``COLUMN_SIGNATURE`` columns a file has to carry
+#: before its contents are taken to identify it. Two rather than one, because a
+#: single distinctive name turns up in frames people derive from a report and
+#: write back out, and two of them together do not.
+SIGNATURE_THRESHOLD: int = 2
+
+#: Extensions whose first line is a header, and what separates it.
+_DELIMITED: dict[str, str] = {".tsv": "\t", ".csv": ",", ".txt": "\t"}
+
+
+def _signed(block: Any, columns: Collection[str]) -> bool:
+    """Whether `columns` carry enough of `block`'s signature to identify it."""
+    signature: frozenset[str] = getattr(block, "COLUMN_SIGNATURE", frozenset())
+    if not signature:
+        return False
+    return len(signature & set(columns)) >= SIGNATURE_THRESHOLD
 
 
 def _claims(block: Any, file_name: str, extension: str) -> bool:
@@ -185,13 +205,60 @@ class Data(BaseModel):
             "Last Accessed": _utc(stat.st_atime),
         }
 
+    def _rewind(self) -> None:
+        """Put a file-like source back to its start after peeking at it."""
+        seek = getattr(self.source, "seek", None)
+        if callable(seek):
+            seek(0)
+
+    def peek_columns(self) -> tuple[str, ...]:
+        """The source's column names, read as cheaply as the format allows.
+
+        A parquet file carries its schema in the footer, so nothing is decoded
+        to get this; a delimited file gives its header up in one line. Only
+        reached when the name settled nothing, so the usual case pays nothing
+        for it.
+
+        Empty for anything that cannot be looked at without reading it — a
+        plaintext log, a stream with no name to dispatch on, a file that is not
+        a file. Empty on any failure at all, too: this decides which reader to
+        use, so it is not the place to raise. The reader that follows will
+        raise about the same file, and say what it was actually trying to do.
+        """
+        extension = self.file_extension.lower()
+        try:
+            if extension == ".parquet":
+                names = tuple(pq.ParquetFile(self.source).schema_arrow.names)
+            elif extension in _DELIMITED:
+                # `source` is declared `object` on the model; the readers
+                # take what they are given, as the loader's do.
+                names = tuple(
+                    pd.read_csv(
+                        cast(Any, self.source),
+                        delimiter=_DELIMITED[extension],
+                        nrows=0,
+                    ).columns
+                )
+            else:
+                return ()
+        except Exception:
+            return ()
+        finally:
+            # Peeking consumes a stream, and the loader is about to read the
+            # same source from its start.
+            if not self.is_path:
+                self._rewind()
+
+        return names
+
     @computed_field
     @cached_property
     def input_type(self) -> str:
         """The search engine that produced this file, or Unknown.
 
         Whichever of the engines on :class:`~proteolyzer.core.formats.Config`
-        claims the file name and extension.
+        claims the file: by name where the engine names its own output, and by
+        the columns inside where it does not.
         """
         user_override = self.INPUT_TYPE
 
@@ -208,6 +275,27 @@ class Data(BaseModel):
                 f"File {self.file_name} with extension {self.file_extension} "
                 f"matches multiple categories: {matched}."
             )
+
+        # Nothing claimed the name, which for a format whose output the analyst
+        # names is the ordinary case rather than a failure. Ask the file what it
+        # is. Only formats that offered a signature can answer, and only a file
+        # whose columns can be read without reading the file is asked.
+        if not matched:
+            columns = self.peek_columns()
+            if columns:
+                matched = [
+                    name for name in _ENGINES if _signed(getattr(CONFIG, name), columns)
+                ]
+                if len(matched) > 1:
+                    raise ValueError(
+                        f"The columns of {self.file_name} match more than one "
+                        f"format: {matched}."
+                    )
+                if matched:
+                    logger.debug(
+                        f"{self.file_name} identified as {matched[0]} by its "
+                        "columns; its name matched no format."
+                    )
 
         auto_type = matched[0] if matched else "Unknown"
 
