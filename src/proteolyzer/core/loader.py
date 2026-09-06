@@ -36,17 +36,47 @@ ASSUMED_AVAILABLE_MEMORY = 2 * 1024**3
 #: False of it, so a gap reads as data until somebody plots it.
 MISSING_TEXT = frozenset({"", "NaN", "nan", "NA", "N/A", "null", "None", "#N/A"})
 
-#: Text that is a gap written out rather than a value. `NaN` is
-#: ``str(float("nan"))`` and an empty field is an empty field: neither is a word
-#: anybody means, so nothing is lost by reading them as the gaps they are, and
-#: `pd.isna` saying False of the string "NaN" is how a gap comes to read as data.
+#: Text that is a gap written out rather than a value -- the one definition both
+#: readers use, so that a report read as text and the same report read as parquet
+#: agree about which cells are empty.
 #:
-#: Deliberately not "NA" or "None", which a text reader also nulls and which
-#: *are* words: on the export this was written from, `EG.InSourceFragmentationClass`
-#: is "None" in 168,532 rows of 170,795 and a real class in the rest, so there it
-#: is a category and not an absence. Making parquet agree with text about those
-#: two means deciding pandas' default is right, which is a wider change than this.
-UNAMBIGUOUS_GAPS = frozenset({"NaN", "nan", ""})
+#: Everything here is a machine artefact. ``NaN`` is ``str(float("nan"))``,
+#: ``<NA>`` is pandas' own, ``1.#IND`` and ``#N/A`` are what a C runtime and a
+#: spreadsheet write; an empty field is an empty field. None of them is a word in
+#: any language, so nothing is lost reading them as the gaps they are.
+#:
+#: **Words are deliberately absent**, and this is narrower than pandas' default
+#: on purpose. ``NA``, ``N/A``, ``None``, ``null`` and ``NULL`` are all nulled by
+#: ``read_csv`` unless told otherwise, and on a real Spectronaut export
+#: ``EG.InSourceFragmentationClass`` is a three-state classification --
+#: ``Likely Parent`` (1,117 rows), ``Likely Child`` (1,146) and ``None``
+#: (168,532), where ``None`` means the precursor is neither. Taking pandas'
+#: default there erased the third state into "not recorded" for 99% of the
+#: report, and the same file read as parquet kept it. That a column *may* use one
+#: of these words for an absence is true; that it may use one as a value is also
+#: true, and only one of those two mistakes is silent.
+UNAMBIGUOUS_GAPS = frozenset(
+    {
+        "",
+        "NaN",
+        "nan",
+        "-NaN",
+        "-nan",
+        "<NA>",
+        "#N/A",
+        "#N/A N/A",
+        "#NA",
+        "1.#IND",
+        "-1.#IND",
+        "1.#QNAN",
+        "-1.#QNAN",
+    }
+)
+
+#: :data:`UNAMBIGUOUS_GAPS` in the order and shape a pandas reader wants it.
+#: Handed over with ``keep_default_na=False``, which is what stops the reader
+#: adding the words back.
+GAP_TEXT: list[str] = sorted(UNAMBIGUOUS_GAPS)
 
 #: What a flag written as text says. Compared lower-cased.
 TRUE_TEXT = frozenset({"true", "1"})
@@ -401,7 +431,13 @@ class DataLoader(Logged):
                 "File is large for the memory available; reading it with the "
                 "stock parser, which needs less."
             )
-            return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
+            return pd.read_csv(
+                self.source,
+                delimiter=delimiter,
+                usecols=cols_to_load,
+                na_values=GAP_TEXT,
+                keep_default_na=False,
+            )
 
         try:
             df = pd.read_csv(
@@ -409,6 +445,8 @@ class DataLoader(Logged):
                 delimiter=delimiter,
                 usecols=cols_to_load,
                 engine="pyarrow",
+                na_values=GAP_TEXT,
+                keep_default_na=False,
             )
         except Exception as exc:
             reason = f"pyarrow could not parse it ({exc})"
@@ -424,7 +462,13 @@ class DataLoader(Logged):
 
         self.logger.info(f"{reason}; re-reading with the default parser.")
         self._rewind()
-        return pd.read_csv(self.source, delimiter=delimiter, usecols=cols_to_load)
+        return pd.read_csv(
+            self.source,
+            delimiter=delimiter,
+            usecols=cols_to_load,
+            na_values=GAP_TEXT,
+            keep_default_na=False,
+        )
 
     def _fast_read_fits(self) -> bool:
         """Whether the fast parser's peak memory is affordable for this source.
@@ -474,7 +518,12 @@ class DataLoader(Logged):
             df = pd.read_excel(self.source, nrows=0)
             cols_to_load = self._cols_to_load(df.columns)
             self._rewind()
-            return pd.read_excel(self.source, usecols=cols_to_load)
+            return pd.read_excel(
+                self.source,
+                usecols=cols_to_load,
+                na_values=GAP_TEXT,
+                keep_default_na=False,
+            )
         except Exception as e:
             self.logger.error(f"Error loading Excel: {self.source}, {e}")
             raise

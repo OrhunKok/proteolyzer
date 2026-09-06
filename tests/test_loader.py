@@ -1041,3 +1041,77 @@ def test_closing_a_gap_leaves_a_column_that_has_none_alone(tmp_path, jmod_ids):
     expected = pd.read_csv(path)
 
     pd.testing.assert_frame_equal(loaded, expected)
+
+
+def test_a_word_is_not_a_gap_on_the_text_path_either(tmp_path):
+    """pandas nulls `NA`, `None`, `null` and `N/A` by default, and on a real
+    Spectronaut export `EG.InSourceFragmentationClass` is a three-state
+    classification whose third state is the word `None` -- 168,532 rows of
+    170,795, against 1,117 `Likely Parent` and 1,146 `Likely Child`. Taking the
+    default erased that state into "not recorded" for 99% of the report."""
+    path = tmp_path / "GluC-30min.tsv"
+    path.write_text(
+        "R.FileName\tEG.ModifiedSequence\tFG.Charge\tEG.InSourceFragmentationClass\n"
+        "run1\t_VVEAHVDQKNKVVTTPAFMCE_\t3\tLikely Parent\n"
+        "run1\t_AHVDQKNKVVTTPAFMCE_\t3\tLikely Child\n"
+        "run1\t_VERVLKE_\t2\tNone\n"
+    )
+
+    frame = Data(source=path, rename=False).load().frame
+
+    assert frame["EG.InSourceFragmentationClass"].tolist() == [
+        "Likely Parent",
+        "Likely Child",
+        "None",
+    ]
+    assert frame["EG.InSourceFragmentationClass"].notna().all()
+
+
+def test_the_two_serializations_agree_about_a_word(tmp_path):
+    """The invariant the change is for: one report, two containers, one answer
+    about what is a value and what is an absence."""
+    rows = {
+        "R_FileName": ["run1", "run1", "run1"],
+        "EG_ModifiedSequence": ["_A_", "_B_", "_C_"],
+        "FG_Charge": [2, 3, 2],
+        "EG_InSourceFragmentationClass": ["Likely Parent", "Likely Child", "None"],
+        "R_Fraction": ["NA", "NA", "NA"],
+    }
+    tsv, parquet = tmp_path / "x.tsv", tmp_path / "x.parquet"
+    pd.DataFrame(rows).to_csv(tsv, sep="\t", index=False)
+    pd.DataFrame(rows).to_parquet(parquet, index=False)
+
+    pd.testing.assert_frame_equal(
+        Data(source=tsv, rename=False).load().frame,
+        Data(source=parquet, rename=False).load().frame,
+    )
+
+
+def test_the_machine_artefacts_are_still_gaps_on_the_text_path(tmp_path):
+    """Narrowing what counts as missing must not stop counting the things that
+    are not words: `NaN` is `str(float('nan'))`, `#N/A` is a spreadsheet's."""
+    path = tmp_path / "GluC-30min.tsv"
+    path.write_text(
+        "R.FileName\tEG.ModifiedSequence\tFG.Charge\tEG.IsVerified\tnote\n"
+        "run1\t_A_\t2\tNaN\t#N/A\n"
+        "run1\t_B_\t3\t\t<NA>\n"
+    )
+
+    frame = Data(source=path, rename=False).load().frame
+
+    assert frame["EG.IsVerified"].isna().all()
+    assert frame["note"].isna().all()
+
+
+def test_a_number_column_with_empty_fields_still_reads_as_numbers(tmp_path):
+    """The obvious way to get this wrong. An empty field is still a gap, so a
+    quantitative column with holes in it stays quantitative rather than turning
+    into text the moment `keep_default_na` is switched off."""
+    path = tmp_path / "report.tsv"
+    path.write_text("Run\tPrecursor.Id\tMs1.Area\nrun1\tp1\t1000.5\nrun1\tp2\t\n")
+
+    frame = Data(source=path).load().frame
+
+    assert pd.api.types.is_float_dtype(frame["Ms1.Area"])
+    assert frame["Ms1.Area"].iloc[0] == 1000.5
+    assert pd.isna(frame["Ms1.Area"].iloc[1])
