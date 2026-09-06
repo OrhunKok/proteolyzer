@@ -10,9 +10,12 @@ import os
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
+from typing import Literal
 
 import chardet
 import pandas as pd
+import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 from .formats import Config
@@ -78,6 +81,15 @@ UNAMBIGUOUS_GAPS = frozenset(
 #: adding the words back.
 GAP_TEXT: list[str] = sorted(UNAMBIGUOUS_GAPS)
 
+#: What the stock parser needs to read a float the way the fast one does. Its
+#: default stops at about sixteen significant digits, so the q-value
+#: ``0.0007162974636774825`` came back ``0.0007162974636774`` from the fallback
+#: and exactly from pyarrow -- and this module promises the fallback is an
+#: optimization in reverse, not a different answer. It costs ~3x on the parse,
+#: on a path already chosen for being the one that fits in memory rather than
+#: the one that is quick.
+EXACT_FLOATS: Literal["round_trip"] = "round_trip"
+
 #: What a flag written as text says. Compared lower-cased.
 TRUE_TEXT = frozenset({"true", "1"})
 FALSE_TEXT = frozenset({"false", "0"})
@@ -99,6 +111,36 @@ def _text(column: pd.Series) -> tuple[pd.Series, pd.Series]:
     return text, text.isna() | text.isin(MISSING_TEXT)
 
 
+def _arrow_numeric(text: pd.Series) -> pd.Series | None:
+    """`text` parsed by Arrow, or ``None`` where Arrow would not have it.
+
+    Worth the detour twice over. It is ~23x quicker than ``pd.to_numeric`` on a
+    column this size, being a vectorized cast over the Arrow buffer the value
+    already sits in rather than a walk. And it is *more accurate*: pandas' own
+    float parser truncates at about sixteen significant digits, so the q-value
+    ``0.0007162974636774825`` comes back ``0.0007162974636774`` from
+    ``to_numeric`` and exactly from here -- which is also what
+    ``read_csv(engine="pyarrow")`` gives, so the two paths agree on the value
+    rather than nearly agreeing.
+
+    Integers first, so a column of whole numbers stays whole, as it did when
+    ``to_numeric`` decided this. ``None`` for anything Arrow refuses, which
+    includes a value that is not a number: the caller re-reads it the slow way
+    and reports it properly rather than guessing which it was.
+    """
+    try:
+        values = pa.array(text)
+    except Exception:
+        return None
+
+    for target in (pa.int64(), pa.float64()):
+        try:
+            return pd.Series(pc.cast(values, target).to_pandas(), index=text.index)
+        except pa.ArrowInvalid, pa.ArrowNotImplementedError:
+            continue
+    return None
+
+
 def as_numeric(column: pd.Series) -> pd.Series | None:
     """`column` as numbers, or ``None`` if any value in it is not one.
 
@@ -109,7 +151,14 @@ def as_numeric(column: pd.Series) -> pd.Series | None:
     left exactly as it arrived, and the caller is told which value stopped it.
     """
     text, missing = _text(column)
-    numbers = pd.to_numeric(text.where(~missing), errors="coerce")
+    blanked = text.where(~missing)
+
+    numbers = _arrow_numeric(blanked)
+    if numbers is None:
+        # Arrow would not take it, which is usually a value that is not a
+        # number and occasionally an input it has no cast for. Either way the
+        # slow parser settles which, and says so.
+        numbers = pd.to_numeric(blanked, errors="coerce")
     if (numbers.isna() & ~missing).any():
         return None
 
@@ -174,8 +223,13 @@ class DataLoader(Logged):
         self.file = file
         self.data = self._auto_load()
 
-        # A text reader turns these into gaps itself, so this is what makes a
-        # parquet read agree with one about what a gap is.
+        # A text reader turns these into gaps itself, being handed GAP_TEXT, so
+        # this is what makes a parquet read agree with one about what a gap is.
+        # It runs on every read: skipping it where the reader has already done
+        # the work measured as no faster -- an `isin` over an Arrow string
+        # column is ~3 ms -- and would have coupled this to which readers are
+        # passed GAP_TEXT, where drifting out of step brings back the exact bug
+        # the pass exists to prevent.
         self.data = self._close_text_gaps()
 
         # Before the rename, because these are named as the file names them --
@@ -437,6 +491,7 @@ class DataLoader(Logged):
                 usecols=cols_to_load,
                 na_values=GAP_TEXT,
                 keep_default_na=False,
+                float_precision=EXACT_FLOATS,
             )
 
         try:
@@ -468,6 +523,7 @@ class DataLoader(Logged):
             usecols=cols_to_load,
             na_values=GAP_TEXT,
             keep_default_na=False,
+            float_precision=EXACT_FLOATS,
         )
 
     def _fast_read_fits(self) -> bool:

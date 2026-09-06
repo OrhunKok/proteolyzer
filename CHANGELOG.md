@@ -8,7 +8,30 @@ with what to do about it, because two repositories depend on this one -- see the
 table in CLAUDE.md -- and the first they knew of the last rename was an
 ImportError.
 
-## v0.14.0
+## Unreleased
+
+### Fixed
+
+- **A float is read exactly, whichever parser reads it.** pandas' own float
+  parser stops at about sixteen significant digits, so the q-value
+  `0.0007162974636774825` came back `0.0007162974636774` — a relative error of
+  1.2e-13, four orders of magnitude past float64's epsilon. It affected the two
+  places pandas parses rather than Arrow: the stock CSV parser, which this
+  package falls back to when memory is short, and `to_numeric`, which read the
+  columns a format writes as text. Both are exact now, so the fallback parser is
+  an optimization in reverse rather than a different answer — which is what
+  `core.loader` already said it was.
+
+### Changed
+
+- Columns a format writes as text are parsed by Arrow rather than by
+  `to_numeric`, which is **~6x quicker** on that step and **1.34x on a whole
+  parquet read** of a 170,795-row report. It is a vectorized cast over the
+  buffer the values already sit in rather than a walk, and it is the more
+  accurate of the two, per above. `to_numeric` remains the fallback for anything
+  Arrow will not take.
+
+
 
 ### Fixed
 
