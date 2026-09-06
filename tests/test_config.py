@@ -3,7 +3,7 @@
 import re
 
 from proteolyzer.core.formats import Config as CoreConfig
-from proteolyzer.core.models import _claims, _signed
+from proteolyzer.core.models import _claims, _shaped, _signed
 
 
 def _engines(cfg) -> list[str]:
@@ -304,6 +304,9 @@ REAL_TABLES: dict[str, dict[str, set[str]]] = {
         },
     },
     "DIANN": {
+        # Four words that belong to nobody, one of which is JMod's. Recognised
+        # by the whole shape rather than by an overlap of names.
+        "xic": {"pr", "feature", "rt", "value"},
         "report": {
             "Run.Index",
             "Run",
@@ -336,6 +339,14 @@ REAL_TABLES: dict[str, dict[str, set[str]]] = {
 }
 
 
+def _claimants(cfg, engines, columns) -> list[str]:
+    """Who claims a file holding `columns`, the way `input_type` asks it: by
+    whole shape first, and by an overlap of names only where nothing does."""
+    return [name for name in engines if _shaped(getattr(cfg, name), columns)] or [
+        name for name in engines if _signed(getattr(cfg, name), columns)
+    ]
+
+
 def test_every_real_table_is_claimed_by_exactly_one_format():
     """The invariant the signatures live or die by.
 
@@ -351,9 +362,7 @@ def test_every_real_table_is_claimed_by_exactly_one_format():
 
     for engine, tables in REAL_TABLES.items():
         for table, columns in tables.items():
-            claimants = [
-                name for name in engines if _signed(getattr(cfg, name), columns)
-            ]
+            claimants = _claimants(cfg, engines, columns)
             assert claimants == [engine], f"{engine}/{table} claimed by {claimants}"
 
 
@@ -364,3 +373,23 @@ def test_a_signature_is_not_satisfied_by_one_column_alone():
     for name in _engines(cfg):
         for column in getattr(cfg, name).COLUMN_SIGNATURE:
             assert not _signed(getattr(cfg, name), {column}), column
+
+
+def test_a_narrow_table_needs_every_one_of_its_columns():
+    """Two of four would be an overlap, and an overlap is what cannot tell this
+    table from anybody else's -- `rt` alone is JMod's too."""
+    cfg = CoreConfig()
+    xic = REAL_TABLES["DIANN"]["xic"]
+
+    assert _shaped(cfg.DIANN, xic)
+    for missing in xic:
+        assert not _shaped(cfg.DIANN, xic - {missing}), missing
+
+
+def test_a_narrow_table_is_narrow_or_it_is_not_that_table():
+    """The second lock. A frame carrying all four of those words among two
+    hundred others is something else, whatever else it is."""
+    cfg = CoreConfig()
+    xic = REAL_TABLES["DIANN"]["xic"]
+
+    assert not _shaped(cfg.DIANN, xic | {f"extra{n}" for n in range(20)})

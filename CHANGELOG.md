@@ -30,12 +30,16 @@ first they knew of the last rename was an ImportError.
   (MaxQuant and FragPipe), `PEP` (MaxQuant and DIA-NN), `rt` (JMod and DIA-NN's
   XIC export).
 
+  A table too small and too plainly named for that — DIA-NN's `xic` export is
+  `pr`, `feature`, `rt`, `value`, one of which is JMod's — is claimed by its
+  whole shape instead: **all** of a declared schema present, in a table about as
+  narrow as declared. Either half separates `xic` from JMod on its own, since
+  JMod holds one of the four names and is eight times too wide.
+
   **What a consumer has to do.** Nothing. This only reaches files that came back
-  `Unknown`; anything recognized before is recognized the same way. Two limits
+  `Unknown`; anything recognized before is recognized the same way. One limit
   worth knowing: a name that *does* match still wins, so a table deliberately
-  renamed to another engine's filename is read as that engine; and DIA-NN's
-  `xic` export cannot be signed — its four columns are `pr`, `feature`, `rt`,
-  `value`, one of which is JMod's — so it stays recognized by name alone.
+  renamed to another engine's filename is read as that engine.
 
 ## v0.10.0
 

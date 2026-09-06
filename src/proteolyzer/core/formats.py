@@ -27,6 +27,30 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
+class Narrow:
+    """A table recognized by the shape of its whole schema, not a few names in it.
+
+    Some tables are too small and too plainly named to be signed by overlap.
+    DIA-NN's XIC export is ``pr``, ``feature``, ``rt``, ``value`` -- four words
+    that belong to nobody, and ``rt`` is JMod's as well. What tells them apart is
+    not which of those names is present but that *all* of them are and there is
+    almost nothing else: four columns against JMod's thirty-four.
+
+    So both have to hold. ``columns`` are all required, which on its own already
+    separates the two -- JMod has ``rt`` and none of the other three. ``width``
+    is the most columns the table is expected to have, and is the second lock: a
+    frame that happens to carry all four names among two hundred others is not
+    this table, whatever else it is.
+    """
+
+    #: Every one of these has to be present, not two of them.
+    columns: frozenset[str]
+    #: The most columns the table has. Generous, since it is guarding against
+    #: something an order of magnitude wider rather than measuring the table.
+    width: int
+
+
+@dataclass(frozen=True)
 class DIANN:
     FILES: list[str] = field(
         default_factory=lambda: [
@@ -45,9 +69,7 @@ class DIANN:
     #: too -- a frame this package renamed and wrote back out reads as DIA-NN,
     #: which is what it is. `PEP` is left out for being MaxQuant's as well.
     #:
-    #: The report only. `xic` has four columns -- `pr`, `feature`, `rt`,
-    #: `value` -- and one of them is JMod's, so there is nothing safe to sign it
-    #: with; it stays recognized by name, which is what it is written under.
+    #: The report only. `xic` is signed by its shape instead, below.
     COLUMN_SIGNATURE: frozenset[str] = field(
         default_factory=lambda: frozenset(
             {
@@ -67,6 +89,18 @@ class DIANN:
                 "Lib.Q.Value",
                 "Run.Index",
             }
+        )
+    )
+    #: The XIC export, which no overlap of names could claim: `pr`, `feature`,
+    #: `rt` and `value` are four words that belong to nobody and one of them is
+    #: JMod's. Its shape is what identifies it -- all four present, in a table
+    #: four columns wide where an identification table is thirty-four or more.
+    #: The names are the ones DIA-NN is read under downstream; the ceiling is
+    #: loose on purpose, being there to exclude something an order of magnitude
+    #: wider rather than to measure the table.
+    NARROW_SIGNATURES: tuple[Narrow, ...] = field(
+        default_factory=lambda: (
+            Narrow(columns=frozenset({"pr", "feature", "rt", "value"}), width=8),
         )
     )
     COLS_RENAME_MAPPING: dict[str, str] = field(default_factory=dict)
