@@ -62,7 +62,7 @@ Notes on the optional extras:
 import numpy as np
 import proteolyzer as pz
 
-report = pz.read("report.parquet")   # DIA-NN report, recognized by name
+report = pz.read("report.parquet")   # DIA-NN, by the name or the columns
 processed = report.process()         # dtypes, derived columns, labelling info
 
 processed.runs                       # {'run1', 'run2', ...}

@@ -4,8 +4,9 @@ Notable changes, newest first. Versions are what a consumer pins: the tags this
 file names are the ones `pip install` should be pointed at, rather than a commit.
 
 Until 1.0 a minor version may break an interface. What breaks is listed here,
-with what to do about it, because three repositories depend on this one and the
-first they knew of the last rename was an ImportError.
+with what to do about it, because two repositories depend on this one -- see the
+table in CLAUDE.md -- and the first they knew of the last rename was an
+ImportError.
 
 ## v0.12.0
 

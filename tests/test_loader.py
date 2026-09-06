@@ -935,3 +935,47 @@ def test_a_jmod_table_is_not_taken_for_an_xic_export(tmp_path, jmod_ids):
     jmod_ids.to_csv(path, index=False)
 
     assert Data(source=path).input_type == "JMod"
+
+
+def test_a_frame_carrying_two_engines_columns_is_unknown_not_an_error(tmp_path, caplog):
+    """Somebody joins a DIA-NN report to a MaxQuant table for a figure, saves
+    it, and reads it back. Two *names* colliding is this package contradicting
+    itself and raises; two signatures matching is a fact about that file, and
+    refusing to load it would be worse than saying it is nobody's."""
+    path = tmp_path / "joined_for_the_figure.parquet"
+    pd.DataFrame(
+        {
+            "Precursor.Id": ["PEPK2"],
+            "Stripped.Sequence": ["PEPK"],
+            "Ms1.Area": [1.0],
+            "Raw file": ["run1"],
+            "Modified sequence": ["_PEPK_"],
+        }
+    ).to_parquet(path, index=False)
+
+    data = Data(source=path)
+
+    assert data.input_type == "Unknown"
+    assert "cannot be told from them" in caplog.text
+    assert len(data.load()) == 1
+
+
+def test_a_name_two_formats_claim_is_still_an_error(tmp_path, monkeypatch):
+    """The other half of that: a file two blocks *name* means the config
+    contradicts itself, and nothing but raising gets that noticed."""
+    frame = pd.DataFrame({"Raw file": ["run1"]})
+    path = tmp_path / "psm.tsv"
+    frame.to_csv(path, sep="\t", index=False)
+
+    clashing = replace(
+        models.CONFIG,
+        DIANN=replace(
+            models.CONFIG.DIANN,
+            FILES=[*models.CONFIG.DIANN.FILES, "psm"],
+            FILE_EXTENSIONS=[*models.CONFIG.DIANN.FILE_EXTENSIONS, ".tsv"],
+        ),
+    )
+    monkeypatch.setattr(models, "CONFIG", clashing)
+
+    with pytest.raises(ValueError, match="matches multiple categories"):
+        _ = Data(source=path).input_type
