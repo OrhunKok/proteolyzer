@@ -35,6 +35,11 @@ ImportError.
 
 ### Changed
 
+- The guide has a page on [DIA isolation windows](guide/isolation.md).
+  `envelope_split` and `envelope_room` have been public since v0.3.0 and v0.7.0
+  and appeared only in the generated API reference, so a reader of the docs had
+  no way to learn the question could be asked. It says what each answers, what
+  the caller has to supply and why, and that `Window` is a position.
 - `CHANGELOG.md` said three repositories depend on this one; there are two.
   The quickstart in `README.md` and the docs still called recognition a matter
   of the file name, which it has not been since v0.11.0.
