@@ -1,11 +1,17 @@
 """Input-format configuration for the core loading/processing pipeline.
 
-Each search-engine block describes the files proteolyzer recognizes -- by name,
-or by pattern where the engine stamps the name with the moment it wrote it --
-how their columns map onto the canonical proteolyzer names, which of them must
-stay numeric, and any canonical column the format does not write that can be
-built out of ones it does. All of that is a fact about the format, true for
-everyone who reads it.
+Each search-engine block describes the files proteolyzer recognizes -- by name
+where the engine names its own output, and by the columns inside where the name
+is a convention rather than a fact -- how their columns map onto the canonical
+proteolyzer names, which of them are written as text and are not text, and any
+canonical column the format does not write that can be built out of ones it
+does. All of that is a fact about the format, true for everyone who reads it.
+
+**A name is the shortcut and the columns are the identification.** Every block
+carries a ``COLUMN_SIGNATURE``, because a file name is a convention people
+depart from -- they rename what they download, and one format here has no
+default name to depart from in the first place. The name is still asked first,
+so a file called what its engine calls it is claimed without being opened.
 
 **Which columns to keep is not here, deliberately.** It is a fact about the
 project doing the reading rather than about the file: a dashboard plots the m/z
@@ -35,6 +41,34 @@ class DIANN:
         ]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".parquet", ".tsv"])
+    #: DIA-NN's own names are the canonical schema, so these are the schema's
+    #: too -- a frame this package renamed and wrote back out reads as DIA-NN,
+    #: which is what it is. `PEP` is left out for being MaxQuant's as well.
+    #:
+    #: The report only. `xic` has four columns -- `pr`, `feature`, `rt`,
+    #: `value` -- and one of them is JMod's, so there is nothing safe to sign it
+    #: with; it stays recognized by name, which is what it is written under.
+    COLUMN_SIGNATURE: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            {
+                "Precursor.Id",
+                "Precursor.Lib.Index",
+                "Precursor.Normalised",
+                "Precursor.Quantity",
+                "Modified.Sequence",
+                "Stripped.Sequence",
+                "Proteotypic",
+                "Protein.Group",
+                "Ms1.Area",
+                "Ms1.Normalised",
+                "PG.MaxLFQ",
+                "PG.Q.Value",
+                "Global.Q.Value",
+                "Lib.Q.Value",
+                "Run.Index",
+            }
+        )
+    )
     COLS_RENAME_MAPPING: dict[str, str] = field(default_factory=dict)
     EXCLUDE_CAT_CONVERSION: set[str] = field(
         default_factory=lambda: {
@@ -69,6 +103,36 @@ class MaxQuant:
         ]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".txt"])
+    #: Fifteen tables that share few columns, so this has to reach any of them
+    #: rather than describe one: `Raw file` carries most, the scan tables are
+    #: signed by their instrument readings and `proteinGroups`, which has no
+    #: run column at all, by its protein ones.
+    #:
+    #: `Charge` and `Intensity` are deliberately absent. FragPipe writes both
+    #: under exactly those names, and two of them together are all it would take
+    #: to make a psm.tsv ambiguous -- which is refused rather than guessed at, so
+    #: it would not mis-read one file, it would make both unreadable.
+    COLUMN_SIGNATURE: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            {
+                "Raw file",
+                "Modified sequence",
+                "Leading razor protein",
+                "MS/MS count",
+                "MS scan number",
+                "Ion injection time",
+                "Total ion current",
+                "Precursor apex offset time",
+                "Retention length",
+                "Retention length (FWHM)",
+                "Mass deficit",
+                "PIF",
+                "Protein IDs",
+                "Majority protein IDs",
+                "Potential contaminant",
+            }
+        )
+    )
     COLS_RENAME_MAPPING: dict[str, str] = field(
         default_factory=lambda: {
             "Experiment": "Run",
@@ -94,6 +158,29 @@ class JMod:
         default_factory=lambda: ["filtered_IDs", "all_IDs", "all_IDs_filtered"]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".csv", ".parquet"])
+    #: All three identification tables carry one set of columns, so one
+    #: signature reaches every table this format has. `rt` and `mz` are left
+    #: out: they are generic enough that DIA-NN's XIC export writes `rt` too.
+    COLUMN_SIGNATURE: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            {
+                "file_name",
+                "stripped_seq",
+                "untag_seq",
+                "untag_prec",
+                "silac_channel",
+                "channels_matched",
+                "plex_Area",
+                "scribe_scores",
+                "frac_dia_int",
+                "BestChannel_Qvalue",
+                "window_mz",
+                "iso_cor",
+                "pep_len",
+                "is_decoy",
+            }
+        )
+    )
     COLS_RENAME_MAPPING: dict[str, str] = field(
         default_factory=lambda: {
             "file_name": "Run",
@@ -118,6 +205,32 @@ class FragPipe:
         default_factory=lambda: ["psm", "peptide", "ion", "protein"]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".tsv"])
+    #: The search scores and the spectrum columns for `psm`, the counting ones
+    #: for `protein`, so either table is reached. `Charge`, `Intensity`,
+    #: `Peptide`, `Protein` and `Gene` are all absent for being too plain to be
+    #: anybody's in particular -- the first two are MaxQuant's under the same
+    #: names, and a file two blocks claim is refused rather than guessed at.
+    COLUMN_SIGNATURE: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            {
+                "Spectrum",
+                "Spectrum File",
+                "Modified Peptide",
+                "Assigned Modifications",
+                "Hyperscore",
+                "Nextscore",
+                "PeptideProphet Probability",
+                "Calibrated Observed M/Z",
+                "Number of Enzymatic Termini",
+                "Razor Spectral Count",
+                "Total Spectral Count",
+                "Razor Intensity",
+                "Protein Probability",
+                "Top Peptide Probability",
+                "Unique Peptides",
+            }
+        )
+    )
     COLS_RENAME_MAPPING: dict[str, str] = field(
         default_factory=lambda: {
             "Spectrum File": "Run",

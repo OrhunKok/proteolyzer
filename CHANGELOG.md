@@ -7,6 +7,36 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Added
+
+- **Every format is recognized by its columns, not just by its file name.**
+  A file name is a convention people depart from — you rename what you
+  downloaded, and a report called `2026-08-27_experiment_three.parquet` used to
+  come back `Unknown`, unrenamed, with a warning. DIA-NN, MaxQuant, JMod and
+  FragPipe now each carry a `COLUMN_SIGNATURE` alongside Spectronaut's, matched
+  against the file's own columns when no format claims the name.
+
+  The name is still asked first, so a file called what its engine calls it is
+  claimed without being opened — cheaper, and identical to every release before
+  this one.
+
+  Bounded by an invariant test that walks **every real table of every engine**
+  and asserts exactly one format claims it. That matters because detection
+  refuses a file two formats claim: a signature reaching another engine's table
+  would not mis-read one file, it would make both unreadable. Four names are
+  shared between engines and appear in no signature — `Charge` and `Intensity`
+  (MaxQuant and FragPipe), `PEP` (MaxQuant and DIA-NN), `rt` (JMod and DIA-NN's
+  XIC export).
+
+  **What a consumer has to do.** Nothing. This only reaches files that came back
+  `Unknown`; anything recognized before is recognized the same way. Two limits
+  worth knowing: a name that *does* match still wins, so a table deliberately
+  renamed to another engine's filename is read as that engine; and DIA-NN's
+  `xic` export cannot be signed — its four columns are `pr`, `feature`, `rt`,
+  `value`, one of which is JMod's — so it stays recognized by name alone.
+
 ## v0.10.0
 
 ### Fixed

@@ -653,11 +653,12 @@ def test_one_familiar_column_is_not_enough_to_claim_a_file(tmp_path):
     assert Data(source=path).input_type == "Unknown"
 
 
-def test_a_file_that_is_not_a_report_is_left_unknown(tmp_path, label_free_report):
-    """Looking inside must not start claiming other engines' output: a DIA-NN
-    report under a name nothing matches stays Unknown, as it did before."""
+def test_a_file_that_is_not_a_report_is_left_unknown(tmp_path):
+    """Looking inside must not claim anything that merely has columns. A frame
+    belonging to no search engine is still answered with Unknown rather than
+    with whichever signature came closest."""
     path = tmp_path / "something_else.parquet"
-    label_free_report.to_parquet(path, index=False)
+    pd.DataFrame({"height": [1.0], "colour": ["red"]}).to_parquet(path, index=False)
 
     assert Data(source=path).input_type == "Unknown"
 
@@ -832,3 +833,84 @@ def test_an_all_digit_identifier_is_a_number_from_text_and_a_string_from_parquet
     assert not pd.api.types.is_numeric_dtype(from_parquet)
     assert pd.api.types.is_integer_dtype(from_tsv)
     assert from_parquet.astype("int64").tolist() == from_tsv.tolist()
+
+
+# --- A renamed file is still the file it was -----------------------------------
+
+
+def test_a_renamed_diann_report_is_still_a_diann_report(tmp_path, label_free_report):
+    """People rename what they download. `report.parquet` is what DIA-NN writes
+    it as, not what it has to be called for the next six months."""
+    path = tmp_path / "2026-08-27_experiment_three.parquet"
+    label_free_report.to_parquet(path, index=False)
+
+    assert Data(source=path).input_type == "DIANN"
+
+
+def test_a_renamed_maxquant_table_is_still_maxquant(tmp_path):
+    path = tmp_path / "run_five_evidence_backup.txt"
+    pd.DataFrame(
+        {
+            "Raw file": ["run1"],
+            "Modified sequence": ["_AAAK_"],
+            "Sequence": ["AAAK"],
+            "Charge": [2],
+            "Intensity": [10.0],
+        }
+    ).to_csv(path, sep="\t", index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "MaxQuant"
+    # and it is read as MaxQuant, not merely labelled one
+    assert "Run" in data.load().columns
+
+
+def test_a_renamed_jmod_table_is_still_jmod(tmp_path, jmod_ids):
+    path = tmp_path / "ids_after_the_rerun.csv"
+    jmod_ids.to_csv(path, index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "JMod"
+    assert {"Run", "Stripped.Sequence"} <= set(data.load().columns)
+
+
+def test_a_renamed_fragpipe_table_is_still_fragpipe(tmp_path, fragpipe_psms):
+    path = tmp_path / "psms_2026_08.tsv"
+    fragpipe_psms.to_csv(path, sep="\t", index=False)
+
+    data = Data(source=path)
+    assert data.input_type == "FragPipe"
+    assert {"Run", "Stripped.Sequence"} <= set(data.load().columns)
+
+
+def test_a_name_that_matches_is_still_taken_at_its_word(
+    tmp_path, label_free_report, monkeypatch
+):
+    """The columns are the fallback, not the first question. A file named the
+    way its engine names it is claimed without being opened -- which is cheaper,
+    and is how every release before this one behaved.
+
+    Checked by making the peek fail: if it were consulted, this would raise.
+    """
+    path = tmp_path / "report.parquet"
+    label_free_report.to_parquet(path, index=False)
+
+    def unreachable(self):
+        raise AssertionError("the file was opened to identify a name that matched")
+
+    monkeypatch.setattr(models.Data, "peek_columns", unreachable)
+
+    assert Data(source=path).input_type == "DIANN"
+
+
+def test_a_misleading_name_still_wins_over_the_columns(tmp_path, fragpipe_psms):
+    """Worth pinning because it is a real limit rather than an oversight: a
+    FragPipe table renamed to something DIA-NN writes is read as DIA-NN, because
+    the name is asked first and answers. Nothing here can tell the difference
+    between a rename and a report, and preferring the columns would mean opening
+    every file to find out. What it costs is a wrong rename mapping on a file
+    somebody deliberately misnamed."""
+    path = tmp_path / "report.tsv"
+    fragpipe_psms.to_csv(path, sep="\t", index=False)
+
+    assert Data(source=path).input_type == "DIANN"

@@ -39,9 +39,14 @@ def test_input_type_detected_from_name_and_extension(report_parquet):
     assert data.input_type == "DIANN"
 
 
-def test_unknown_input_type_loads_every_column(tmp_path, label_free_report):
+def test_unknown_input_type_loads_every_column(tmp_path):
+    """A file no format claims, by name or by what is in it.
+
+    Not a search report under an odd name: those are recognized by their
+    columns now, which is the point of the signatures.
+    """
     path = tmp_path / "something_else.parquet"
-    label_free_report.to_parquet(path)
+    pd.DataFrame({"height": [1.0, 2.0], "colour": ["red", "blue"]}).to_parquet(path)
     data = Data(source=path)
     assert data.input_type == "Unknown"
     assert data.cols_subset is None
