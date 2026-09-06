@@ -1115,3 +1115,43 @@ def test_a_number_column_with_empty_fields_still_reads_as_numbers(tmp_path):
     assert pd.api.types.is_float_dtype(frame["Ms1.Area"])
     assert frame["Ms1.Area"].iloc[0] == 1000.5
     assert pd.isna(frame["Ms1.Area"].iloc[1])
+
+
+def test_a_float_survives_whichever_parser_reads_it(tmp_path, monkeypatch):
+    """The module promises the stock parser is a fallback and not a different
+    answer, and for a while it was one: pandas' float parser stops at about
+    sixteen significant digits, so a q-value came back short from it and exact
+    from pyarrow. Read the same file both ways and compare, rather than trust
+    the fixture to have a value long enough to notice."""
+    exact = "0.0007162974636774825"
+    path = tmp_path / "report.tsv"
+    path.write_text(f"Run\tPrecursor.Id\tQ.Value\nrun1\tp1\t{exact}\n")
+
+    fast = Data(source=path, load_all_columns=True).load().frame
+
+    monkeypatch.setattr(loader, "_available_memory", lambda: 1024)
+    stock = Data(source=path, load_all_columns=True).load().frame
+
+    assert fast["Q.Value"].iloc[0] == float(exact)
+    pd.testing.assert_frame_equal(fast, stock)
+
+
+def test_a_number_written_as_text_is_parsed_exactly(tmp_path):
+    """The same value, arriving in a parquet column of strings. Arrow's cast is
+    what reads it -- quicker than `to_numeric` and, on a value this long, the
+    only one of the two that is right."""
+    exact = "0.0007162974636774825"
+    path = tmp_path / "GluC-30min.parquet"
+    pd.DataFrame(
+        {
+            "R_FileName": ["run1"],
+            "EG_ModifiedSequence": ["_PEPK_"],
+            "FG_Charge": [2],
+            "EG_Qvalue": [exact],
+        }
+    ).to_parquet(path, index=False)
+
+    frame = Data(source=path).load().frame
+
+    assert frame["Q.Value"].dtype == "float64"
+    assert frame["Q.Value"].iloc[0] == float(exact)
