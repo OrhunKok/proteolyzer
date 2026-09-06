@@ -172,6 +172,11 @@ _SPECTRONAUT_COLUMNS: dict[str, str] = {
 }
 
 
+def _either_spelling(names: set[str]) -> frozenset[str]:
+    """`names` as the text export spells them and as the parquet export does."""
+    return frozenset(names) | {name.replace(".", "_") for name in names}
+
+
 def _both_spellings(mapping: dict[str, str]) -> dict[str, str]:
     """`mapping` keyed by the text export's names and by the parquet's.
 
@@ -276,6 +281,36 @@ class Spectronaut:
         default_factory=lambda: {
             "Precursor.Id": ("Modified.Sequence", "Precursor.Charge")
         }
+    )
+    #: Columns the export writes as text that are not text, named as the file
+    #: names them so a caller keeping the file's own names gets them too.
+    #:
+    #: Spectronaut is inconsistent about this within one file: ``EG.Qvalue``
+    #: arrives as the string ``'1.99e-13'`` while ``PG.Qvalue`` beside it is a
+    #: double, and ``PEP.IsProteotypic`` is ``'False'`` while ``EG.IsDecoy`` is
+    #: a real boolean. A string q-value is not a lesser q-value, it is one that
+    #: raises `TypeError` the first time anyone filters on it.
+    #:
+    #: A list rather than a rule, because the rule gets it wrong:
+    #: ``FG.XICDBID`` is every-value-parses-as-a-number and is a database key,
+    #: and turning an identifier into an integer is the kind of quiet damage
+    #: this package exists not to do. ``EG.IsVerified`` is left alone for the
+    #: opposite reason -- every value in the measured export is the string
+    #: ``'NaN'``, so there is nothing there to say what it would be.
+    NUMERIC_COLS: frozenset[str] = field(
+        default_factory=lambda: _either_spelling(
+            {
+                "EG.Qvalue",
+                "EG.MinChannelQvalue",
+                "EG.MaxChannelQvalue",
+                "PEP.NrOfMissedCleavages",
+            }
+        )
+    )
+    #: As above. ``'True'`` and ``'False'``, which the tab-separated export
+    #: writes as real booleans, so this is also what keeps the two agreeing.
+    BOOLEAN_COLS: frozenset[str] = field(
+        default_factory=lambda: _either_spelling({"PEP.IsProteotypic"})
     )
     #: Nothing. The columns worth keeping out are the quantitative ones, and
     #: they are numbers, which are never converted whatever this says.

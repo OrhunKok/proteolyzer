@@ -30,6 +30,65 @@ BULK_READ_EXPANSION = 20
 #: than any machine that would be running a search in the first place.
 ASSUMED_AVAILABLE_MEMORY = 2 * 1024**3
 
+#: Text that means "no value" in a column that is otherwise numbers or flags.
+#: A search engine writing a column as text writes its gaps as text too, and
+#: the literal string "NaN" is the one that does real harm: ``pd.isna`` says
+#: False of it, so a gap reads as data until somebody plots it.
+MISSING_TEXT = frozenset({"", "NaN", "nan", "NA", "N/A", "null", "None", "#N/A"})
+
+#: What a flag written as text says. Compared lower-cased.
+TRUE_TEXT = frozenset({"true", "1"})
+FALSE_TEXT = frozenset({"false", "0"})
+
+
+def _text(column: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """`column` as trimmed text, and which of its values are missing."""
+    text = column.astype("string").str.strip()
+    return text, text.isna() | text.isin(MISSING_TEXT)
+
+
+def as_numeric(column: pd.Series) -> pd.Series | None:
+    """`column` as numbers, or ``None`` if any value in it is not one.
+
+    All or nothing, deliberately. ``errors="coerce"`` would turn whatever it
+    could not read into a gap, which is the silent kind of wrong this package
+    is built against: the column would come back numeric, shorter by however
+    many values nobody was told about. A column that does not convert whole is
+    left exactly as it arrived, and the caller is told which value stopped it.
+    """
+    text, missing = _text(column)
+    numbers = pd.to_numeric(text.where(~missing), errors="coerce")
+    if (numbers.isna() & ~missing).any():
+        return None
+
+    if not missing.any():
+        # Plain numpy where nothing is missing, which is what the same report
+        # read from text gives and what `Narrower` decides for itself further
+        # down: a nullable dtype costs a mask byte per value and buys nothing
+        # until there is a gap to carry. Reading a report should not hand back
+        # a different dtype for having been serialized differently.
+        return numbers.astype(
+            "int64" if pd.api.types.is_integer_dtype(numbers) else "float64"
+        )
+    return numbers
+
+
+def as_boolean(column: pd.Series) -> pd.Series | None:
+    """`column` as flags, or ``None`` if any value in it is not one.
+
+    Plain ``bool`` where nothing is missing, which is what the same report read
+    from text gives, and the nullable dtype only where a gap makes it necessary.
+    """
+    text, missing = _text(column)
+    lowered = text.str.lower()
+    if not bool(lowered[~missing].isin(TRUE_TEXT | FALSE_TEXT).all()):
+        return None
+
+    flags = lowered.isin(TRUE_TEXT)
+    if not missing.any():
+        return flags.astype(bool)
+    return flags.astype("boolean").where(~missing)
+
 
 def _available_memory() -> int:
     """Free physical memory in bytes, or :data:`ASSUMED_AVAILABLE_MEMORY`."""
@@ -63,6 +122,12 @@ class DataLoader(Logged):
         self.file = file
         self.data = self._auto_load()
 
+        # Before the rename, because these are named as the file names them --
+        # which is also what makes them reach a caller reading with
+        # rename=False.
+        if self.numeric_cols or self.boolean_cols:
+            self.data = self._retype_cols()
+
         if self.cols_rename_mapping:
             self.data = self._rename_cols()
 
@@ -87,6 +152,14 @@ class DataLoader(Logged):
     @property
     def built_cols(self) -> dict:
         return self.file.built_cols
+
+    @property
+    def numeric_cols(self) -> frozenset[str]:
+        return self.file.numeric_cols
+
+    @property
+    def boolean_cols(self) -> frozenset[str]:
+        return self.file.boolean_cols
 
     @property
     def cols_subset(self):
@@ -137,6 +210,55 @@ class DataLoader(Logged):
             return df
         self.logger.info(f"Renaming columns in {self.INPUT_TYPE} input")
         return df.rename(columns=self.cols_rename_mapping)
+
+    def _retype_cols(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
+        """Give back the dtype to columns the format wrote as text.
+
+        Some engines serialize a number or a flag as a string -- Spectronaut
+        writes ``EG.Qvalue`` as ``'1.99e-13'`` while writing ``PG.Qvalue``
+        beside it as a double -- and a q-value that is a string raises
+        ``TypeError`` the first time anyone filters on it. Which columns those
+        are is a fact about the format, so the format block says; see
+        :class:`~proteolyzer.core.formats.Spectronaut` for why it is a list and
+        not a rule.
+
+        Runs before the rename, on the file's own names, so a caller reading
+        with ``rename=False`` gets it too. A column already stored properly is
+        left alone, since an export that got it right must not be undone.
+        """
+        df = self.data if df is None else df
+
+        converters: list[tuple[frozenset[str], Callable[..., pd.Series | None]]] = [
+            (self.numeric_cols, as_numeric),
+            (self.boolean_cols, as_boolean),
+        ]
+
+        retyped, refused = {}, {}
+        for wanted, convert in converters:
+            for col in wanted & set(df.columns):
+                if not isinstance(df[col].dtype, pd.StringDtype) and (
+                    df[col].dtype != object
+                ):
+                    continue  # this export stored it properly already
+
+                converted = convert(df[col])
+                if converted is None:
+                    refused[col] = str(df[col].dtype)
+                    continue
+
+                df[col] = converted
+                retyped[col] = str(converted.dtype)
+
+        if retyped:
+            self.logger.info(f"Read columns the file wrote as text: {retyped}.")
+        if refused:
+            self.logger.warning(
+                f"Left as text, because not every value in them converts whole: "
+                f"{sorted(refused)}. Whatever else is in them is not a number "
+                f"or a flag, and dropping it silently would be worse."
+            )
+
+        return df
 
     def _build_cols(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """Add the canonical columns this format does not write for itself.

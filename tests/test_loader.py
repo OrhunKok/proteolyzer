@@ -687,3 +687,148 @@ def test_a_file_that_cannot_be_peeked_at_is_not_an_error(tmp_path):
     path.write_bytes(b"not a parquet file at all")
 
     assert Data(source=path).input_type == "Unknown"
+
+
+# --- Columns a format writes as text that are not text -------------------------
+
+
+def test_a_q_value_written_as_text_comes_back_a_number(
+    tmp_path, spectronaut_text_typed_report
+):
+    """Spectronaut writes EG.Qvalue as '1.99e-13' and PG.Qvalue beside it as a
+    double. A string q-value is not a lesser q-value: it raises TypeError the
+    first time anyone filters on it, which is the first thing anyone does."""
+    path = tmp_path / ANALYST_NAMED
+    spectronaut_text_typed_report.to_parquet(path, index=False)
+
+    frame = Data(source=path).load().frame
+
+    assert frame["Q.Value"].dtype == "float64"
+    assert (frame["Q.Value"] < 0.01).all()
+    assert frame["Missed.Cleavages"].dtype == "int64"
+    assert frame["Proteotypic"].dtype == "bool"
+
+
+def test_an_identifier_that_looks_like_a_number_is_left_alone(
+    tmp_path, spectronaut_text_typed_report
+):
+    """Every value of FG.XICDBID parses as a number and it is a database key.
+    This is why the columns are a list and not a rule -- a rule gets this one
+    wrong, and turning an identifier into an integer is quiet damage."""
+    path = tmp_path / ANALYST_NAMED
+    spectronaut_text_typed_report.to_parquet(path, index=False)
+
+    frame = Data(source=path).load().frame
+
+    assert frame["FG_XICDBID"].iloc[0] == "42775050"
+    assert not pd.api.types.is_numeric_dtype(frame["FG_XICDBID"])
+
+
+def test_a_column_that_does_not_convert_whole_is_left_as_it_came(
+    tmp_path, spectronaut_text_typed_report, caplog
+):
+    """All or nothing. `errors="coerce"` would hand back a numeric column
+    shorter by however many values nobody was told about."""
+    frame = spectronaut_text_typed_report.copy()
+    frame.loc[frame.index[0], "EG_Qvalue"] = "Filtered"
+    path = tmp_path / ANALYST_NAMED
+    frame.to_parquet(path, index=False)
+
+    loaded = Data(source=path).load().frame
+
+    assert not pd.api.types.is_numeric_dtype(loaded["Q.Value"])
+    assert loaded["Q.Value"].iloc[0] == "Filtered"
+    assert "not every value in them converts whole" in caplog.text
+
+
+def test_the_text_a_file_uses_for_a_gap_becomes_a_real_gap(
+    tmp_path, spectronaut_text_typed_report
+):
+    """`pd.isna` says False of the string 'NaN', so a gap reads as data until
+    somebody plots it. The nullable dtype is for the gap, not for its own sake."""
+    frame = spectronaut_text_typed_report.copy()
+    frame.loc[frame.index[0], "EG_Qvalue"] = "NaN"
+    path = tmp_path / ANALYST_NAMED
+    frame.to_parquet(path, index=False)
+
+    loaded = Data(source=path).load().frame
+
+    assert pd.isna(loaded["Q.Value"].iloc[0])
+    assert loaded["Q.Value"].iloc[1:].notna().all()
+
+
+def test_the_dtype_is_given_back_under_the_file_s_own_names_too(
+    tmp_path, spectronaut_text_typed_report
+):
+    """rename=False asks about names. A q-value that cannot be compared to a
+    float is no more use under one name than another, and the dashboard reads
+    every format this way."""
+    path = tmp_path / ANALYST_NAMED
+    spectronaut_text_typed_report.to_parquet(path, index=False)
+
+    frame = Data(source=path, rename=False).load().frame
+
+    assert frame["EG_Qvalue"].dtype == "float64"
+    assert frame["PEP_IsProteotypic"].dtype == "bool"
+    assert "Q.Value" not in frame.columns
+
+
+def test_an_export_that_stored_them_properly_is_not_undone(
+    tmp_path, spectronaut_parquet_report
+):
+    """Another lab's export may write these as numbers already, and a reader
+    that converts unconditionally would be round-tripping them for nothing."""
+    frame = spectronaut_parquet_report.copy()
+    frame["EG_Qvalue"] = 1.5e-13
+    path = tmp_path / ANALYST_NAMED
+    frame.to_parquet(path, index=False)
+
+    loaded = Data(source=path).load().frame
+
+    assert loaded["Q.Value"].dtype == "float64"
+    assert loaded["Q.Value"].iloc[0] == 1.5e-13
+
+
+def test_a_text_typed_parquet_still_reads_as_its_own_tab_separated_export(
+    tmp_path, spectronaut_text_typed_report
+):
+    """Which container a lab exported must not change the frame it gets back,
+    even though one of them stores these columns as text and the other does
+    not. Over every column the format claims -- see below for the one it does
+    not, which is the only place the two still part."""
+    parquet = tmp_path / ANALYST_NAMED
+    tsv = tmp_path / "GluC-30min.tsv"
+    spectronaut_text_typed_report.to_parquet(parquet, index=False)
+    spectronaut_text_typed_report.to_csv(tsv, sep="\t", index=False)
+
+    from_parquet = Data(source=parquet).load().frame.drop(columns="FG_XICDBID")
+    from_tsv = Data(source=tsv).load().frame.drop(columns="FG_XICDBID")
+
+    pd.testing.assert_frame_equal(from_parquet, from_tsv)
+
+
+def test_an_all_digit_identifier_is_a_number_from_text_and_a_string_from_parquet(
+    tmp_path, spectronaut_text_typed_report
+):
+    """The one column the two serializations still disagree about, recorded
+    rather than left to be discovered.
+
+    `FG.XICDBID` is a database key of digits, so the text reader infers an
+    integer from it and parquet hands back what it stored. Its *values* survive
+    either way -- there are no leading zeros in it to lose -- so this is a dtype
+    to know about rather than damage, and it is not one of the names the schema
+    maps. Naming it in a list of columns-that-are-text-whatever-they-look-like
+    would be a second list to keep true for this one column; if a second turns
+    up, that is the point to write it.
+    """
+    parquet = tmp_path / ANALYST_NAMED
+    tsv = tmp_path / "GluC-30min.tsv"
+    spectronaut_text_typed_report.to_parquet(parquet, index=False)
+    spectronaut_text_typed_report.to_csv(tsv, sep="\t", index=False)
+
+    from_parquet = Data(source=parquet).load().frame["FG_XICDBID"]
+    from_tsv = Data(source=tsv).load().frame["FG_XICDBID"]
+
+    assert not pd.api.types.is_numeric_dtype(from_parquet)
+    assert pd.api.types.is_integer_dtype(from_tsv)
+    assert from_parquet.astype("int64").tolist() == from_tsv.tolist()

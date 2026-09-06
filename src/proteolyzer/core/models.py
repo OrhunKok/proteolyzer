@@ -355,6 +355,28 @@ class Data(BaseModel):
 
     @computed_field
     @cached_property
+    def numeric_cols(self) -> frozenset[str]:
+        """Columns this format writes as text that hold numbers.
+
+        Named as the *file* names them, and not conditioned on ``rename``:
+        asking to keep the file's own column names is asking about names, and a
+        q-value that cannot be compared to a float is no more use under one name
+        than another. See :class:`~proteolyzer.core.formats.Spectronaut`.
+        """
+        return getattr(
+            getattr(CONFIG, self.input_type, None), "NUMERIC_COLS", frozenset()
+        )
+
+    @computed_field
+    @cached_property
+    def boolean_cols(self) -> frozenset[str]:
+        """Columns this format writes as text that hold ``True``/``False``."""
+        return getattr(
+            getattr(CONFIG, self.input_type, None), "BOOLEAN_COLS", frozenset()
+        )
+
+    @computed_field
+    @cached_property
     def built_cols(self) -> dict:
         """Canonical columns to build after the rename, and what out of.
 
