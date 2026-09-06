@@ -24,10 +24,11 @@ assuming it did.
 
 Parquet, TSV, CSV, Excel and plaintext are dispatched on the file extension,
 and a file-like object works in place of a path as long as it has a `name` to
-dispatch on. Which search engine produced a file is detected from its name and
-extension, and can be overridden with `INPUT_TYPE=`. Most engines name their own
-output; Spectronaut stamps its report with the date, the time and the name of the
-analysis, so that one is recognized by the ending of the name instead.
+dispatch on. Which search engine produced a file is detected from its name where the engine
+names its own output, and from the columns inside where the name says nothing —
+because people rename what they download, and one format has no default name to
+begin with. The name is asked first, so a file called what its engine calls it is
+claimed without being opened. `INPUT_TYPE=` overrides both.
 
 Columns are renamed onto proteolyzer's own vocabulary, and a canonical column the
 format does not write is built where the format says how to: a Spectronaut report

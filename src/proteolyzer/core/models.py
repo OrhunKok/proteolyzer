@@ -309,11 +309,20 @@ class Data(BaseModel):
                     name for name in _ENGINES if _signed(getattr(CONFIG, name), columns)
                 ]
                 if len(matched) > 1:
-                    raise ValueError(
-                        f"The columns of {self.file_name} match more than one "
-                        f"format: {matched}."
+                    # Not the error the name clash above is. Two blocks claiming
+                    # one *name* is this package's config contradicting itself,
+                    # and raising is how it gets noticed. Two signatures matching
+                    # is a fact about somebody's file -- a report joined to
+                    # another engine's table for a figure, saved, read back --
+                    # and "no format claims this" is exactly what Unknown means.
+                    # Raising there would refuse a file that used to load.
+                    logger.warning(
+                        f"The columns of {self.file_name} match {matched}, so "
+                        "which engine wrote it cannot be told from them. Reading "
+                        "it as an unknown format; pass INPUT_TYPE= to say."
                     )
-                if matched:
+                    matched = []
+                elif matched:
                     logger.debug(
                         f"{self.file_name} identified as {matched[0]} by its "
                         "columns; its name matched no format."
