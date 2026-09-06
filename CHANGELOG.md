@@ -8,7 +8,7 @@ with what to do about it, because two repositories depend on this one -- see the
 table in CLAUDE.md -- and the first they knew of the last rename was an
 ImportError.
 
-## Unreleased
+## v0.13.0
 
 ### Fixed
 
