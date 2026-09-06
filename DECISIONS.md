@@ -34,6 +34,16 @@ can be in no signature at all: `Charge` and `Intensity` (MaxQuant and FragPipe),
 `PEP` (MaxQuant and DIA-NN), `rt` (JMod and DIA-NN's XIC export). That list is
 why the test checks the tables instead of trusting that nobody reached for them.
 
+**A table an overlap of names cannot claim is claimed by its whole shape.**
+DIA-NN's XIC export is `pr`, `feature`, `rt`, `value` — four words that belong to
+nobody, one of which is JMod's. Recording that as unsignable was giving up too
+early: what separates them is not *which* of those names is present but that
+**all** of them are and there is almost nothing else, four columns against JMod's
+thirty-four. So `Narrow` asks for both, and either alone would do here — JMod
+holds one of the four, and is eight times too wide. Requiring all of a small
+schema is the strong form of a signature; the width is the second lock, against a
+frame that carries those four words among two hundred others.
+
 What it does not do is override a name that matches. A FragPipe table renamed to
 `report.tsv` reads as DIA-NN, because the name is asked first and answers.
 Preferring the columns would mean opening every file to find out, and nothing

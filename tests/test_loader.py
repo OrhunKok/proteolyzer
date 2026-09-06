@@ -914,3 +914,24 @@ def test_a_misleading_name_still_wins_over_the_columns(tmp_path, fragpipe_psms):
     fragpipe_psms.to_csv(path, sep="\t", index=False)
 
     assert Data(source=path).input_type == "DIANN"
+
+
+def test_a_renamed_xic_export_is_recognised_by_its_whole_shape(tmp_path):
+    """The table no overlap of names could claim. `pr`, `feature`, `rt` and
+    `value` each belong to nobody in particular and `rt` is JMod's as well, so
+    what says which it is, is that all four are there and almost nothing else."""
+    path = tmp_path / "traces_for_run_one.parquet"
+    pd.DataFrame(
+        {"pr": ["PEPTIDEK2"], "feature": ["ms1"], "rt": [10.2], "value": [1.0]}
+    ).to_parquet(path, index=False)
+
+    assert Data(source=path).input_type == "DIANN"
+
+
+def test_a_jmod_table_is_not_taken_for_an_xic_export(tmp_path, jmod_ids):
+    """They share `rt`, which is exactly why the shape has to be the whole
+    schema and not an overlap. JMod's is thirty-odd columns wide."""
+    path = tmp_path / "ids_after_the_rerun.csv"
+    jmod_ids.to_csv(path, index=False)
+
+    assert Data(source=path).input_type == "JMod"

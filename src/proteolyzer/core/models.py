@@ -46,6 +46,21 @@ SIGNATURE_THRESHOLD: int = 2
 _DELIMITED: dict[str, str] = {".tsv": "\t", ".csv": ",", ".txt": "\t"}
 
 
+def _shaped(block: Any, columns: Collection[str]) -> bool:
+    """Whether `columns` are the whole shape of one of `block`'s narrow tables.
+
+    For a table too small and too plainly named for an overlap of names to say
+    anything: every one of the declared columns has to be there, and the table
+    has to be about as narrow as declared. See
+    :class:`~proteolyzer.core.formats.Narrow`.
+    """
+    held = set(columns)
+    return any(
+        narrow.columns <= held and len(held) <= narrow.width
+        for narrow in getattr(block, "NARROW_SIGNATURES", ())
+    )
+
+
 def _signed(block: Any, columns: Collection[str]) -> bool:
     """Whether `columns` carry enough of `block`'s signature to identify it."""
     signature: frozenset[str] = getattr(block, "COLUMN_SIGNATURE", frozenset())
@@ -283,7 +298,14 @@ class Data(BaseModel):
         if not matched:
             columns = self.peek_columns()
             if columns:
+                # By whole shape first, then by an overlap of names. The shape
+                # is the stronger claim -- every column of a known narrow table
+                # and nothing much besides -- and it is what identifies the
+                # tables an overlap cannot, whose few names each belong to
+                # somebody else as well.
                 matched = [
+                    name for name in _ENGINES if _shaped(getattr(CONFIG, name), columns)
+                ] or [
                     name for name in _ENGINES if _signed(getattr(CONFIG, name), columns)
                 ]
                 if len(matched) > 1:
