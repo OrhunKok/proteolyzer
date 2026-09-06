@@ -161,6 +161,24 @@ def spectronaut_parquet_report(spectronaut_report) -> pd.DataFrame:
 
 
 @pytest.fixture
+def spectronaut_text_typed_report(spectronaut_parquet_report) -> pd.DataFrame:
+    """The parquet-named report with the columns Spectronaut writes as text.
+
+    A real export is inconsistent about this within the one file: ``EG_Qvalue``
+    is a string of scientific notation while ``PG_Qvalue`` beside it is a
+    double, and ``PEP_IsProteotypic`` is ``'False'`` while ``EG_IsDecoy`` is a
+    real boolean. ``FG_XICDBID`` is here because it is the counter-example --
+    every value of it parses as a number and it is a database key.
+    """
+    frame = spectronaut_parquet_report.copy()
+    frame["EG_Qvalue"] = ["1.9967115436590949E-13"] * len(frame)
+    frame["PEP_NrOfMissedCleavages"] = [str(n % 3) for n in range(len(frame))]
+    frame["PEP_IsProteotypic"] = ["True", "False"] * (len(frame) // 2)
+    frame["FG_XICDBID"] = [f"4277505{n}" for n in range(len(frame))]
+    return frame
+
+
+@pytest.fixture
 def fragpipe_psms() -> pd.DataFrame:
     """A FragPipe/Philosopher psm.tsv, under FragPipe's own column names."""
     rows = 6

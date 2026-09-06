@@ -7,6 +7,40 @@ Until 1.0 a minor version may break an interface. What breaks is listed here,
 with what to do about it, because three repositories depend on this one and the
 first they knew of the last rename was an ImportError.
 
+## Unreleased
+
+### Fixed
+
+- **A column a search engine writes as text comes back with its dtype.**
+  Spectronaut serializes some numbers and flags as strings, inconsistently
+  within the one file: `EG.Qvalue` arrives as `'1.99e-13'` while `PG.Qvalue`
+  beside it is a double, and `PEP.IsProteotypic` is `'False'` while
+  `EG.IsDecoy` is a real boolean. So the canonical `Q.Value` was a string, and
+
+  ```python
+  frame["Q.Value"] < 0.01
+  TypeError: Invalid comparison between dtype=str and float
+  ```
+
+  which is the first thing anyone does with a report. `Q.Value`,
+  `Missed.Cleavages` and the channel q-values now come back numeric and
+  `Proteotypic` boolean, matching what the same report read from text gives.
+
+  The columns are a list on the format block rather than a rule, because the
+  rule gets it wrong: `FG.XICDBID` is a database key whose every value parses
+  as a number, and turning an identifier into an integer is quiet damage.
+  Conversion is **all or nothing** per column -- a column where any value is
+  not a number is left exactly as it arrived and logged, rather than being
+  handed back numeric and shorter by however many values nobody was told
+  about. A column an export already stored properly is not touched, and the
+  text a file uses for a gap (`'NaN'`, which `pd.isna` calls False) becomes a
+  real gap.
+
+  Applied before the rename, on the file's own column names, so it reaches a
+  caller reading with `rename=False` -- `streamlit-DO-MS` reads every format
+  that way, and a q-value that cannot be compared to a float is no more use
+  under one name than another.
+
 ## v0.9.0
 
 ### Fixed
