@@ -4,8 +4,8 @@
 
 A Python package for processing, analyzing and visualizing proteomics data. It
 reads DIA-NN, Spectronaut, MaxQuant, JMod and FragPipe output, normalizes it into
-a consistent shape, and provides the domain pipelines used for single-cell sample
-preparation and amino acid substitution discovery.
+a consistent shape, and reads a cellenONE run directory for single-cell sample
+preparation.
 
 ## What it does
 
@@ -53,10 +53,6 @@ the package and depends only on pandas, numpy and pyarrow. `plots` and
 the module that needs it. `tests/test_package_boundaries.py` enforces that,
 including that importing proteolyzer does not pull in matplotlib.
 
-Domain pipelines built on this core live in their own repositories, so an
-instrument or an assay does not become a dependency of everyone's install:
-
-- [proteolyzer-cellenone](https://github.com/OrhunKok/proteolyzer-cellenone) —
-  mapping single cells prepared on a cellenONE to well positions
-- [proteolyzer-aas](https://github.com/OrhunKok/proteolyzer-aas) — discovery of
-  amino acid substitutions
+Reading a cellenONE preparation is part of the package rather than a repository
+of its own — see the [cellenONE guide](guide/cellenone.md). It was pulled back in
+for v0.2.0 because two repositories were maintaining separate copies of it.

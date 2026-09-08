@@ -8,7 +8,25 @@ with what to do about it, because two repositories depend on this one -- see the
 table in CLAUDE.md -- and the first they knew of the last rename was an
 ImportError.
 
-## v0.15.0
+## Unreleased
+
+### Changed
+
+- The README and the docs no longer point at `proteolyzer-cellenone` and
+  `proteolyzer-aas`. Neither repository exists — both 404 — and the claim built
+  on them was wrong twice over: reading a cellenONE preparation is **in** this
+  package (`proteolyzer.cellenone`, since v0.2.0), and the
+  amino-acid-substitution pipeline is nowhere. The package description said the
+  package "provides the domain pipelines used for ... amino acid substitution
+  discovery", which it has not since v0.1.0, and that description ships with the
+  wheel.
+
+  Also noted rather than changed: `core.io`, `core.logging` and `core.pipeline`
+  were documented as the surface those pipelines used. Nothing in this
+  repository or in either consumer uses them today, so the docs now call that
+  surface available rather than load-bearing.
+
+
 
 ### Fixed
 

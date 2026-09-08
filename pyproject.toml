@@ -102,7 +102,7 @@ fallback_version = "0.0.0"
 [tool.mypy]
 # Checked so far: the base suite, and cellenone since a downstream consumer
 # reads every run through it. The plots subpackage is not annotated enough to
-# pass yet; add it here as it is typed. `aas` left the repository.
+# pass yet; add it here as it is typed. `aas` is gone entirely.
 files = [
     "src/proteolyzer/reference.py",
     "src/proteolyzer/core",
