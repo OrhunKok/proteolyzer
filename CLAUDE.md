@@ -29,7 +29,12 @@ see below for why.
 ## Why it is built this way
 
 [DECISIONS.md](./DECISIONS.md) — the choices that are not visible from the code,
-and the ones whose reasoning lives in a docstring worth finding.
+one claim each. It is an index, so keep it that way.
+
+[docs/notes/](./docs/notes/) — the long form: what was measured, what it cost,
+what turned out not to be true, and what was tried and dropped. Anything a
+docstring would need more than a line or two of *why* for goes there with a
+pointer left behind, which is what keeps this file and the source readable.
 
 ## This is the repository others depend on
 
@@ -37,8 +42,12 @@ Two of them, and neither resolves it from PyPI:
 
 | who | what they use |
 |---|---|
-| `streamlit-DO-MS` | `core.formats`, `core.loader`, `narrow`, `cellenone` — the whole reading and narrowing path |
-| `decoder` | `reference.CODON_TABLE`, and `Data(...).load().frame` in one module |
+| `streamlit-DO-MS` | `core.formats`, `core.loader`, `narrow`, `cellenone` — the whole reading and narrowing path — plus `core.isolation` and `cv`/`jaccard_index` |
+| `decoder` | `reference.CODON_TABLE`, `Report`, and `Data(...).load().frame` in one module |
+
+Read off their sources rather than remembered: `gh repo clone` each and grep for
+`proteolyzer`. That is also how to answer whether something here still has a
+consumer before removing it — `core.io` and `core.pipeline` turned out not to.
 
 **A change to a public interface reaches them before it reaches any test here.**
 That happened on 2026-08-20: `utils` became `core` and the constants separated

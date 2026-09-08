@@ -10,6 +10,20 @@ ImportError.
 
 ## Unreleased
 
+### Changed
+
+- The history and the measurements have moved out of the source into
+  [`docs/notes/`](https://OrhunKok.github.io/proteolyzer/notes/) — what was
+  measured off a real export, what a benchmark cost and what its confounds were,
+  an assumption that shipped and was wrong. `core.formats`, `core.loader` and
+  `core.models` lost ~140 lines of that, so a docstring now says what the thing
+  does and points at the note where the *why* is long. `DECISIONS.md` is back to
+  a claim per entry, which is what it says it is, and `CLAUDE.md` gained a
+  pointer rather than more prose.
+
+  Nothing about behaviour changes. It is here because docstrings are the API
+  reference, so the reference reads differently.
+
 ### Removed
 
 - `core.io` (`read_frame`, `write_frame`, `frame_exists`) and `core.pipeline`

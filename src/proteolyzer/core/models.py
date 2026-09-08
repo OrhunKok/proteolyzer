@@ -37,9 +37,8 @@ SourceType = Path | IO[str] | IO[bytes]
 
 
 #: How many of a format's ``COLUMN_SIGNATURE`` columns a file has to carry
-#: before its contents are taken to identify it. Two rather than one, because a
-#: single distinctive name turns up in frames people derive from a report and
-#: write back out, and two of them together do not.
+#: before its contents identify it. Two rather than one: a single distinctive
+#: name turns up in frames people derive from a report and write back out.
 SIGNATURE_THRESHOLD: int = 2
 
 #: Extensions whose first line is a header, and what separates it.
@@ -49,10 +48,8 @@ _DELIMITED: dict[str, str] = {".tsv": "\t", ".csv": ",", ".txt": "\t"}
 def _shaped(block: Any, columns: Collection[str]) -> bool:
     """Whether `columns` are the whole shape of one of `block`'s narrow tables.
 
-    For a table too small and too plainly named for an overlap of names to say
-    anything: every one of the declared columns has to be there, and the table
-    has to be about as narrow as declared. See
-    :class:`~proteolyzer.core.formats.Narrow`.
+    Every declared column has to be there and the table has to be about as
+    narrow as declared. See :class:`~proteolyzer.core.formats.Narrow`.
     """
     held = set(columns)
     return any(
@@ -72,13 +69,9 @@ def _signed(block: Any, columns: Collection[str]) -> bool:
 def _claims(block: Any, file_name: str, extension: str) -> bool:
     """Whether a format block recognizes a file by this name and extension.
 
-    By exact name for every engine that names its own output, which is most of
-    them. Spectronaut stamps its export with the date, the time and the name of
-    the analysis, so there is no name to list and ``FILE_PATTERNS`` says what the
-    stem has to look like instead.
-
-    A pattern has to match the stem *in full*: matching from the start would take
-    the ``..._Report.setup`` written beside a report for the report itself.
+    By exact name where an engine names its own output, and by pattern where it
+    does not. A pattern has to match the stem *in full*: matching from the start
+    would take a ``..._Report.setup`` beside a report for the report itself.
     """
     if extension not in block.FILE_EXTENSIONS:
         return False
@@ -229,16 +222,13 @@ class Data(BaseModel):
     def peek_columns(self) -> tuple[str, ...]:
         """The source's column names, read as cheaply as the format allows.
 
-        A parquet file carries its schema in the footer, so nothing is decoded
-        to get this; a delimited file gives its header up in one line. Only
-        reached when the name settled nothing, so the usual case pays nothing
-        for it.
+        A parquet file carries its schema in the footer and a delimited file
+        gives its header up in one line, so this is cheap -- and it is only
+        reached when the name settled nothing.
 
-        Empty for anything that cannot be looked at without reading it — a
-        plaintext log, a stream with no name to dispatch on, a file that is not
-        a file. Empty on any failure at all, too: this decides which reader to
-        use, so it is not the place to raise. The reader that follows will
-        raise about the same file, and say what it was actually trying to do.
+        Empty for anything that cannot be looked at without reading it, and
+        empty on any failure: choosing a reader is not the place to raise about
+        a file. The reader that follows will, and will say what it was doing.
         """
         extension = self.file_extension.lower()
         try:
@@ -273,7 +263,8 @@ class Data(BaseModel):
 
         Whichever of the engines on :class:`~proteolyzer.core.formats.Config`
         claims the file: by name where the engine names its own output, and by
-        the columns inside where it does not.
+        the columns inside where it does not. See
+        ``docs/notes/recognising-a-format.md``.
         """
         user_override = self.INPUT_TYPE
 
@@ -298,24 +289,17 @@ class Data(BaseModel):
         if not matched:
             columns = self.peek_columns()
             if columns:
-                # By whole shape first, then by an overlap of names. The shape
-                # is the stronger claim -- every column of a known narrow table
-                # and nothing much besides -- and it is what identifies the
-                # tables an overlap cannot, whose few names each belong to
-                # somebody else as well.
+                # Whole shape first, being the stronger claim, then an overlap
+                # of names.
                 matched = [
                     name for name in _ENGINES if _shaped(getattr(CONFIG, name), columns)
                 ] or [
                     name for name in _ENGINES if _signed(getattr(CONFIG, name), columns)
                 ]
                 if len(matched) > 1:
-                    # Not the error the name clash above is. Two blocks claiming
-                    # one *name* is this package's config contradicting itself,
-                    # and raising is how it gets noticed. Two signatures matching
-                    # is a fact about somebody's file -- a report joined to
-                    # another engine's table for a figure, saved, read back --
-                    # and "no format claims this" is exactly what Unknown means.
-                    # Raising there would refuse a file that used to load.
+                    # Not the error the name clash above is: that one is the
+                    # config contradicting itself, this one is a fact about
+                    # somebody's file, and Unknown is what that means.
                     logger.warning(
                         f"The columns of {self.file_name} match {matched}, so "
                         "which engine wrote it cannot be told from them. Reading "
@@ -390,9 +374,9 @@ class Data(BaseModel):
         """Columns this format writes as text that hold numbers.
 
         Named as the *file* names them, and not conditioned on ``rename``:
-        asking to keep the file's own column names is asking about names, and a
-        q-value that cannot be compared to a float is no more use under one name
-        than another. See :class:`~proteolyzer.core.formats.Spectronaut`.
+        keeping the file's own column names is a question about names, and a
+        q-value that cannot be compared to a float is no more use under one
+        than another.
         """
         return getattr(
             getattr(CONFIG, self.input_type, None), "NUMERIC_COLS", frozenset()
@@ -412,12 +396,9 @@ class Data(BaseModel):
         """Canonical columns to build after the rename, and what out of.
 
         For a format that writes no column of its own for something the rest of
-        the package keys on; see :class:`~proteolyzer.core.formats.Spectronaut`,
-        whose report carries no precursor identifier.
-
-        Empty when the file keeps its own column names, because these are stated
-        in the core's vocabulary and a caller who asked not to be given that
-        vocabulary has not asked for a column named in it either.
+        the package keys on. Empty when the file keeps its own column names:
+        these are stated in the core's vocabulary, which such a caller has
+        asked not to be given.
         """
         if not self.rename:
             return {}
