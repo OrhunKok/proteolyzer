@@ -1,17 +1,13 @@
 """Input-format configuration for the core loading/processing pipeline.
 
-Each search-engine block describes the files proteolyzer recognizes -- by name
-where the engine names its own output, and by the columns inside where the name
-is a convention rather than a fact -- how their columns map onto the canonical
-proteolyzer names, which of them are written as text and are not text, and any
-canonical column the format does not write that can be built out of ones it
-does. All of that is a fact about the format, true for everyone who reads it.
+Each block describes one search engine's output: the files it goes by, the
+columns that identify it, how its columns map onto the canonical proteolyzer
+names, which of them are written as text and are not text, and any canonical
+column it does not write that can be built out of ones it does. All of that is a
+fact about the format, true for everyone who reads it.
 
-**A name is the shortcut and the columns are the identification.** Every block
-carries a ``COLUMN_SIGNATURE``, because a file name is a convention people
-depart from -- they rename what they download, and one format here has no
-default name to depart from in the first place. The name is still asked first,
-so a file called what its engine calls it is claimed without being opened.
+How a file is matched to a block, and why the columns rather than the name, is in
+``docs/notes/recognising-a-format.md``.
 
 **Which columns to keep is not here, deliberately.** It is a fact about the
 project doing the reading rather than about the file: a dashboard plots the m/z
@@ -30,23 +26,15 @@ from dataclasses import dataclass, field
 class Narrow:
     """A table recognized by the shape of its whole schema, not a few names in it.
 
-    Some tables are too small and too plainly named to be signed by overlap.
-    DIA-NN's XIC export is ``pr``, ``feature``, ``rt``, ``value`` -- four words
-    that belong to nobody, and ``rt`` is JMod's as well. What tells them apart is
-    not which of those names is present but that *all* of them are and there is
-    almost nothing else: four columns against JMod's thirty-four.
-
-    So both have to hold. ``columns`` are all required, which on its own already
-    separates the two -- JMod has ``rt`` and none of the other three. ``width``
-    is the most columns the table is expected to have, and is the second lock: a
-    frame that happens to carry all four names among two hundred others is not
-    this table, whatever else it is.
+    For a table too small and too plainly named for an overlap of names to say
+    anything. Both conditions have to hold, and why both is in
+    ``docs/notes/recognising-a-format.md``.
     """
 
     #: Every one of these has to be present, not two of them.
     columns: frozenset[str]
-    #: The most columns the table has. Generous, since it is guarding against
-    #: something an order of magnitude wider rather than measuring the table.
+    #: The most columns the table is expected to have. Generous: it guards
+    #: against something an order of magnitude wider.
     width: int
 
 
@@ -66,10 +54,7 @@ class DIANN:
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".parquet", ".tsv"])
     #: DIA-NN's own names are the canonical schema, so these are the schema's
-    #: too -- a frame this package renamed and wrote back out reads as DIA-NN,
-    #: which is what it is. `PEP` is left out for being MaxQuant's as well.
-    #:
-    #: The report only. `xic` is signed by its shape instead, below.
+    #: too. The report only; `xic` is signed by its shape instead, below.
     COLUMN_SIGNATURE: frozenset[str] = field(
         default_factory=lambda: frozenset(
             {
@@ -91,13 +76,9 @@ class DIANN:
             }
         )
     )
-    #: The XIC export, which no overlap of names could claim: `pr`, `feature`,
-    #: `rt` and `value` are four words that belong to nobody and one of them is
-    #: JMod's. Its shape is what identifies it -- all four present, in a table
-    #: four columns wide where an identification table is thirty-four or more.
-    #: The names are the ones DIA-NN is read under downstream; the ceiling is
-    #: loose on purpose, being there to exclude something an order of magnitude
-    #: wider rather than to measure the table.
+    #: The XIC export. Its four column names each belong to nobody in
+    #: particular, so its shape is what identifies it; the width ceiling is
+    #: loose on purpose. See ``docs/notes/recognising-a-format.md``.
     NARROW_SIGNATURES: tuple[Narrow, ...] = field(
         default_factory=lambda: (
             Narrow(columns=frozenset({"pr", "feature", "rt", "value"}), width=8),
@@ -137,15 +118,12 @@ class MaxQuant:
         ]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".txt"])
-    #: Fifteen tables that share few columns, so this has to reach any of them
-    #: rather than describe one: `Raw file` carries most, the scan tables are
-    #: signed by their instrument readings and `proteinGroups`, which has no
-    #: run column at all, by its protein ones.
+    #: Fifteen tables that share few columns, so this reaches any of them
+    #: rather than describing one: `Raw file` carries most, the scan tables
+    #: their instrument readings, `proteinGroups` its protein ones.
     #:
-    #: `Charge` and `Intensity` are deliberately absent. FragPipe writes both
-    #: under exactly those names, and two of them together are all it would take
-    #: to make a psm.tsv ambiguous -- which is refused rather than guessed at, so
-    #: it would not mis-read one file, it would make both unreadable.
+    #: `Charge` and `Intensity` are absent deliberately -- FragPipe writes both
+    #: under those names. See ``docs/notes/recognising-a-format.md``.
     COLUMN_SIGNATURE: frozenset[str] = field(
         default_factory=lambda: frozenset(
             {
@@ -192,9 +170,8 @@ class JMod:
         default_factory=lambda: ["filtered_IDs", "all_IDs", "all_IDs_filtered"]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".csv", ".parquet"])
-    #: All three identification tables carry one set of columns, so one
-    #: signature reaches every table this format has. `rt` and `mz` are left
-    #: out: they are generic enough that DIA-NN's XIC export writes `rt` too.
+    #: All three identification tables share one set of columns. `rt` and `mz`
+    #: are left out, being DIA-NN's XIC export's as well.
     COLUMN_SIGNATURE: frozenset[str] = field(
         default_factory=lambda: frozenset(
             {
@@ -239,11 +216,9 @@ class FragPipe:
         default_factory=lambda: ["psm", "peptide", "ion", "protein"]
     )
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".tsv"])
-    #: The search scores and the spectrum columns for `psm`, the counting ones
-    #: for `protein`, so either table is reached. `Charge`, `Intensity`,
-    #: `Peptide`, `Protein` and `Gene` are all absent for being too plain to be
-    #: anybody's in particular -- the first two are MaxQuant's under the same
-    #: names, and a file two blocks claim is refused rather than guessed at.
+    #: The search scores for `psm`, the counting columns for `protein`, so
+    #: either table is reached. `Charge`, `Intensity`, `Peptide`, `Protein` and
+    #: `Gene` are absent for being too plain to be anybody's in particular.
     COLUMN_SIGNATURE: frozenset[str] = field(
         default_factory=lambda: frozenset(
             {
@@ -287,12 +262,9 @@ class FragPipe:
 
 
 #: The report's columns onto the canonical schema, spelled the way the
-#: tab-separated export spells them. The parquet export writes the same report
-#: with ``_`` where this has ``.``, so :class:`Spectronaut` carries both
-#: spellings -- derived from this rather than written out twice, because two
-#: lists of seventeen names differing by one character is two lists that drift.
-#: Measured off both: an export of each was read and every key checked against
-#: what the file actually holds.
+#: tab-separated export spells them. The parquet export writes the same names
+#: with ``_`` for ``.``, and :class:`Spectronaut` carries both -- derived from
+#: this rather than written twice. See ``docs/notes/spectronaut.md``.
 _SPECTRONAUT_COLUMNS: dict[str, str] = {
     "R.FileName": "Run",
     "EG.ModifiedSequence": "Modified.Sequence",
@@ -327,9 +299,8 @@ def _either_spelling(names: set[str]) -> frozenset[str]:
 def _both_spellings(mapping: dict[str, str]) -> dict[str, str]:
     """`mapping` keyed by the text export's names and by the parquet's.
 
-    A rename mapping is applied by name, and a name the file does not carry
-    does nothing, so holding both costs a dict twice the size and buys not
-    having to know which serialization is being read.
+    A name the file does not carry does nothing, so holding both costs a dict
+    twice the size and buys not having to know which serialization this is.
     """
     return mapping | {
         name.replace(".", "_"): canonical for name, canonical in mapping.items()
@@ -344,62 +315,33 @@ class Spectronaut:
     ``R.`` a run, ``PG.`` a protein group, ``PEP.`` a peptide, ``EG.`` an
     elution group, ``FG.`` a fragment group, which is a precursor.
 
-    **The separator depends on the serialization.** The tab-separated export
-    writes ``R.FileName``; the parquet export writes ``R_FileName``, and turns
-    the space in ``PG.Cscore (Run-Wise)`` into an underscore as well. A dot is
-    a path separator in a nested parquet schema, so the export spells it out of
-    the way. Both are the same report and both are mapped.
+    Read as parquet or as tab-separated text; the extension decides, and a
+    caller does nothing to pick. The two are one report in two serializations
+    and come back as the same frame, which a test asserts -- but they do not
+    spell their column names the same way, hence both spellings below.
 
-    A report is configurable column by column, so what one lab's export holds is
-    not what another's does: 78 columns in the one this was written from. That
-    makes the intersection :meth:`~proteolyzer.core.loader.DataLoader._cols_to_load`
-    already takes load-bearing rather than convenient -- naming a column the
-    analysis did not write must not fail the read.
+    A report is configurable column by column, so a subset naming a column the
+    analysis did not write must not fail the read. The intersection
+    ``cols_to_load`` already takes is what makes that so.
 
-    Parquet and tab-separated text, because Spectronaut writes either and
-    parquet is what it writes by default. The two are one report in two
-    serializations rather than two formats: the same names, the same rename
-    mapping, the same built identifier, and a test asserting a report read both
-    ways comes back the same. Which is read is decided by the extension, so a
-    caller does nothing to pick.
-
-    Two things measured off that export -- 13 runs, 173,443 rows, 174 MB, tab
-    separated -- are worth knowing before reading one:
-
-    ``FG.Quantity`` spans 2.54 to 400,000 in the one column, so it is not on the
-    scale a DIA-NN area is. ``round_large_floats`` would throw away a fifth of a
-    precursor quantified at 2.54, and must stay off for this format, as it is by
-    default for every format.
-
-    ``FG.PrecWindowNumber`` says which of the method's isolation windows took the
-    precursor, which no other report read here states -- grouping by it recovers
-    the window scheme with no design file to hand. It is an integer, and a number
-    is never made categorical, so nothing has to keep it out of that.
+    ``docs/notes/spectronaut.md`` has what was measured off real exports,
+    including the quantity scale, the isolation-window column, and the two
+    things this block had wrong before v0.9.0.
     """
 
     #: A name the export sometimes goes by, not a name it must have. Kept
     #: because a report exported as one is then recognized without opening it.
     FILES: list[str] = field(default_factory=lambda: ["Report"])
-    #: ``<date>_<time>_<analysis>_Report`` is a shape an export often has and
-    #: never has to: **Spectronaut has no default output name** -- whoever runs
-    #: the analysis names it, and `GluC-30min.parquet` is as real an export as
-    #: any. So this is a shortcut, not the identification; COLUMN_SIGNATURE is
-    #: what actually settles it. Matched against the stem in full rather than
-    #: from its start, so a ``..._Report.setup`` beside a report is not taken
-    #: for it, and case-sensitively, because DIA-NN's ``report`` differs from a
-    #: bare ``Report`` by the one letter and a file two blocks claim is an
-    #: error rather than a guess.
+    #: A shape an export often has and never has to: Spectronaut has no
+    #: default output name, so this is a shortcut and COLUMN_SIGNATURE is the
+    #: identification. Matched against the stem in full, and case-sensitively.
     FILE_PATTERNS: list[str] = field(default_factory=lambda: [r".*_Report"])
-    #: Both. The pattern is over the stem, so it does not care which. DIA-NN
-    #: claims ``.parquet`` too, which is what the case-sensitivity above is
-    #: holding apart.
+    #: Both. DIA-NN claims ``.parquet`` too, which the case-sensitivity above
+    #: is what holds apart.
     FILE_EXTENSIONS: list[str] = field(default_factory=lambda: [".parquet", ".tsv"])
     #: What identifies the report when its name cannot, which is the usual
-    #: case. Any two of these settle it: they are level-prefixed the way no
-    #: other engine read here prefixes anything, in either spelling, and a
-    #: report configured without one of them still carries the rest. This is
-    #: the same call the cellenONE reader makes for the same reason -- which
-    #: file is which is worked out from the file, because names are unreliable.
+    #: case. Any two settle it: level-prefixed the way no other engine here
+    #: prefixes anything, in either spelling.
     COLUMN_SIGNATURE: frozenset[str] = field(
         default_factory=lambda: frozenset(
             _both_spellings(
@@ -420,30 +362,18 @@ class Spectronaut:
     COLS_RENAME_MAPPING: dict[str, str] = field(
         default_factory=lambda: _both_spellings(_SPECTRONAUT_COLUMNS)
     )
-    #: There is no EG.PrecursorId in every export -- there was none in the one
-    #: this was written from -- so the identifier the rest of the package keys
-    #: on is built from the two columns a fragment group always has. Stated
-    #: under the canonical names, since it is built after the rename.
+    #: No EG.PrecursorId in every export, so the identifier the rest of the
+    #: package keys on is built from the two columns a fragment group always
+    #: has. Under the canonical names, being built after the rename.
     BUILT_COLS: dict[str, tuple[str, ...]] = field(
         default_factory=lambda: {
             "Precursor.Id": ("Modified.Sequence", "Precursor.Charge")
         }
     )
     #: Columns the export writes as text that are not text, named as the file
-    #: names them so a caller keeping the file's own names gets them too.
-    #:
-    #: Spectronaut is inconsistent about this within one file: ``EG.Qvalue``
-    #: arrives as the string ``'1.99e-13'`` while ``PG.Qvalue`` beside it is a
-    #: double, and ``PEP.IsProteotypic`` is ``'False'`` while ``EG.IsDecoy`` is
-    #: a real boolean. A string q-value is not a lesser q-value, it is one that
-    #: raises `TypeError` the first time anyone filters on it.
-    #:
-    #: A list rather than a rule, because the rule gets it wrong:
-    #: ``FG.XICDBID`` is every-value-parses-as-a-number and is a database key,
-    #: and turning an identifier into an integer is the kind of quiet damage
-    #: this package exists not to do. ``EG.IsVerified`` is left alone for the
-    #: opposite reason -- every value in the measured export is the string
-    #: ``'NaN'``, so there is nothing there to say what it would be.
+    #: names them so a caller keeping the file's own names gets them too. A
+    #: list rather than a rule, because a rule turns the XIC database key into
+    #: an integer; see ``docs/notes/numbers-and-gaps.md``.
     NUMERIC_COLS: frozenset[str] = field(
         default_factory=lambda: _either_spelling(
             {
@@ -454,13 +384,13 @@ class Spectronaut:
             }
         )
     )
-    #: As above. ``'True'`` and ``'False'``, which the tab-separated export
-    #: writes as real booleans, so this is also what keeps the two agreeing.
+    #: As above. The tab-separated export writes these as real booleans, so
+    #: this is also what keeps the two serializations agreeing.
     BOOLEAN_COLS: frozenset[str] = field(
         default_factory=lambda: _either_spelling({"PEP.IsProteotypic"})
     )
-    #: Nothing. The columns worth keeping out are the quantitative ones, and
-    #: they are numbers, which are never converted whatever this says.
+    #: Nothing: the columns worth keeping out are numbers, which are never
+    #: converted whatever this says.
     EXCLUDE_CAT_CONVERSION: set[str] = field(default_factory=set)
 
 

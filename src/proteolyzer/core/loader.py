@@ -40,24 +40,9 @@ ASSUMED_AVAILABLE_MEMORY = 2 * 1024**3
 MISSING_TEXT = frozenset({"", "NaN", "nan", "NA", "N/A", "null", "None", "#N/A"})
 
 #: Text that is a gap written out rather than a value -- the one definition both
-#: readers use, so that a report read as text and the same report read as parquet
-#: agree about which cells are empty.
-#:
-#: Everything here is a machine artefact. ``NaN`` is ``str(float("nan"))``,
-#: ``<NA>`` is pandas' own, ``1.#IND`` and ``#N/A`` are what a C runtime and a
-#: spreadsheet write; an empty field is an empty field. None of them is a word in
-#: any language, so nothing is lost reading them as the gaps they are.
-#:
-#: **Words are deliberately absent**, and this is narrower than pandas' default
-#: on purpose. ``NA``, ``N/A``, ``None``, ``null`` and ``NULL`` are all nulled by
-#: ``read_csv`` unless told otherwise, and on a real Spectronaut export
-#: ``EG.InSourceFragmentationClass`` is a three-state classification --
-#: ``Likely Parent`` (1,117 rows), ``Likely Child`` (1,146) and ``None``
-#: (168,532), where ``None`` means the precursor is neither. Taking pandas'
-#: default there erased the third state into "not recorded" for 99% of the
-#: report, and the same file read as parquet kept it. That a column *may* use one
-#: of these words for an absence is true; that it may use one as a value is also
-#: true, and only one of those two mistakes is silent.
+#: readers use, so a report read as text and the same report read as parquet
+#: agree about which cells are empty. Machine artefacts only: no word is in here,
+#: deliberately. See ``docs/notes/numbers-and-gaps.md``.
 UNAMBIGUOUS_GAPS = frozenset(
     {
         "",
@@ -81,13 +66,9 @@ UNAMBIGUOUS_GAPS = frozenset(
 #: adding the words back.
 GAP_TEXT: list[str] = sorted(UNAMBIGUOUS_GAPS)
 
-#: What the stock parser needs to read a float the way the fast one does. Its
-#: default stops at about sixteen significant digits, so the q-value
-#: ``0.0007162974636774825`` came back ``0.0007162974636774`` from the fallback
-#: and exactly from pyarrow -- and this module promises the fallback is an
-#: optimization in reverse, not a different answer. It costs ~3x on the parse,
-#: on a path already chosen for being the one that fits in memory rather than
-#: the one that is quick.
+#: What the stock parser needs to read a float the way the fast one does; its
+#: default truncates at about sixteen significant digits. ~3x on the parse, on a
+#: path already chosen for fitting in memory rather than for being quick.
 EXACT_FLOATS: Literal["round_trip"] = "round_trip"
 
 #: What a flag written as text says. Compared lower-cased.
@@ -114,19 +95,12 @@ def _text(column: pd.Series) -> tuple[pd.Series, pd.Series]:
 def _arrow_numeric(text: pd.Series) -> pd.Series | None:
     """`text` parsed by Arrow, or ``None`` where Arrow would not have it.
 
-    Worth the detour twice over. It is ~23x quicker than ``pd.to_numeric`` on a
-    column this size, being a vectorized cast over the Arrow buffer the value
-    already sits in rather than a walk. And it is *more accurate*: pandas' own
-    float parser truncates at about sixteen significant digits, so the q-value
-    ``0.0007162974636774825`` comes back ``0.0007162974636774`` from
-    ``to_numeric`` and exactly from here -- which is also what
-    ``read_csv(engine="pyarrow")`` gives, so the two paths agree on the value
-    rather than nearly agreeing.
+    Integers first, so a column of whole numbers stays whole. ``None`` for
+    anything Arrow refuses, including a value that is not a number: the caller
+    re-reads it the slow way rather than guessing which it was.
 
-    Integers first, so a column of whole numbers stays whole, as it did when
-    ``to_numeric`` decided this. ``None`` for anything Arrow refuses, which
-    includes a value that is not a number: the caller re-reads it the slow way
-    and reports it properly rather than guessing which it was.
+    Quicker than ``pd.to_numeric`` and more accurate than it; both measured in
+    ``docs/notes/performance.md``.
     """
     try:
         values = pa.array(text)
@@ -144,30 +118,25 @@ def _arrow_numeric(text: pd.Series) -> pd.Series | None:
 def as_numeric(column: pd.Series) -> pd.Series | None:
     """`column` as numbers, or ``None`` if any value in it is not one.
 
-    All or nothing, deliberately. ``errors="coerce"`` would turn whatever it
-    could not read into a gap, which is the silent kind of wrong this package
-    is built against: the column would come back numeric, shorter by however
-    many values nobody was told about. A column that does not convert whole is
-    left exactly as it arrived, and the caller is told which value stopped it.
+    All or nothing, deliberately: ``errors="coerce"`` would hand back a numeric
+    column shorter by however many values nobody was told about. A column that
+    does not convert whole is left as it arrived and the caller told why.
     """
     text, missing = _text(column)
     blanked = text.where(~missing)
 
     numbers = _arrow_numeric(blanked)
     if numbers is None:
-        # Arrow would not take it, which is usually a value that is not a
-        # number and occasionally an input it has no cast for. Either way the
-        # slow parser settles which, and says so.
+        # Usually a value that is not a number, occasionally an input Arrow
+        # has no cast for. The slow parser settles which.
         numbers = pd.to_numeric(blanked, errors="coerce")
     if (numbers.isna() & ~missing).any():
         return None
 
     if not missing.any():
         # Plain numpy where nothing is missing, which is what the same report
-        # read from text gives and what `Narrower` decides for itself further
-        # down: a nullable dtype costs a mask byte per value and buys nothing
-        # until there is a gap to carry. Reading a report should not hand back
-        # a different dtype for having been serialized differently.
+        # read from text gives: a nullable dtype costs a mask byte per value
+        # and buys nothing until there is a gap to carry.
         return numbers.astype(
             "int64" if pd.api.types.is_integer_dtype(numbers) else "float64"
         )
@@ -223,13 +192,9 @@ class DataLoader(Logged):
         self.file = file
         self.data = self._auto_load()
 
-        # A text reader turns these into gaps itself, being handed GAP_TEXT, so
-        # this is what makes a parquet read agree with one about what a gap is.
-        # It runs on every read: skipping it where the reader has already done
-        # the work measured as no faster -- an `isin` over an Arrow string
-        # column is ~3 ms -- and would have coupled this to which readers are
-        # passed GAP_TEXT, where drifting out of step brings back the exact bug
-        # the pass exists to prevent.
+        # Runs on every read. Skipping it where the reader has already done
+        # the work measured as no faster, and would couple this to which
+        # readers get GAP_TEXT -- see docs/notes/performance.md.
         self.data = self._close_text_gaps()
 
         # Before the rename, because these are named as the file names them --
@@ -324,14 +289,9 @@ class DataLoader(Logged):
     def _close_text_gaps(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """Read the text that means "no value" as no value.
 
-        A delimited reader does this for itself -- ``NaN`` and an empty field
-        both arrive as gaps out of ``read_csv`` -- and parquet does not, because
-        it stores the string it was given. So the same report read the two ways
-        disagreed about which cells were empty, and the parquet one lied the
-        worse way round: ``pd.isna`` says False of the string ``"NaN"``, so the
-        gap read as data all the way to whatever plotted it.
-
-        Only the two spellings that are not words. See :data:`UNAMBIGUOUS_GAPS`.
+        A delimited reader does this for itself, being handed :data:`GAP_TEXT`;
+        parquet stores the string it was given, so this is what makes the two
+        agree. Only spellings that are not words.
         """
         df = self.data if df is None else df
 
@@ -352,17 +312,10 @@ class DataLoader(Logged):
     def _retype_cols(self, df: pd.DataFrame | None = None) -> pd.DataFrame:
         """Give back the dtype to columns the format wrote as text.
 
-        Some engines serialize a number or a flag as a string -- Spectronaut
-        writes ``EG.Qvalue`` as ``'1.99e-13'`` while writing ``PG.Qvalue``
-        beside it as a double -- and a q-value that is a string raises
-        ``TypeError`` the first time anyone filters on it. Which columns those
-        are is a fact about the format, so the format block says; see
-        :class:`~proteolyzer.core.formats.Spectronaut` for why it is a list and
-        not a rule.
-
-        Runs before the rename, on the file's own names, so a caller reading
-        with ``rename=False`` gets it too. A column already stored properly is
-        left alone, since an export that got it right must not be undone.
+        Which columns those are is a fact about the format, so the format
+        block says. Runs before the rename, on the file's own names, so a
+        caller reading with ``rename=False`` gets it too; a column an export
+        already stored properly is left alone.
         """
         df = self.data if df is None else df
 
@@ -404,11 +357,9 @@ class DataLoader(Logged):
         text, in the order given. Runs after the rename and only when renaming,
         so both sides are in the core's vocabulary.
 
-        Skipped where the file already carries the column -- an export that was
-        configured to write it is taken at its word -- and where a column it
-        would be built from was not read, which is the same intersection every
-        other subset is: a caller that asked for two columns of a report is told
-        what could not be built out of them rather than handed a third.
+        Skipped where the file already carries the column, and where a column
+        it would be built from was not read -- the same intersection every
+        other subset is, with the caller told what could not be built.
         """
         df = self.data if df is None else df
 

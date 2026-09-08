@@ -113,6 +113,12 @@ nav:
       - guide/memory.md
       - guide/plots.md
       - guide/reference-data.md
+  - Notes:
+      - notes/index.md
+      - notes/recognising-a-format.md
+      - notes/spectronaut.md
+      - notes/numbers-and-gaps.md
+      - notes/performance.md
   - API reference: reference/
   - Changelog: changelog.md
 

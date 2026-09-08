@@ -13,76 +13,38 @@ other change. It used to name DIANN and MaxQuant, which is why adding JMod and
 FragPipe touched `models.py` at all.
 
 **Every format is identified by its columns; the name is only a shortcut.**
-A file name is a convention people depart from -- they rename what they
+A file name is a convention people depart from — they rename what they
 downloaded, and Spectronaut has no default output name to depart from in the
-first place -- so `COLUMN_SIGNATURE` is what actually says which engine wrote a
-file, read from a parquet footer or one header line. The name is still asked
-first, so a file called what its engine calls it is claimed without being opened
-and every release before this behaved identically. It is the same call the
-cellenONE reader makes two sections down, and it was made there first: *names are
-unreliable.*
+first place. So `COLUMN_SIGNATURE` is what says which engine wrote a file, with
+`NARROW_SIGNATURES` for a table too small to sign by an overlap of names. The name
+is still asked first, so a file called what its engine calls it is claimed without
+being opened. It is the same call the cellenONE reader makes two sections down,
+and it was made there first: *names are unreliable.*
 
-The guards are what make it safe rather than clever. Two columns have to match,
-because one familiar name turns up in frames people derive from a report and
-write back out. A peek that fails is answered with no columns rather than an
-exception, since choosing a reader is not the place to raise about a file. And
-detection refuses a file two formats claim, which cuts both ways: a signature
-reaching another engine's table would not mis-read one file, it would make *both*
-unreadable -- so an invariant test walks every real table of every engine and
-asserts exactly one claims it. Four column names are shared between engines and
-can be in no signature at all: `Charge` and `Intensity` (MaxQuant and FragPipe),
-`PEP` (MaxQuant and DIA-NN), `rt` (JMod and DIA-NN's XIC export). That list is
-why the test checks the tables instead of trusting that nobody reached for them.
-
-**A table an overlap of names cannot claim is claimed by its whole shape.**
-DIA-NN's XIC export is `pr`, `feature`, `rt`, `value` — four words that belong to
-nobody, one of which is JMod's. Recording that as unsignable was giving up too
-early: what separates them is not *which* of those names is present but that
-**all** of them are and there is almost nothing else, four columns against JMod's
-thirty-four. So `Narrow` asks for both, and either alone would do here — JMod
-holds one of the four, and is eight times too wide. Requiring all of a small
-schema is the strong form of a signature; the width is the second lock, against a
-frame that carries those four words among two hundred others.
-
-What it does not do is override a name that matches. A FragPipe table renamed to
-`report.tsv` reads as DIA-NN, because the name is asked first and answers.
-Preferring the columns would mean opening every file to find out, and nothing
-here can tell a rename from a report; what it costs is the wrong rename mapping
-on a file somebody deliberately misnamed.
+Detection refuses a file two formats claim, which is why four column names can be
+in no signature at all, and why an invariant test walks every real table of every
+engine. The four, the margins, and the two limits this leaves are in
+[docs/notes/recognising-a-format.md](docs/notes/recognising-a-format.md).
 
 **A format's names can depend on how it was serialized.** Spectronaut's
 tab-separated export writes `R.FileName` and its parquet export writes
 `R_FileName`, a dot being a path separator in a nested parquet schema. v0.8.0
-shipped parquet support that assumed otherwise and silently renamed nothing.
-Both spellings are carried, derived from one list rather than written out twice,
-because two lists of seventeen names differing by one character is two lists that
-drift. A rename mapping is applied by name and a name the file lacks does
-nothing, so holding both costs a dict twice the size and buys never having to ask
-which serialization is in front of it.
+shipped parquet support that assumed otherwise and renamed nothing. Both spellings
+are carried, derived from one list rather than written out twice, because two lists
+of seventeen names differing by one character is two lists that drift.
 
-**A file is recognized by name, or by pattern where there is no name to match.**
-Four of the five engines name their own output, so `FILES` is a list of exact
-names and that is the whole of it. Spectronaut stamps its export with the date,
-the time and the name of the analysis — `20260901_164751_..._Report.tsv` — so
-`FILE_PATTERNS` says what the stem has to look like instead. Two details are
-load-bearing. The pattern matches the stem *in full*, because Spectronaut writes
-a `..._Report.setup.txt` beside the report and a prefix match takes one for the
-other. And it is case-sensitive, because DIA-NN's `report.tsv` is one capital
-letter from a bare `Report.tsv`: detection refuses to choose between two
-claimants, so a pattern that reached another block's name would not mis-read that
-engine's output, it would make it unreadable. An invariant test walks every name
-every block lists and asserts exactly one block claims it.
+**A word is not a gap, and a machine artefact is.** `read_csv` nulls `NA`, `None`
+and `null` by default; a real Spectronaut column is a three-state classification
+whose third state is the word `None`, in 168,532 rows of 170,795. So both readers
+null one explicit set of artefacts and no words, and the two serializations agree
+about which cells are empty. What is in that set and what it cost is in
+[docs/notes/numbers-and-gaps.md](docs/notes/numbers-and-gaps.md).
 
-**A format may say how to build a column it does not write.** A Spectronaut
-report has no one column for the precursor — `EG.PrecursorId` is not in every
-export — and `Precursor.Id` is what the rest of this package keys on;
-`DataProcessor` asks for it in its constructor, before a single one of its own
-steps runs. So `BUILT_COLS` is joined in the loader, after the rename and only
-when renaming: the names on both sides are the core's vocabulary, and
-`rename=False` is a caller saying it does not want that vocabulary. It is skipped
-where the file already carries the column, and where a column it would be built
-from was not read — the same intersection every subset is, told to the caller
-rather than guessed around.
+**A number written as text is parsed by Arrow, not by pandas.** Quicker, and the
+more accurate of the two: pandas' float parser truncates at about sixteen
+significant digits, which also made the stock CSV fallback disagree with the fast
+parser it is supposed to be an optimization in reverse of. Measured in
+[docs/notes/performance.md](docs/notes/performance.md).
 
 **Which columns to keep is the caller's, and this package keeps no list.** A
 format block says what the file *is* -- which names it goes by, how its columns
