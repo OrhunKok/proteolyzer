@@ -10,6 +10,24 @@ ImportError.
 
 ## Unreleased
 
+### Removed
+
+- `core.io` (`read_frame`, `write_frame`, `frame_exists`) and `core.pipeline`
+  (`Stage`, `NullQueue`). They were parquet interchange and stage plumbing for
+  the out-of-tree pipelines that no longer exist, and nothing used them:
+  not this package, and not either consumer — checked by cloning both and
+  grepping, rather than by trusting a search index.
+
+  Dead public surface is not free. It is tested, type-checked, documented, and
+  has to be considered for compatibility on every release. This repository's
+  own rule is that code lives here when a consumer wants it; the same rule
+  removed `LOAD_COLS` in v0.4.0 and refused `quirks.py`.
+
+  **What a consumer has to do.** Nothing, unless you import one of those five
+  names — in which case they were 55 and 95 lines, and lifting them into your
+  own repository is the whole of the migration. `core.logging` is unaffected
+  and stays: it is what every class here logs through.
+
 ### Changed
 
 - The README and the docs no longer point at `proteolyzer-cellenone` and

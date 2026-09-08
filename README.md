@@ -214,10 +214,10 @@ was pulled back in for v0.2.0 because two repositories were maintaining separate
 copies of it and had independently fixed the same bug, which is one copy more
 than the problem needed.
 
-`core.io`, `core.logging` and `core.pipeline` are plumbing for a pipeline built
-on this one — parquet interchange, the shared logger, stage parameters and a
-provenance log. Nothing in this repository or in either consumer of it uses them
-today, so treat that surface as available rather than as load-bearing.
+`core.io` and `core.pipeline` — parquet interchange and stage plumbing — were
+that surface, and are gone as of v0.16.0: nothing in this repository or in either
+consumer used them. `core.logging` stays, being what every class here logs
+through.
 
 ## Development
 

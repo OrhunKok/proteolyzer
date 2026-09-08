@@ -17,9 +17,8 @@ install:
 test:
 	pytest
 
-# The pipelines that used to live here are their own repos now, so a change to
-# core.io, core.logging, core.pipeline or reference no longer breaks a test in
-# this suite -- it breaks one in theirs. Neither consumer's suite is pytest,
+# A change to the reading path or to reference breaks a test in a consumer's
+# suite before it breaks one here. Neither consumer's suite is pytest,
 # and each has its own way of picking up the working tree, so each is wired in
 # by name rather than discovered generically. Both are private repositories:
 # a consumer this machine has no checkout of under downstream/ is skipped, not
