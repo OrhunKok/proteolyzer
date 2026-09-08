@@ -8,8 +8,8 @@
 
 Proteolyzer is a Python package for processing, analyzing, and visualizing
 proteomics data. It reads DIA-NN, Spectronaut, MaxQuant, JMod and FragPipe
-output, normalizes it into a consistent shape, and provides the domain pipelines
-used for single-cell sample preparation and amino acid substitution discovery.
+output, normalizes it into a consistent shape, and reads a cellenONE run
+directory for single-cell sample preparation.
 
 **Documentation:** <https://OrhunKok.github.io/proteolyzer/>
 
@@ -206,20 +206,18 @@ load on first access, so a missing extra only fails for the module that needs
 it — `tests/test_package_boundaries.py` enforces that, including that importing
 proteolyzer does not pull in matplotlib.
 
-## Domain pipelines
+## Instrument pipelines
 
-Pipelines for a particular instrument or assay live in their own repositories,
-built on this core, so that neither their dependencies nor their release
-cadence lands on everyone installing it:
+Reading a cellenONE preparation is part of this package: `proteolyzer.cellenone`,
+imported on first access, documented in the [guide](docs/guide/cellenone.md). It
+was pulled back in for v0.2.0 because two repositories were maintaining separate
+copies of it and had independently fixed the same bug, which is one copy more
+than the problem needed.
 
-| repository | what it does |
-|---|---|
-| [proteolyzer-cellenone](https://github.com/OrhunKok/proteolyzer-cellenone) | maps single cells prepared on a cellenONE to well positions, and flags well/label clashes |
-| [proteolyzer-aas](https://github.com/OrhunKok/proteolyzer-aas) | discovery of amino acid substitutions ([paper](https://decode.slavovlab.net/)) |
-
-Each uses `core.io` for the parquet interchange, `core.logging` for the logger,
-and `core.pipeline` for stage plumbing and provenance. That surface is what to
-keep stable.
+`core.io`, `core.logging` and `core.pipeline` are plumbing for a pipeline built
+on this one — parquet interchange, the shared logger, stage parameters and a
+provenance log. Nothing in this repository or in either consumer of it uses them
+today, so treat that surface as available rather than as load-bearing.
 
 ## Development
 

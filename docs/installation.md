@@ -22,17 +22,12 @@ pip install -e '.[docs]'      # this documentation
 
 The core install pulls in pandas, numpy and pyarrow, plus the plotting stack.
 
-## Domain pipelines
+## Instrument pipelines
 
-The cellenONE and amino acid substitution pipelines were moved into their own
-repositories, so neither their dependencies nor their release cadence land on
-everyone installing the core:
-
-- [proteolyzer-cellenone](https://github.com/OrhunKok/proteolyzer-cellenone)
-- [proteolyzer-aas](https://github.com/OrhunKok/proteolyzer-aas)
-
-Each depends on this package and uses `core.io`, `core.logging` and
-`core.pipeline`.
+The cellenONE reader is part of this package, under `proteolyzer.cellenone`, and
+is imported on first access — so a core install does not pay for it and nothing
+extra has to be installed to use it. See the
+[cellenONE guide](guide/cellenone.md).
 
 !!! note "LaTeX for the default plot theme"
 
