@@ -17,6 +17,10 @@
     }
   },
 
+  // Read only when VS Code attaches, and nothing below depends on it: the
+  // container is driven by `devcontainer up` from a terminal now, so treat this
+  // block as the fallback for an editor that may not be opened. Formatting is
+  // enforced by `make lint` and .pre-commit-config.yaml, not by these settings.
   "customizations": {
     "vscode": {
       "extensions": [
@@ -51,9 +55,14 @@
   // and the command history and Claude config in the old one are silently left
   // behind. Two checkouts with the same directory name would share volumes, so
   // keep the directory names distinct.
+  //
+  // The `gh` volume is what makes this container's own GitHub login survive a
+  // rebuild. It is only load-bearing when nothing is forwarding a credential in
+  // from the host -- which is every start that is not VS Code's. See README.md.
   "mounts": [
     "source=claude-code-bashhistory-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
-    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume"
+    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
+    "source=claude-code-gh-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume"
   ],
   "containerEnv": {
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true",
@@ -64,9 +73,9 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  // Make `gh` read the credential the container already has for git. Idempotent.
-  // This one line is what replaced a shared repository, a read-only mount, an
-  // installer and two session hooks -- see DECISIONS.md.
+  // Sort out `gh` and `git` credentials for whichever way the container was
+  // started. Idempotent. This one line is what replaced a shared repository, a
+  // read-only mount, an installer and two session hooks -- see DECISIONS.md.
   "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /workspace/.devcontainer/gh-auth.sh' >> ~/.zshrc",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"

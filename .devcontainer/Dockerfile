@@ -50,9 +50,12 @@ ENV DEVCONTAINER=true
 # no warning, and sudo here is restricted to init-firewall.sh. decoder hit exactly
 # that on a shared memory volume: five files failed to restore and the script died
 # on a bare Permission denied. Creating it node-owned here means a volume mounted
-# over it inherits that instead.
-RUN mkdir -p /workspace /home/node/.claude/projects/-workspace/memory && \
-  chown -R node:node /workspace /home/node/.claude
+# over it inherits that instead. /home/node/.config/gh is the same case and does
+# have a mount: `gh auth login` writes hosts.yml there, and a root-owned volume
+# would fail that write with a bare Permission denied.
+RUN mkdir -p /workspace /home/node/.claude/projects/-workspace/memory \
+  /home/node/.config/gh && \
+  chown -R node:node /workspace /home/node/.claude /home/node/.config
 
 WORKDIR /workspace
 

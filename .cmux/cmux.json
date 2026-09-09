@@ -1,0 +1,23 @@
+{
+  "commands": [
+    {
+      "name": "Devcontainer shell",
+      "description": "zsh inside this repository's sandbox",
+      "keywords": ["devcontainer", "shell", "zsh", "sandbox"],
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/up.sh"
+    },
+    {
+      "name": "Claude in devcontainer",
+      "description": "Claude Code inside the sandbox, with the firewall applied",
+      "keywords": ["claude", "agent", "sandbox"],
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/up.sh claude"
+    },
+    {
+      "name": "Rebuild devcontainer",
+      "description": "discard the container and build it from the Dockerfile again",
+      "keywords": ["rebuild", "devcontainer", "docker"],
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && REBUILD=1 ./.devcontainer/up.sh",
+      "confirm": true
+    }
+  ]
+}
