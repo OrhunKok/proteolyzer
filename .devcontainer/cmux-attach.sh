@@ -70,11 +70,30 @@ fi
 
 # Written on every attach rather than mounted: a mount that has to exist is a
 # container that will not start on the day the file is missing.
+#
+# The path is spelled out rather than reached through $HOME, because `docker exec
+# -u` does not reliably set HOME -- and the earlier version of this, which used
+# "$HOME/.ssh", wrote somewhere sshd never looks and failed with nothing but
+# `Permission denied (publickey)`.
+#
+# chmod explicitly too. `mkdir -p` leaves an existing directory's mode alone, and
+# the node image ships ~/.ssh as 755, so umask alone does not make it 700.
 docker exec -i -u node "$container" sh -c '
-    umask 077
-    mkdir -p "$HOME/.ssh"
-    cat > "$HOME/.ssh/authorized_keys"
+    set -e
+    mkdir -p /home/node/.ssh
+    cat > /home/node/.ssh/authorized_keys
+    chmod 700 /home/node/.ssh
+    chmod 600 /home/node/.ssh/authorized_keys
 ' < "$key.pub"
+
+# Read it back. A key that silently did not land is the failure this whole block
+# exists to prevent, and it is invisible until ssh refuses.
+if ! docker exec "$container" cat /home/node/.ssh/authorized_keys 2>/dev/null \
+        | grep -qF "$(cut -d' ' -f2 < "$key.pub")"; then
+    echo "cmux-attach: the public key is not in the container's authorized_keys." >&2
+    echo "cmux-attach: container=$container key=$key.pub" >&2
+    exit 1
+fi
 
 # Idempotent, and covers a container that was already up from before sshd was
 # part of this image.
@@ -93,6 +112,23 @@ if command -v nc >/dev/null 2>&1; then
     done
 fi
 
+# Prove the login works before handing the connection to cmux. cmux reports a
+# refused key as "the remote VM may have been paused, destroyed, or lost
+# network", which is true of almost nothing and sends you looking in the wrong
+# place; ssh's own message names the actual problem.
+if ! ssh -o BatchMode=yes \
+        -o IdentitiesOnly=yes \
+        -o UserKnownHostsFile=/dev/null \
+        -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=5 \
+        -i "$key" -p "$port" node@127.0.0.1 true 2>/tmp/cmux-attach-ssh.$$; then
+    echo "cmux-attach: ssh into the container failed. ssh said:" >&2
+    sed 's/^/cmux-attach:   /' /tmp/cmux-attach-ssh.$$ >&2
+    rm -f /tmp/cmux-attach-ssh.$$
+    exit 1
+fi
+rm -f /tmp/cmux-attach-ssh.$$
+
 remote_command="cd /workspace"
 if [ "$#" -gt 0 ]; then
     remote_command="cd /workspace && $*"
@@ -106,11 +142,17 @@ fi
 #
 # --no-forward-agent for the reason the container holds its own gh credential:
 # it is a sandbox, and the host's ssh agent is not part of what it gets.
+#
+# IdentitiesOnly=yes because `-i` only *adds* a key: ssh still offers everything
+# in the agent first, and a well-stocked agent can exhaust MaxAuthTries before
+# reaching the one key that would have worked. That failure also arrives as a
+# bare `Permission denied (publickey)`.
 exec cmux ssh "node@127.0.0.1" \
     --port "$port" \
     --identity "$key" \
     --name "$(basename "$repo")" \
     --no-forward-agent \
+    --ssh-option IdentitiesOnly=yes \
     --ssh-option UserKnownHostsFile=/dev/null \
     --ssh-option StrictHostKeyChecking=no \
     --command "$remote_command"
