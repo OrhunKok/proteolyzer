@@ -56,6 +56,16 @@ credential.helper` clears it, or rebuild.
 `.pre-commit-config.yaml` are what enforce formatting here, and they run in the
 container either way.
 
+**Where you edit is not one of them**, though it looks like it should be. The
+Dev Containers extension puts the editor *inside* the container, so losing it
+reads as losing somewhere to write code — and cmux is a terminal with no editor
+in it. But `workspaceMount` is a bind: the files are on the Mac the whole time,
+and `/workspace` is a view of them. Any native editor opens the checkout
+directly, with no container in the path. What belongs in here is running things
+— the agent, the tests, anything that should be behind the firewall — not
+typing. That is a better arrangement than the one being replaced, not a
+casualty of it.
+
 Three entries in `init-firewall.sh` — `marketplace.visualstudio.com`,
 `vscode.blob.core.windows.net`, `update.code.visualstudio.com` — exist so the VS
 Code server and its extensions can install themselves inside the container. They
@@ -139,6 +149,16 @@ this is the port being on loopback and the key being one the script made.
 - `cmux workspace loading on`, `cmux read-screen`, `cmux send` — the CLI is
   relayed as a whole, not a subset.
 - Terminals that survive cmux quitting, and reconnect on relaunch.
+
+`install-cmux-hooks.sh`, run once per `~/.claude` volume from inside the
+container, uses that to fix the one thing cmux gets wrong about a containerised
+agent. It only draws its status pill for a process it recognises as an agent,
+and it recognises the `claude` its own wrapper started on the host — not one in
+here, which is a generic process to it. So the hooks drive the documented
+workspace lane instead: `cmux workspace status set needs-attention` when Claude
+asks something, `auto` when it stops. The sidebar row goes amber and back on its
+own. Every hook is guarded on `command -v cmux`, so it is silent on the `up.sh`
+path rather than an error every turn.
 
 An OSC escape sequence still works too, and needs nothing installed:
 
