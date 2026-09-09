@@ -385,6 +385,28 @@ So the changes this file actually attracts are cross-cutting fixes rather than
 project-specific features, and that is the profile that eventually wants one
 image. A file that changed weekly with per-project tweaks would not.
 
+**What pinning does not answer**, and the reason the bar for switching should
+stay high. A pinned tag makes the *bytes* independent — a project publishing a
+new tag cannot move a project that did not bump — but the coupling that remains
+is in the process:
+
+- Someone has to publish. A Dockerfile change stops being an edit and becomes an
+  edit, a build, a push and N pin bumps.
+- **It does not reduce the number of pull requests.** A fix all N projects need
+  is still N bumps; what is saved is writing the fix N times, not landing it N
+  times. So it pays when a fix is hard to write, or when a project would
+  otherwise be forgotten entirely — and barely at all when it is a one-line
+  change to an obvious place.
+- Divergent needs have to be negotiated into one Dockerfile or pushed into a
+  `FROM` layer, where today they are simply unrelated.
+- A project that goes `image:`-only cannot build from source any more, so the
+  registry becomes load-bearing for starting work at all. Keeping the Dockerfile
+  as a fallback means maintaining both.
+
+Copies trade a silent-drift risk for none of that. Three projects and a 4 KB
+file is a small enough drift risk to keep paying, and the honest summary is that
+the two options are closer than the section above makes them sound.
+
 **Pin the content tag, never `latest`**, and [DECISIONS.md](../DECISIONS.md) is
 the reason rather than taste. What was torn out on 2026-08-23 was shared
 *content that had to be kept current and misled silently when it was not*, and
