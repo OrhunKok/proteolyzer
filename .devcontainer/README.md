@@ -1,8 +1,13 @@
 # The sandbox, without VS Code
 
-Claude Code runs in this container so that a firewall stands between it and
+Two reasons, and the order matters when weighing a replacement. The first is
+that the environment is a file in git, so another machine is a clone rather than
+an afternoon. The second is that a firewall stands between Claude Code and
 everything that is not GitHub, PyPI, npm or the Anthropic API — see
 `init-firewall.sh`, which is why `runArgs` asks for `NET_ADMIN`.
+
+Most things that claim to replace this replace the second reason only. See
+[Moving to another machine](#moving-to-another-machine).
 
 The container is defined by `devcontainer.json` and nothing about it needs an
 editor:
@@ -271,6 +276,47 @@ is what this repository uses. [APPLE.md](./APPLE.md) has the evidence, the
 config to swap in, and the one upstream issue to watch. OrbStack is the
 meanwhile option: it makes Docker faster without making it different, so nothing
 here changes.
+
+## Moving to another machine
+
+Most of it already travels, and it is worth being exact about which part does
+not:
+
+| | travels | how |
+|---|---|---|
+| the environment itself | yes | `Dockerfile` and `devcontainer.json`, in git |
+| the workspace | yes | a bind mount, so wherever you cloned |
+| the cmux commands | yes | `.cmux/cmux.json`, in git |
+| the ssh key and host key | yes | `cmux-attach.sh` and `start-sshd.sh` make them if absent |
+| **the three named volumes** | **no** | `state.sh` |
+
+The volumes are the gap, and one of them matters: `/home/node/.claude` holds
+settings, project state and the agent's memory directory. `state.sh export`
+writes them to a tarball you copy across and `state.sh import` puts them back.
+The `gh` volume is excluded unless you ask for it, because including it writes a
+GitHub token into that tarball in plaintext and `gh auth login` is one command
+on the far side. Volume names are keyed on the directory basename, so the
+checkout has to be named the same over there — the same constraint
+`devcontainer.json` already documents.
+
+**The macOS-only parts are the frontend, not the environment**, which is the
+distinction to keep. cmux does not run on Linux and neither does Apple
+`container`; `up.sh` does, on any Docker host. That is why both scripts exist
+rather than one: `cmux-attach.sh` is the nice thing on a Mac and `up.sh` is the
+one that still works on a Linux box, and neither is the source of truth.
+
+**`devcontainer.json` stays the source of truth for the same reason.** Every
+alternative weighed here trades a standard several tools implement — the CLI,
+VS Code, Codespaces, JetBrains, `adevcontainer` — for a bespoke config only its
+own tool reads: AgentBox has `agentbox.yaml`, `claude-contained` has a launcher
+script, Sculptor has an app. Each is a better product in some direction and all
+of them cost the property that made this worth building.
+
+Worth naming because it is a tempting swap: Claude Code's own sandboxing —
+macOS Seatbelt plus a domain-allowlisting proxy — is a real answer to the
+*second* reason and no answer at all to the first. A Seatbelt policy does not
+carry a Python version, a toolchain or an installed package to a new machine.
+Good security, not portability.
 
 ## Other repositories
 
