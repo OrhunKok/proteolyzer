@@ -187,12 +187,41 @@ not force-proxy.
 **`--transport mosh`.** Mosh needs inbound UDP in the 60000 range and the
 firewall drops all UDP but DNS. Stay on the SSH transport.
 
-### If what you wanted was devcontainers managed for you
+### Other answers to the same problem
 
-[ccmanager](https://github.com/kbwo/ccmanager) runs the agent session inside the
-devcontainer as a first-class feature, with the manager on the host. The trade is
-a session manager instead of a terminal — no browser pane, no splits, no socket
-API, and none of the above.
+[cmux-devcontainer-bridge](https://github.com/zackey-heuristics/cmux-devcontainer-bridge)
+is a Go daemon on the host listening on `127.0.0.1:8765`. A Claude Code hook in
+the container `POST`s to `host.docker.internal:8765/notify`, and the bridge
+execs `cmux notify` on the host. It exists for exactly the gap this file
+describes, and it solves it from the other side: instead of getting a `cmux`
+into the container, it gets the container's message out to the one on the host.
+
+Not adopted here, for two reasons rather than one. Over `cmux ssh` the real CLI
+is already in the container, authenticated per workspace, with nothing listening
+on the host. And on the `up.sh` path the OSC hook above needs no daemon at all.
+What the bridge adds over OSC is structured title/subtitle/body and the ability
+to name a workspace by ID when the hook has no tty to write to — real, but
+narrow.
+
+Two things worth knowing before reaching for it anyway. `--token` is empty by
+default, so anything in the sandbox that can reach the host gateway can drive
+`cmux notify`; and nothing here would need opening for that, because
+`init-firewall.sh` already accepts the host network in both directions. The exec
+itself is safe by construction — `internal/notifier/cmux.go` hardcodes the
+`notify` subcommand and passes values as argv rather than a shell string, and
+the server uses a constant-time token compare and a body limit. It is one
+release, one author and no stars, so build it from source; it has no third-party
+dependencies, which makes that easy. Its example overlay assumes the cmux
+devcontainer's router/sandbox compose split, which this container does not have.
+
+What was worth taking from it outright is in `up.sh`:
+`devcontainer exec --remote-env CMUX_WORKSPACE_ID=... CMUX_SURFACE_ID=...`.
+Without it a hook inside the container has no idea which pane it belongs to.
+
+[ccmanager](https://github.com/kbwo/ccmanager) is the other shape: it runs the
+agent session inside the devcontainer as a first-class feature, with the manager
+on the host. The trade is a session manager instead of a terminal — no browser
+pane, no splits, no socket API, and none of the above.
 
 ## Other repositories
 
