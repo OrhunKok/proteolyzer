@@ -1,9 +1,15 @@
-# Apple `container` instead of Docker
+# Apple's stack, and where this container stops
+
+Two questions, both about the same boundary. First: can this sandbox run on
+Apple's own container runtime instead of Docker. Second: can Apple's on-device
+AI stack, Core AI, be used from inside it. Nothing below was run — this machine
+has neither macOS nor any of the tools. It is read off the projects' own
+specifications and PyPI metadata, cited so the claims can be rechecked when
+they move.
+
+## Running the sandbox on Apple `container`
 
 **Verdict: the runtime is ready, the devcontainer layer is one feature short.**
-Nothing below was run — this machine has neither macOS nor either tool. It is
-read off the two projects' own specifications, cited so the claims can be
-rechecked when they move.
 
 The appeal is real and it is not just tidiness. Under Docker this container is
 reached through a published loopback port that Docker picks at random, which is
@@ -153,3 +159,37 @@ So: stay on Docker, and watch one thing —
 [apple/container#2112](https://github.com/apple/container/issues/2112), where
 `adevcontainer`'s author offers it as a `container` plugin. When `build` support
 lands, this is a swap of one file and one build command.
+
+## Core AI, and why it stays on the host
+
+[Core AI](https://developer.apple.com/documentation/coreai) is Apple's on-device
+stack after Core ML: its own IR, models exported as standalone `.aimodel` files,
+and a compiler and runtime behind them.
+[`apple/coreai-torch`](https://github.com/apple/coreai-torch) lowers a
+`torch.export.ExportedProgram` into that IR;
+[`apple/coreai-models`](https://github.com/apple/coreai-models) carries export
+recipes, a Swift runtime package, and agent skills.
+
+**Running a model is macOS/iOS 27 and Xcode 27**, so that half is host-only and
+not arguable — the same boundary as everything else in this file.
+
+**Converting one could in principle happen in here, and cannot today**, for two
+reasons worth writing down because both are silent until you try:
+
+- `coreai-torch` is `py3-none-any`, but it hard-depends on `coreai-core`, which
+  declares `requires_python = ">=3.10,<3.14"`. `devcontainer.json` pins the
+  Python feature to **3.14**. Out of range on the version this container is
+  built around.
+- `coreai-core` has only ever published `macosx_26_0_arm64`, `manylinux1_x86_64`
+  and `manylinux_2_34_x86_64` wheels — across both releases, **no Linux
+  aarch64**. On an Apple silicon Mac this container is arm64 Linux, so there is
+  no wheel for it at any Python version. That one is not fixable from this side.
+
+The x86_64 manylinux wheels say Apple means the export path to be usable off a
+Mac, so ARM Linux is plausibly a matter of time. Until then: on the host.
+
+The agent skills in `coreai-models` (`working-with-coreai`, `model-authoring`,
+`model-compression-exploration`) follow the runtime for the same reason. They
+drive `coreai-torch` and `coreai-opt` against a Mac, so they belong to a Claude
+Code running on the host, not to the one in here — even though
+`/home/node/.claude` is a volume and would happily hold them.
