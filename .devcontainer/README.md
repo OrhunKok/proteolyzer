@@ -336,7 +336,34 @@ Good security, not portability.
 
 ## Other repositories
 
-`streamlit-DO-MS` and `decoder` carry their own copy of this container. Nothing
-here reaches into them: the change is a handful of files and a `gh auth login`,
-applied in each repository by that repository, which is the same rule as
-everything else on the account.
+`streamlit-DO-MS` and `decoder` carry their own copy of this container, and so
+does every other project with a Claude sandbox. Nothing here reaches into them:
+a change is applied in each repository by that repository, which is the rule
+everywhere else on the account.
+
+Copying is fine for the config and wasteful for the image. **Nothing in this
+`Dockerfile` is specific to this repository** — no Python, no project paths, no
+`src/`; it is node, the tools, `gh`, Claude Code, the firewall and sshd. The
+Python comes from a `features` entry in `devcontainer.json`, which is where the
+per-project part belongs. So the same image serves every project, and the honest
+description of the status quo is that one generic image is being maintained N
+times by hand.
+
+`publish.sh` with a neutral name is the fix:
+
+```bash
+IMAGE=ghcr.io/orhunkok/claude-devcontainer ./.devcontainer/publish.sh
+```
+
+Each project then keeps a thin `devcontainer.json` pinning a tag, with its own
+`features`, `mounts` and lifecycle. Changing the firewall becomes one edit, one
+publish and N pin bumps, instead of N edits that drift.
+
+**Pin the content tag, never `latest`**, and [DECISIONS.md](../DECISIONS.md) is
+the reason rather than taste. What was torn out on 2026-08-23 was shared
+*content that had to be kept current and misled silently when it was not*, and
+the test it leaves behind is: *can it be out of date?* A tag like
+`:4a0b18e1ff50` cannot — it is immutable, the consumer owns its pin, and a
+project on an old one is behind rather than broken. That is the same shape as
+two repositories pinning a wheel from here. `:latest` fails the same test for
+the same reason: it changes under a project that did not ask it to.

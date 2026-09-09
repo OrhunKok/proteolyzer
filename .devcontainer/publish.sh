@@ -31,7 +31,13 @@ fi
 
 # GHCR wants the owner lowercased; the repository part may keep its case but
 # there is no reason to find out the hard way.
-image="ghcr.io/$(echo "$slug" | tr '[:upper:]' '[:lower:]')-devcontainer"
+#
+# The default names the image after this repository, which is wrong the moment a
+# second project wants it -- and nothing in the Dockerfile is specific to this
+# one. Set IMAGE to a neutral name and every project can pin the same image:
+#
+#   IMAGE=ghcr.io/orhunkok/claude-devcontainer ./.devcontainer/publish.sh
+image="${IMAGE:-ghcr.io/$(echo "$slug" | tr '[:upper:]' '[:lower:]')-devcontainer}"
 
 # Tag on the content of .devcontainer rather than the git SHA: the image only
 # changes when the thing that builds it does, so an unrelated commit does not
