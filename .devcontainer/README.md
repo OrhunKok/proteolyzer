@@ -223,6 +223,18 @@ agent session inside the devcontainer as a first-class feature, with the manager
 on the host. The trade is a session manager instead of a terminal — no browser
 pane, no splits, no socket API, and none of the above.
 
+### A different runtime under all of this
+
+Docker is not the only way to get a Linux container on a Mac, and the one that
+would suit this best is Apple's own — every container gets an address reachable
+from the host, which deletes the published port and the `docker port` step from
+`cmux-attach.sh` rather than adding to them. `NET_ADMIN` is supported, so the
+firewall survives the move. What does not work yet is `build.dockerfile`, which
+is what this repository uses. [APPLE.md](./APPLE.md) has the evidence, the
+config to swap in, and the one upstream issue to watch. OrbStack is the
+meanwhile option: it makes Docker faster without making it different, so nothing
+here changes.
+
 ## Other repositories
 
 `streamlit-DO-MS` and `decoder` carry their own copy of this container. Nothing
