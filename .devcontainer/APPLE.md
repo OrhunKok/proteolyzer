@@ -89,13 +89,28 @@ and `sudo` here is restricted to two named scripts. That is the decoder
 on the same sudo arrangement, chowning those three paths, ahead of the firewall
 in `postStartCommand`.
 
-## The config, for when `build` lands
+## The config — which does not have to wait for `build`
 
-Swap `.devcontainer/devcontainer.json` for this, having built the image first:
+Calling this blocked was too strong. `build.dockerfile` is rejected, but the way
+around it is one an OCI image gives you for free: build the image separately and
+point `image:` at it. Either locally,
 
 ```bash
 container build -t proteolyzer-dev:latest .devcontainer
 ```
+
+or, better, from the registry, which is what `publish.sh` is for — an image
+pushed once is pulled by every machine and by every runtime, since none of them
+cares which one built it:
+
+```bash
+./.devcontainer/publish.sh          # ghcr.io/orhunkok/proteolyzer-devcontainer
+```
+
+What it costs is that the Dockerfile stops being the config's source of truth: a
+change to it means a rebuild-and-publish before the config sees it, where
+`build:` did that implicitly. That is the whole price, and it buys a start with
+no build in it.
 
 ```jsonc
 {
@@ -155,10 +170,13 @@ of writing — but unusually disciplined for that age: ADRs, requirement specs
 with scenarios, a compatibility-degradation report with stable codes, and an
 opt-in `ADEVCONTAINER_STRICT_COMPATIBILITY=1`. Young, not sloppy.
 
-So: stay on Docker, and watch one thing —
+So the runtime is safe to try and the layer above it is the young part. Nothing
+is lost by trying: the image is the same OCI image either way, `publish.sh` puts
+it somewhere both runtimes can reach, and going back is the same swap in
+reverse. Worth watching either way —
 [apple/container#2112](https://github.com/apple/container/issues/2112), where
-`adevcontainer`'s author offers it as a `container` plugin. When `build` support
-lands, this is a swap of one file and one build command.
+`adevcontainer`'s author offers it as a `container` plugin. If `build` support
+lands, even the `image:` indirection goes away.
 
 ## Core AI, and why it stays on the host
 

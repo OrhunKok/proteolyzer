@@ -299,11 +299,27 @@ on the far side. Volume names are keyed on the directory basename, so the
 checkout has to be named the same over there — the same constraint
 `devcontainer.json` already documents.
 
-**The macOS-only parts are the frontend, not the environment**, which is the
-distinction to keep. cmux does not run on Linux and neither does Apple
-`container`; `up.sh` does, on any Docker host. That is why both scripts exist
-rather than one: `cmux-attach.sh` is the nice thing on a Mac and `up.sh` is the
-one that still works on a Linux box, and neither is the source of truth.
+**The macOS-only parts are the frontend, not the environment.** cmux does not
+run on Linux and neither does Apple `container` — but neither of them is the
+environment. The image is OCI, so Docker, podman, containerd and Apple
+`container` all take it and none of them cares which one built it; the runtime
+underneath is interchangeable and picking a Mac-native one costs nothing here.
+What is runtime-specific is the two attach scripts, and that is why there are
+two: `cmux-attach.sh` is the nice thing on a Mac, `up.sh` is the one that still
+works on a Linux box, and neither is the source of truth.
+
+**`publish.sh` is the step that makes migration a pull instead of a build.** It
+cross-builds `linux/amd64` and `linux/arm64` with buildx and pushes both to
+GHCR under a tag derived from the contents of this directory, so the tag only
+moves when the thing that builds the image does. A machine that has the tag
+needs neither the Dockerfile nor a build.
+
+That also makes the Apple `container` route cheaper than [APPLE.md](./APPLE.md)
+implies, and for a reason worth spelling out: the one change `adevcontainer`
+forces — `image:` instead of `build:`, because it hard-rejects Dockerfile builds
+— is the same change that makes a pull possible. Those two goals converge rather
+than compete. `features` survives the switch untouched; both the devcontainer
+CLI and `adevcontainer` derive an image from base plus features at create time.
 
 **`devcontainer.json` stays the source of truth for the same reason.** Every
 alternative weighed here trades a standard several tools implement — the CLI,
