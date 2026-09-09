@@ -77,3 +77,8 @@ yarn-error.log*
 # made and tested against them in one place. Each is its own git repo; none of
 # it belongs to this one. See downstream/README.md.
 /downstream/
+
+# `.devcontainer/state.sh export` writes here: the named volumes this container
+# keeps, so they can be carried to another machine. With --with-credentials it
+# holds a GitHub token in plaintext. Never committed.
+/devcontainer-state.tar.gz
