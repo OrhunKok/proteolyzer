@@ -1,22 +1,28 @@
 {
   "commands": [
     {
-      "name": "Devcontainer shell",
-      "description": "zsh inside this repository's sandbox",
-      "keywords": ["devcontainer", "shell", "zsh", "sandbox"],
+      "name": "Devcontainer workspace",
+      "description": "attach the sandbox as a cmux remote workspace over ssh",
+      "keywords": ["devcontainer", "workspace", "sandbox", "ssh", "attach"],
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/cmux-attach.sh"
+    },
+    {
+      "name": "Claude in devcontainer workspace",
+      "description": "same, starting Claude Code in /workspace",
+      "keywords": ["claude", "agent", "sandbox", "workspace"],
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/cmux-attach.sh claude"
+    },
+    {
+      "name": "Devcontainer shell (exec)",
+      "description": "just a zsh in the sandbox, no ssh, no workspace metadata",
+      "keywords": ["devcontainer", "shell", "zsh", "exec"],
       "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/up.sh"
     },
     {
-      "name": "Claude in devcontainer",
-      "description": "Claude Code inside the sandbox, with the firewall applied",
-      "keywords": ["claude", "agent", "sandbox"],
-      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/up.sh claude"
-    },
-    {
       "name": "Rebuild devcontainer",
-      "description": "discard the container and build it from the Dockerfile again",
+      "description": "discard the container, build from the Dockerfile, attach again",
       "keywords": ["rebuild", "devcontainer", "docker"],
-      "command": "cd \"$(git rev-parse --show-toplevel)\" && REBUILD=1 ./.devcontainer/up.sh",
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && REBUILD=1 ./.devcontainer/cmux-attach.sh",
       "confirm": true
     }
   ]

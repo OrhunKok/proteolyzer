@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   jq \
   nano \
   vim \
+  openssh-server \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure default node user has access to /usr/local/share
@@ -99,4 +100,25 @@ USER root
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
+
+# The sshd `cmux ssh` attaches to. Copied in rather than read off /workspace: the
+# bind mount is writable by whatever is running in the container, and a config
+# that decides who may log in should not be.
+COPY sshd-cmux.conf /etc/ssh/sshd_cmux_config
+COPY start-sshd.sh /usr/local/bin/
+RUN chmod 0644 /etc/ssh/sshd_cmux_config && \
+  chmod +x /usr/local/bin/start-sshd.sh && \
+  echo "node ALL=(root) NOPASSWD: /usr/local/bin/start-sshd.sh" > /etc/sudoers.d/node-sshd && \
+  chmod 0440 /etc/sudoers.d/node-sshd && \
+  rm -f /etc/ssh/ssh_host_*
+
+# The rm above is the point of that line, not tidying. The openssh-server
+# postinst runs ssh-keygen -A, so a host key would otherwise be baked into the
+# image and shared by every container built from it. start-sshd.sh regenerates
+# what is missing at first start, which makes it per container instead.
+
+# sshd runs the login shell out of /etc/passwd and ignores ENV SHELL, so without
+# this a cmux ssh session lands in bash -- no ~/.zshrc, and therefore no
+# gh-auth.sh and no `gh`. Everything else names zsh explicitly and is unaffected.
+RUN usermod --shell /bin/zsh node
 USER node

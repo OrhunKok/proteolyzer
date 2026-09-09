@@ -9,7 +9,17 @@
       "ZSH_IN_DOCKER_VERSION": "1.2.0"
     }
   },
-  "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
+  // NET_ADMIN/NET_RAW are init-firewall.sh's. The published port is sshd's, so
+  // `cmux ssh` can attach -- loopback-bound, and with no host port named, so
+  // Docker picks a free one and several of these containers coexist. Discovered
+  // with `docker port` rather than fixed, which is what cmux's own Docker suites
+  // do. See README.md.
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW",
+    "-p",
+    "127.0.0.1::2222"
+  ],
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14",
@@ -77,6 +87,8 @@
   // started. Idempotent. This one line is what replaced a shared repository, a
   // read-only mount, an installer and two session hooks -- see DECISIONS.md.
   "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /workspace/.devcontainer/gh-auth.sh' >> ~/.zshrc",
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  // Firewall first: init-firewall.sh flushes the tables, so anything holding a
+  // connection wants to be started after it rather than through it.
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && sudo /usr/local/bin/start-sshd.sh",
   "waitFor": "postStartCommand"
 }

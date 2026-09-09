@@ -2,22 +2,23 @@
 
 Claude Code runs in this container so that a firewall stands between it and
 everything that is not GitHub, PyPI, npm or the Anthropic API — see
-`init-firewall.sh`, which is the reason `runArgs` asks for `NET_ADMIN`.
+`init-firewall.sh`, which is why `runArgs` asks for `NET_ADMIN`.
 
 The container is defined by `devcontainer.json` and nothing about it needs an
-editor. Start it from a terminal:
+editor:
 
 ```bash
-npm install -g @devcontainers/cli   # once
-./.devcontainer/up.sh               # a zsh in the container
-./.devcontainer/up.sh claude        # straight into Claude Code
-REBUILD=1 ./.devcontainer/up.sh     # discard the container and build again
+npm install -g @devcontainers/cli    # once
+./.devcontainer/up.sh                # a zsh in the container
+./.devcontainer/up.sh claude         # straight into Claude Code
+./.devcontainer/cmux-attach.sh       # the same container as a cmux workspace
+REBUILD=1 ./.devcontainer/up.sh      # discard the container and build again
 ```
 
 `up.sh` is `devcontainer up` followed by `devcontainer exec`, which is the whole
 of what the Dev Containers extension was doing to the container itself. The
-extension is still supported — `customizations.vscode` is read when VS Code
-attaches — but nothing depends on it any more.
+extension still works — `customizations.vscode` is read when VS Code attaches —
+but nothing depends on it.
 
 ## What VS Code was also doing, silently
 
@@ -42,7 +43,7 @@ gh auth login          # inside the container; device flow, github.com is allowe
 survives a rebuild the way the command history and the Claude config do.
 `gh-auth.sh` notices it on the next shell and runs `gh auth setup-git`, which
 points git at the same credential — one login, both tools, no host involved. The
-old forwarding path is still there as a fallback for a VS Code session.
+old forwarding path stays as the fallback for a VS Code session.
 
 One edge: `gh auth setup-git` is skipped when a credential helper is already
 configured, because two helpers is a coin toss over which answers. If you attach
@@ -52,49 +53,94 @@ credential.helper` clears it, or rebuild.
 
 **Formatting on save.** `editor.formatOnSave` and the eslint fixer in
 `customizations.vscode` do nothing without the editor. `make lint` and
-`.pre-commit-config.yaml` are what actually enforce formatting here, and they run
-in the container either way.
+`.pre-commit-config.yaml` are what enforce formatting here, and they run in the
+container either way.
 
 Three entries in `init-firewall.sh` — `marketplace.visualstudio.com`,
 `vscode.blob.core.windows.net`, `update.code.visualstudio.com` — exist so the VS
 Code server and its extensions can install themselves inside the container. They
-are dead weight once nothing attaches, and dropping them narrows the allowlist by
-three. They are left in because they cost nothing and are the difference between
-VS Code working and VS Code hanging on the day you want it back.
+are dead weight once nothing attaches. They are left in because they cost
+nothing and are the difference between VS Code working and VS Code hanging on
+the day you want it back.
 
 ## cmux
 
-cmux is a terminal, not a container manager. It replaces the editor half of what
-VS Code was doing and none of the container half — there is no devcontainer
-support in it, and there is no point looking for it: `devcontainer.json` stays,
-`up.sh` drives it, and cmux is what the shell is displayed in.
+cmux has no devcontainer support and does not need any. It has something better:
+**`cmux ssh` is a first-class workspace type with a Linux-side daemon, and a
+container running sshd is a remote host like any other.** cmux's own integration
+suites attach to a Docker container this way — `tests_v2/test_ssh_remote_docker_forwarding.py`
+and friends, with an ephemeral published port, a throwaway key and host key
+checking off — so it is a tested configuration rather than a clever one.
 
-`.cmux/cmux.json` in the repository root is read by cmux when a workspace is
-opened here, and it registers the three commands above in the command palette
-(⌘⇧P). Nothing else uses that file.
+That leaves two ways in, and they are not equivalent:
 
-**Session restore.** cmux restores panes and working directories on relaunch, and
-for an agent it runs the agent's native resume command — but that integration is
-a wrapper around the `claude` binary *on the host*, and this `claude` is inside a
-container where cmux cannot see it. What cmux can restore is the way back in:
+| | `up.sh` (`devcontainer exec`) | `cmux-attach.sh` (`cmux ssh`) |
+|---|---|---|
+| extra surface in the image | none | `openssh-server`, a published loopback port |
+| `cmux` CLI inside the container | no | **yes** |
+| terminal survives cmux restarting | no | yes, reconnects |
+| sidebar metadata, sftp file drop | partial | yes |
+| browser pane egress | the host's | the container's, so inside the firewall |
 
-```bash
-cmux surface resume set --shell '/path/to/repo/.devcontainer/up.sh claude'
-```
+Use `up.sh` for a shell. Use `cmux-attach.sh` for the workspace you actually
+work in.
 
-Run in the pane you want it attached to. cmux keeps a socket-set command for
-manual restore until the prefix is approved under Settings › Terminal › Resume
-Commands, which is deliberate on its part and worth doing once.
+### How the ssh path works
 
-Losing the host wrapper also means no agent hibernation and no AI workspace
-naming for a containerised session. Both are conveniences; the firewall is not.
+`cmux ssh` probes the remote platform, uploads a release-pinned `cmuxd-remote`
+binary verified against a SHA-256 manifest embedded in the app, and runs it over
+stdio. **The daemon arrives over the SSH connection, not from the internet**,
+which is why the firewall does not have to be opened to allow any of this.
 
-**Notifications.** cmux raises its ring and sidebar badge off OSC 9/99/777, and
-those pass through `devcontainer exec` to the terminal like any other escape
-sequence, so a bell from inside the container still lands. `cmux notify` does
-not — it is a host binary. To drive notifications from Claude Code's hooks,
-write the sequence rather than calling the CLI, in the settings.json inside
-`/home/node/.claude` (which is a persisted volume):
+It then reverse-forwards a TCP port — `ssh -N -R` — to an authenticated local
+relay, installs a `cmux` wrapper at `~/.cmux/bin/cmuxd-remote`/`bin/cmux` on the
+remote, prepends that to `PATH`, and pins `CMUX_SOCKET_PATH=127.0.0.1:<port>` in
+the session. The relay port is per workspace. That is the whole trick: it is why
+the `cmux` CLI works *from inside the container*.
+
+What this repository adds for it:
+
+- `openssh-server` in the image, and `sshd-cmux.conf` — cmux's own test fixture,
+  minus root login and moved to port 2222. `AllowTcpForwarding yes` is
+  load-bearing, not boilerplate: the reverse forward runs with
+  `ExitOnForwardFailure=yes`, so refusing it fails the attach rather than
+  degrading it.
+- `start-sshd.sh`, reachable through `sudo` for the same reason
+  `init-firewall.sh` is, and run from `postStartCommand` after it — the firewall
+  flushes the tables, so anything holding a connection wants to start after it.
+  Host keys are generated at first start rather than baked into the image, so two
+  containers from one image do not share one.
+- `-p 127.0.0.1::2222` in `runArgs`. No host port is named, so Docker picks a
+  free one and several of these containers coexist; `cmux-attach.sh` finds it
+  with `docker port`. Bound to loopback, so it is not on the network.
+- `usermod --shell /bin/zsh node`. sshd reads the login shell out of
+  `/etc/passwd` and ignores `ENV SHELL`, so without this an ssh session lands in
+  bash — no `~/.zshrc`, so no `gh-auth.sh`, so no `gh`. Everything else names
+  zsh explicitly and is unaffected.
+
+Starting sshd unconditionally is safe: the port is loopback-only, password auth
+is off, and no `authorized_keys` exists until `cmux-attach.sh` writes one. Until
+you ask for it, it listens and refuses everything.
+
+The key is a dedicated one, `~/.ssh/cmux-devcontainer`, not the one that talks to
+GitHub — giving a loopback hop into a sandbox a key with any other reach is how a
+sandbox stops being one. Agent forwarding is explicitly off for the same reason.
+Host key checking is off because a host key is generated per container and the
+port is a fresh ephemeral one each rebuild, so `known_hosts` could only ever
+reject a container it had seen before on a port something else used. What bounds
+this is the port being on loopback and the key being one the script made.
+
+### What now works inside the container
+
+- **`cmux notify`**, so a Claude Code hook can raise the ring and the sidebar
+  badge directly rather than by printing an escape sequence. The relay is
+  per-workspace, which is what lets cmux resolve which workspace a notification
+  came from. Worth confirming once on the machine.
+- `cmux workspace loading on`, `cmux read-screen`, `cmux send` — the CLI is
+  relayed as a whole, not a subset.
+- Terminals that survive cmux quitting, and reconnect on relaunch.
+
+An OSC escape sequence still works too, and needs nothing installed:
 
 ```json
 {
@@ -113,19 +159,44 @@ write the sequence rather than calling the CLI, in the settings.json inside
 }
 ```
 
-`> /dev/tty` is the part that matters: hook stdout is captured by Claude Code, so
-a sequence merely printed never reaches the terminal. Confirm it on the machine
-before relying on it.
+`> /dev/tty` is the part that matters — hook stdout is captured by Claude Code,
+so a sequence merely printed never reaches the terminal. That settings.json
+belongs in `/home/node/.claude`, which is a persisted volume.
 
-**If what you wanted was devcontainers managed for you**, cmux is the wrong
-shape and [ccmanager](https://github.com/kbwo/ccmanager) is the right one: it
-keeps the session manager on the host and runs the agent session inside the
-devcontainer as a first-class feature. The trade is a session manager instead of
-a terminal — no browser pane, no splits, no socket API.
+### What still does not work
+
+**Native Claude session restore.** cmux's Claude Code integration is a wrapper
+around the `claude` binary *on the host*, and its session records live in
+`~/.cmuxterm/` there. A `claude` inside a container is not wrapped, so no
+automatic `claude --resume <id>` on relaunch, no agent hibernation, and no AI
+workspace naming. The manual equivalent, once per pane:
+
+```bash
+cmux surface resume set --shell '/path/to/repo/.devcontainer/cmux-attach.sh claude'
+```
+
+cmux keeps a socket-set command for manual restore until its prefix is approved
+under Settings › Terminal › Resume Commands, which is deliberate on its part.
+
+**Browser panes are inside the firewall.** cmux routes a remote workspace's
+browser through a SOCKS5 proxy tunnelled over the daemon, so it egresses from the
+container — and the allowlist blocks nearly everything. That is correct rather
+than broken, but it means browsing happens in a local workspace, which cmux does
+not force-proxy.
+
+**`--transport mosh`.** Mosh needs inbound UDP in the 60000 range and the
+firewall drops all UDP but DNS. Stay on the SSH transport.
+
+### If what you wanted was devcontainers managed for you
+
+[ccmanager](https://github.com/kbwo/ccmanager) runs the agent session inside the
+devcontainer as a first-class feature, with the manager on the host. The trade is
+a session manager instead of a terminal — no browser pane, no splits, no socket
+API, and none of the above.
 
 ## Other repositories
 
 `streamlit-DO-MS` and `decoder` carry their own copy of this container. Nothing
-here reaches into them: the change is four files and a `gh auth login`, applied
-in each repository by that repository, which is the same rule as everything else
-on the account.
+here reaches into them: the change is a handful of files and a `gh auth login`,
+applied in each repository by that repository, which is the same rule as
+everything else on the account.
