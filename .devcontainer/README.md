@@ -140,6 +140,23 @@ port is a fresh ephemeral one each rebuild, so `known_hosts` could only ever
 reject a container it had seen before on a port something else used. What bounds
 this is the port being on loopback and the key being one the script made.
 
+### The same sshd serves a second frontend
+
+The Claude Code desktop app has an SSH environment — its documentation names dev
+containers as a target — and it asks for exactly what `cmux-attach.sh` already
+produces: a host, a port, and an identity file. `node@127.0.0.1`, whatever
+`docker port` reports, and `~/.ssh/cmux-devcontainer`. It installs Claude Code
+on the remote itself and uses the remote `/home/node/.claude`, which is the
+volume. So the sshd here is not cmux-specific, and a native app is a second way
+in rather than a different setup.
+
+Two things to expect if you try it. There is no terminal panel in a remote
+session, so it wants a terminal beside it rather than replacing one. And SSH
+mode sets `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST=1` with its own
+`ANTHROPIC_BASE_URL` and token, overriding provider configuration on the remote
+— which costs nothing here, and would matter to a container pointed at Bedrock
+or Vertex.
+
 ### What now works inside the container
 
 - **`cmux notify`**, so a Claude Code hook can raise the ring and the sidebar
