@@ -349,7 +349,7 @@ per-project part belongs. So the same image serves every project, and the honest
 description of the status quo is that one generic image is being maintained N
 times by hand.
 
-`publish.sh` with a neutral name is the fix:
+`publish.sh` with a neutral name is the fix, when it is time for one:
 
 ```bash
 IMAGE=ghcr.io/orhunkok/claude-devcontainer ./.devcontainer/publish.sh
@@ -358,6 +358,32 @@ IMAGE=ghcr.io/orhunkok/claude-devcontainer ./.devcontainer/publish.sh
 Each project then keeps a thin `devcontainer.json` pinning a tag, with its own
 `features`, `mounts` and lifecycle. Changing the firewall becomes one edit, one
 publish and N pin bumps, instead of N edits that drift.
+
+**Sharing a base does not cost the option to diverge**, which is the usual
+objection and the wrong way round. Divergence has three homes, and only the last
+needs a Dockerfile: a `features` entry, which is already where this repository's
+Python comes from; the `mounts`, `containerEnv` and lifecycle keys; and failing
+those, a project Dockerfile that is `FROM` the shared tag plus whatever that
+project needs. A project can leave entirely and still inherit the firewall.
+
+**When to do it is a different question from whether**, and the answer is not
+yet. Before this branch, this Dockerfile changed twice in three weeks. While it
+is moving, N copies are cheaper than a publish step, because an edit is an edit
+rather than an edit, a build, a push and N pin bumps.
+
+The signal to switch is making the same edit twice in two repositories, and it
+is worth knowing that this has already happened here. `8f5fc5d2`, "Create the
+memory path in the image, node-owned", is a fix for a bug **decoder** hit — five
+files failing to restore behind a bare `Permission denied` — applied here
+preemptively for a mount this repository does not even have. That knowledge
+crossed repositories because a person carried it. [CLAUDE.md](../CLAUDE.md)
+records the same shape with `CoordinatesMapping`, which existed twice and had
+the same imaging-channel bug fixed in both in the same week without either
+knowing.
+
+So the changes this file actually attracts are cross-cutting fixes rather than
+project-specific features, and that is the profile that eventually wants one
+image. A file that changed weekly with per-project tweaks would not.
 
 **Pin the content tag, never `latest`**, and [DECISIONS.md](../DECISIONS.md) is
 the reason rather than taste. What was torn out on 2026-08-23 was shared
