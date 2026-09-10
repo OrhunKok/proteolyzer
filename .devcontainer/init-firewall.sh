@@ -78,11 +78,21 @@ done
 
 # Resolve and add other allowed domains.
 # Queried against several resolvers to widen coverage of round-robin pools.
+#
+# claude.com and platform.claude.com are `claude /login`, not the API:
+# /cai/oauth/authorize is served by the first and the code exchange goes to the
+# second. api.anthropic.com alone is enough to *use* a credential and not enough
+# to obtain one, so logging in from inside this container was impossible until
+# these were added -- the stock template has the same gap. Both resolve into
+# Anthropic's own 160.79.104.0/24 rather than a rotating CDN pool, so plain
+# resolution holds and they need none of the pinning PyPI gets above.
 for domain in \
     "pypi.org" \
     "files.pythonhosted.org" \
     "registry.npmjs.org" \
     "api.anthropic.com" \
+    "claude.com" \
+    "platform.claude.com" \
     "sentry.io" \
     "statsig.com" \
     "marketplace.visualstudio.com" \
