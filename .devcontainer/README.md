@@ -132,6 +132,34 @@ trade; but that is the reason, not an argument that this is better.
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
 
+## Skipping permission prompts
+
+The palette entries run `claude --dangerously-skip-permissions`, which is what
+the firewall is for: a sandbox that cannot reach anything but GitHub, PyPI, npm
+and the Anthropic API is the environment where bypassing prompts is a reasonable
+trade rather than a reckless one. Anthropic's own reference devcontainer exists
+for the same purpose.
+
+The flag rather than the setting, deliberately. `permissions.defaultMode` set to
+`bypassPermissions` does the same thing, but since v2.1.257 it is **only honoured
+from user or managed settings** — a `.claude/settings.json` committed to a
+repository is read and then ignored for this key, silently. If you want typed
+`claude` sessions to bypass as well, it has to go in the container's *user*
+settings, which is inside the volume and therefore survives rebuilds and travels
+with `state.sh`:
+
+```bash
+# inside the container
+jq '.permissions.defaultMode = "bypassPermissions"' \
+   "$CLAUDE_CONFIG_DIR/settings.json" > /tmp/s && mv /tmp/s "$CLAUDE_CONFIG_DIR/settings.json"
+```
+
+Two things this does not do. It is not protection against prompt injection —
+nothing here is. And the firewall bounds *where* the agent can reach, not what it
+can do with what is already inside: the `gh` credential in the volume can push to
+your repositories. Deny rules still apply in every mode, `bypassPermissions`
+included, so they are the place to put anything that should stay impossible.
+
 ## What VS Code was also doing, silently
 
 Two things came from the editor rather than from `devcontainer.json`, and both

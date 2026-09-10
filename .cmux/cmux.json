@@ -17,7 +17,7 @@
                   {
                     "type": "terminal",
                     "name": "claude",
-                    "command": "./.devcontainer/up.sh claude",
+                    "command": "./.devcontainer/up.sh claude --dangerously-skip-permissions",
                     "focus": true
                   }
                 ]
@@ -42,7 +42,7 @@
       "name": "Open sandbox (cmux ssh)",
       "description": "same, over ssh — durable terminals and the cmux CLI inside",
       "keywords": ["devcontainer", "sandbox", "ssh", "workspace"],
-      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/cmux-attach.sh claude"
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/cmux-attach.sh claude --dangerously-skip-permissions"
     },
     {
       "name": "Devcontainer shell",
