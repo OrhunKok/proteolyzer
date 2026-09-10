@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# Move this container's state between machines.
+# Move this container's state between machines, or between runtimes.
 #
 # The image definition travels in git and the workspace is a bind mount, so a
-# new machine is `git clone` and `up.sh`. What does not travel is the three
-# named volumes, and one of them is the interesting one: /home/node/.claude
-# holds settings, project state and the agent's memory directory. Losing that
-# on every machine change is the part that makes a portable environment feel
-# unportable.
+# new machine is `git clone`, `build.sh` and `up.sh`. What does not travel is the
+# named volume, and it is the interesting part: /home/node/.state holds Claude
+# Code's config, projects and memory under `claude/`, the GitHub login under
+# `gh/`, and the shell history. Losing that on every machine change is what makes
+# a portable environment feel unportable.
 #
 # Runs on the host.
 #
-#   ./.devcontainer/state.sh export                  everything but the credential
+#   ./.devcontainer/state.sh export                    without the credential
 #   ./.devcontainer/state.sh export --with-credentials
 #   ./.devcontainer/state.sh import [--with-credentials]
+#   ./.devcontainer/state.sh migrate                   fold the old three into one
 #   ./.devcontainer/state.sh export ~/somewhere.tar.gz
 #
-# The container does not need to be running. `docker volume` is enough.
+# The container need not be running.
 set -euo pipefail
 
 # These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
@@ -37,27 +38,27 @@ action=""
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        export|import) action="$1" ;;
+        export|import|migrate) action="$1" ;;
         --with-credentials) with_credentials=1 ;;
-        -h|--help) sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) archive="$1" ;;
     esac
     shift
 done
 
 if [ -z "$action" ]; then
-    echo "state.sh: say 'export' or 'import'. --help for the rest." >&2
+    echo "state.sh: say 'export', 'import' or 'migrate'. --help for the rest." >&2
     exit 1
 fi
 
 # Runtimes keep separate volume stores, so this is also how you move state
-# between them -- which is the migration you want the day you switch:
+# between them:
 #
 #   RUNTIME=docker    ./.devcontainer/state.sh export
 #   RUNTIME=container ./.devcontainer/state.sh import
 #
-# The Docker volumes are read, not touched, so the old setup stays intact until
-# you are satisfied the new one works.
+# Export reads and does not write, so the old setup stays intact until the new
+# one is trusted.
 rt="${RUNTIME:-}"
 if [ -z "$rt" ]; then
     if command -v container >/dev/null 2>&1; then
@@ -93,63 +94,87 @@ ensure_volume() {
     volume_exists "$1" || "$rt" volume create "$1" >/dev/null
 }
 
-# Volume names are keyed on the directory basename, the same as devcontainer.json
-# does it -- so the directory has to be named the same on the far machine for
-# these to land where the container will look for them.
-history_volume="claude-code-bashhistory-$base"
-config_volume="claude-code-config-$base"
-gh_volume="claude-code-gh-$base"
+volume="claude-code-state-$base"
+
+# The volume names from before everything moved under one. `migrate` reads these.
+old_history="claude-code-bashhistory-$base"
+old_config="claude-code-config-$base"
+old_gh="claude-code-gh-$base"
 
 case "$action" in
 export)
-    args=(--rm)
-    for pair in "$history_volume:bashhistory" "$config_volume:config"; do
-        volume="${pair%%:*}"
-        if volume_exists "$volume"; then
-            args+=(-v "$volume:/v/${pair##*:}:ro")
-        else
-            echo "state.sh: no volume $volume yet; skipping." >&2
-        fi
-    done
+    volume_exists "$volume" || {
+        echo "state.sh: no volume $volume. Has the container ever started?" >&2
+        exit 1
+    }
 
+    # The credential shares a volume with everything else now, so it is left out
+    # by subtree rather than by living somewhere separate. Same result: an
+    # ordinary export carries no token.
+    exclude=(--exclude=./gh)
     if [ "$with_credentials" -eq 1 ]; then
-        if volume_exists "$gh_volume"; then
-            args+=(-v "$gh_volume:/v/gh:ro")
-            echo "state.sh: WARNING -- including $gh_volume puts a GitHub token"
-            echo "state.sh: in $archive as plaintext. Move it as you would a key,"
-            echo "state.sh: and delete it after. \`gh auth login\` is one command."
-        else
-            echo "state.sh: no volume $gh_volume yet; skipping." >&2
-        fi
+        exclude=()
+        echo "state.sh: WARNING -- this includes gh/, so $archive will hold a"
+        echo "state.sh: GitHub token in plaintext. Move it as you would a key and"
+        echo "state.sh: delete it after. \`gh auth login\` is one command."
     fi
 
     mkdir -p "$(dirname "$archive")"
-    args+=(-v "$(dirname "$archive"):/out")
-    "$rt" run "${args[@]}" alpine \
-        tar czf "/out/$(basename "$archive")" --numeric-owner -C /v .
+    "$rt" run --rm \
+        -v "$volume:/v:ro" \
+        -v "$(dirname "$archive"):/out" \
+        alpine tar czf "/out/$(basename "$archive")" \
+            --numeric-owner ${exclude[@]+"${exclude[@]}"} -C /v .
     echo "state.sh: wrote $archive"
     ;;
 
 import)
     [ -f "$archive" ] || { echo "state.sh: no such archive: $archive" >&2; exit 1; }
+    ensure_volume "$volume"
 
+    # An archive made without --with-credentials simply has no gh/ in it, so
+    # there is nothing to decline here and nothing to half-restore.
+    "$rt" run --rm \
+        -v "$volume:/v" \
+        -v "$(dirname "$archive"):/in:ro" \
+        alpine tar xzf "/in/$(basename "$archive")" --numeric-owner -C /v
+    echo "state.sh: restored into $volume"
+    echo "state.sh: the directory must stay named '$base' for the container to find it."
+    ;;
+
+migrate)
+    # One-off, for a container that predates the single volume: fold
+    # bashhistory, config and gh into .state/{history,claude,gh}. The old volumes
+    # are mounted read-only and left in place, so this is repeatable and undone
+    # by deleting the new volume.
     args=(--rm)
-    ensure_volume "$history_volume"
-    ensure_volume "$config_volume"
-    args+=(-v "$history_volume:/v/bashhistory" -v "$config_volume:/v/config")
+    found=0
+    for pair in "$old_history:hist" "$old_config:config" "$old_gh:gh"; do
+        name="${pair%%:*}"
+        if volume_exists "$name"; then
+            args+=(-v "$name:/old/${pair##*:}:ro")
+            found=1
+            echo "state.sh: will read $name"
+        else
+            echo "state.sh: no $name; skipping."
+        fi
+    done
+    [ "$found" -eq 1 ] || { echo "state.sh: nothing to migrate." >&2; exit 1; }
 
-    if [ "$with_credentials" -eq 1 ]; then
-        ensure_volume "$gh_volume"
-        args+=(-v "$gh_volume:/v/gh")
-    fi
+    ensure_volume "$volume"
+    args+=(-v "$volume:/new")
 
-    args+=(-v "$(dirname "$archive"):/in:ro")
-    # Anything in the archive without a volume mounted over its path lands in the
-    # throwaway container layer and goes away with it -- which is how a `gh`
-    # directory in the tarball is declined rather than half-restored.
-    "$rt" run "${args[@]}" alpine \
-        tar xzf "/in/$(basename "$archive")" --numeric-owner -C /v
-    echo "state.sh: restored into $history_volume, $config_volume$([ "$with_credentials" -eq 1 ] && echo ", $gh_volume")"
-    echo "state.sh: the directory must stay named '$base' for the container to find these."
+    # 1000:1000 rather than a name: the alpine doing the copying has no `node`
+    # user, and numeric ownership is what the container reads it back as.
+    "$rt" run "${args[@]}" alpine sh -c '
+        set -e
+        mkdir -p /new/claude /new/gh
+        [ -d /old/config ] && cp -a /old/config/. /new/claude/ || true
+        [ -d /old/gh ] && cp -a /old/gh/. /new/gh/ || true
+        [ -f /old/hist/.bash_history ] && cp -a /old/hist/.bash_history /new/history || true
+        chown -R 1000:1000 /new
+    '
+    echo "state.sh: folded into $volume; the old volumes are untouched."
+    echo "state.sh: pick it up with: ./.devcontainer/build.sh && REBUILD=1 ./.devcontainer/up.sh"
     ;;
 esac

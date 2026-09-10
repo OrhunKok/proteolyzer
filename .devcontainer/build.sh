@@ -57,4 +57,34 @@ echo "build: $runtime build -t $tag"
     -t "$tag" \
     "$repo/.devcontainer"
 
-echo "build: $tag is ready. Next: ./.devcontainer/up.sh"
+echo "build: $tag is ready."
+
+# adevcontainer does not run this image directly. Because `features` is set, it
+# derives one -- base plus features -- and reuses it under a tag hashed from the
+# *config*, which does not include the base image. So rebuilding the base changes
+# nothing: the container keeps starting from a derived image built before your
+# edit, and the edit appears to have had no effect at all. A firewall change cost
+# an hour to that, and the log calls it "Reusing features image adev-...", which
+# reads like progress.
+#
+# Dropping the derived images makes it re-derive from what was just built. The
+# cost is re-fetching the feature, which is seconds.
+if [ "$runtime" = container ]; then
+    stale="$(container image list 2>/dev/null | awk '/adev-/ {print $1":"$2}' || true)"
+    if [ -n "$stale" ]; then
+        echo "build: dropping derived images so the new base is actually used:"
+        printf '%s\n' "$stale" | sed 's/^/build:   /'
+        printf '%s\n' "$stale" | while read -r image; do
+            container image delete "$image" >/dev/null 2>&1 || \
+                echo "build: could not delete $image; delete it by hand" >&2
+        done
+    else
+        # Not fatal, but said out loud: the column layout of
+        # `container image list` is not a contract, and a silently missed purge
+        # presents as a change that did not apply -- this exact bug.
+        echo "build: no derived adev- images found. If a change does not take" >&2
+        echo "build: effect, check \`container image list\` for one and delete it." >&2
+    fi
+fi
+
+echo "build: next: REBUILD=1 ./.devcontainer/up.sh"

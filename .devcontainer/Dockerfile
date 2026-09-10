@@ -35,28 +35,33 @@ RUN mkdir -p /usr/local/share/npm-global && \
 ARG USERNAME=node
 
 # Persist bash history.
-RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-  && mkdir /commandhistory \
-  && touch /commandhistory/.bash_history \
-  && chown -R $USERNAME /commandhistory
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/home/node/.state/history" \
+  && mkdir -p /home/node/.state \
+  && touch /home/node/.state/history \
+  && chown -R $USERNAME /home/node/.state
 
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
 
-# Create workspace and config directories and set permissions.
+# Create the workspace and the one state directory, node-owned.
 #
-# The memory path is here for a mount this repository does not have yet: a named
-# volume is initialised from the image path it covers, ownership included, so a
-# path the image does not have comes up root-owned and unwritable by node — with
-# no warning, and sudo here is restricted to init-firewall.sh. decoder hit exactly
-# that on a shared memory volume: five files failed to restore and the script died
-# on a bare Permission denied. Creating it node-owned here means a volume mounted
-# over it inherits that instead. /home/node/.config/gh is the same case and does
-# have a mount: `gh auth login` writes hosts.yml there, and a root-owned volume
-# would fail that write with a bare Permission denied.
-RUN mkdir -p /workspace /home/node/.claude/projects/-workspace/memory \
-  /home/node/.config/gh && \
-  chown -R node:node /workspace /home/node/.claude /home/node/.config
+# Everything that must survive a rebuild lives under /home/node/.state, which is
+# the single named volume: `claude/` for Claude Code's config, projects and
+# memory, `gh/` for the GitHub login, and `history` for the shell. There were
+# three volumes and one is easier to keep track of; CLAUDE_CONFIG_DIR and
+# GH_CONFIG_DIR do the redirecting, and HISTFILE above.
+#
+# Every subdirectory is created here, node-owned, and that is load-bearing: a
+# named volume is initialised from the image path it covers, ownership included,
+# so a path the image does not have comes up root-owned and unwritable by node --
+# with no warning, and sudo here is restricted to named scripts. decoder hit
+# exactly that on a shared memory volume: five files failed to restore and the
+# script died on a bare Permission denied. Apple `container` does not seed
+# volumes at all, which fix-volume-perms.sh covers.
+RUN mkdir -p /workspace \
+  /home/node/.state/claude/projects/-workspace/memory \
+  /home/node/.state/gh && \
+  chown -R node:node /workspace /home/node/.state
 
 WORKDIR /workspace
 
@@ -87,7 +92,7 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
   -p fzf \
   -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
   -a "source /usr/share/doc/fzf/examples/completion.zsh" \
-  -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+  -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/home/node/.state/history" \
   -x
 
 # Install Claude
@@ -102,7 +107,8 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true
 ENV DISABLE_TELEMETRY=true
 ENV NODE_OPTIONS=--max-old-space-size=4096
-ENV CLAUDE_CONFIG_DIR=/home/node/.claude
+ENV CLAUDE_CONFIG_DIR=/home/node/.state/claude
+ENV GH_CONFIG_DIR=/home/node/.state/gh
 ENV POWERLEVEL9K_DISABLE_GITSTATUS=true
 
 # The same values again for login shells, which read files rather than the
@@ -124,7 +130,8 @@ RUN printf '%s\n' \
   'export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true' \
   'export DISABLE_TELEMETRY=true' \
   'export NODE_OPTIONS=--max-old-space-size=4096' \
-  'export CLAUDE_CONFIG_DIR=/home/node/.claude' \
+  'export CLAUDE_CONFIG_DIR=/home/node/.state/claude' \
+  'export GH_CONFIG_DIR=/home/node/.state/gh' \
   'export POWERLEVEL9K_DISABLE_GITSTATUS=true' \
   > /etc/profile.d/10-devcontainer.sh && \
   chmod 0644 /etc/profile.d/10-devcontainer.sh
