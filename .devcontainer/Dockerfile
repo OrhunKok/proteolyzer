@@ -93,6 +93,48 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
+# The settings that used to live in devcontainer.json's containerEnv. They are
+# here instead because a container's environment is given to processes the
+# *runtime* starts -- an entrypoint, `docker exec`, `devcontainer exec` -- and
+# sshd is not one of those. It builds a login environment from /etc/profile and
+# friends, so under `cmux ssh` none of these were set and `claude` was not even
+# on PATH. One place, applied to both.
+ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true
+ENV DISABLE_TELEMETRY=true
+ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV CLAUDE_CONFIG_DIR=/home/node/.claude
+ENV POWERLEVEL9K_DISABLE_GITSTATUS=true
+
+# The same values again for login shells, which read files rather than the
+# container config.
+#
+# /etc/profile sources /etc/profile.d/*.sh, which covers bash. It does not cover
+# zsh: this image's /etc/zsh/zprofile is the packaged one and contains nothing
+# but comments, so a zsh login shell reads neither. sshd hands out zsh here
+# (usermod --shell, below), which is precisely the shell that needed this, so
+# zprofile gets the line Debian would otherwise have put there. `emulate sh`
+# keeps /etc/profile's sh syntax from meeting zsh's parser.
+USER root
+RUN grep -q '/etc/profile' /etc/zsh/zprofile || \
+  printf "%s\n" "emulate sh -c 'source /etc/profile'" >> /etc/zsh/zprofile
+RUN printf '%s\n' \
+  '# Written by .devcontainer/Dockerfile. A login shell -- notably one sshd' \
+  '# starts -- does not inherit the container ENV, so it is restated here.' \
+  'export PATH="$PATH:/usr/local/share/npm-global/bin"' \
+  'export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true' \
+  'export DISABLE_TELEMETRY=true' \
+  'export NODE_OPTIONS=--max-old-space-size=4096' \
+  'export CLAUDE_CONFIG_DIR=/home/node/.claude' \
+  'export POWERLEVEL9K_DISABLE_GITSTATUS=true' \
+  > /etc/profile.d/10-devcontainer.sh && \
+  chmod 0644 /etc/profile.d/10-devcontainer.sh
+
+# Belt and braces for a shell that reads no profile at all -- `bash -lc` resets
+# PATH to the Debian default, and some agents shell out that way. /usr/local/bin
+# is in every default PATH there is.
+RUN ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
+USER node
+
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/

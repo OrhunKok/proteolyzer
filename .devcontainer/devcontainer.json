@@ -69,13 +69,11 @@
     "source=claude-code-gh-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume"
   ],
 
-  "containerEnv": {
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true",
-    "DISABLE_TELEMETRY": "true",
-    "NODE_OPTIONS": "--max-old-space-size=4096",
-    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
-  },
+  // containerEnv is gone, deliberately. A container's environment reaches
+  // processes the runtime starts and not sshd, which builds a login environment
+  // from files -- so under `cmux ssh` none of it was set and `claude` was not on
+  // PATH. The Dockerfile now sets these as ENV *and* writes them to
+  // /etc/profile.d, which covers both entry points from one place.
 
   // workspaceMount is gone: adevcontainer does not implement it and both CLIs
   // bind the workspace folder here by default anyway.
