@@ -94,6 +94,27 @@ ensure_volume() {
     volume_exists "$1" || "$rt" volume create "$1" >/dev/null
 }
 
+# Volume mounts are not marked :ro anywhere below, and that is Apple
+# `container`'s constraint rather than a preference. Mounting a named volume
+# read-only to a second container is an open request -- apple/container#889 --
+# and asking for it produces `VZErrorDomain Code=2 "The storage device
+# attachment is invalid."`, which names the storage layer and not the flag. A
+# host bind mount keeps :ro; that is a different mechanism and works.
+#
+# The same constraint means a volume already attached to a running container
+# cannot attach to a second one, so `export` and `migrate` want the project's
+# container stopped. run_or_hint says so when the attach fails.
+run_or_hint() {
+    if ! "$rt" "$@"; then
+        echo >&2
+        echo "state.sh: the runtime refused to attach a volume." >&2
+        echo "state.sh: a volume attaches to one container at a time, so stop" >&2
+        echo "state.sh: this project's container and try again:" >&2
+        echo "state.sh:   adevcontainer stop" >&2
+        exit 1
+    fi
+}
+
 volume="claude-code-state-$base"
 
 # The volume names from before everything moved under one. `migrate` reads these.
@@ -120,8 +141,8 @@ export)
     fi
 
     mkdir -p "$(dirname "$archive")"
-    "$rt" run --rm \
-        -v "$volume:/v:ro" \
+    run_or_hint run --rm \
+        -v "$volume:/v" \
         -v "$(dirname "$archive"):/out" \
         alpine tar czf "/out/$(basename "$archive")" \
             --numeric-owner ${exclude[@]+"${exclude[@]}"} -C /v .
@@ -134,7 +155,7 @@ import)
 
     # An archive made without --with-credentials simply has no gh/ in it, so
     # there is nothing to decline here and nothing to half-restore.
-    "$rt" run --rm \
+    run_or_hint run --rm \
         -v "$volume:/v" \
         -v "$(dirname "$archive"):/in:ro" \
         alpine tar xzf "/in/$(basename "$archive")" --numeric-owner -C /v
@@ -152,7 +173,7 @@ migrate)
     for pair in "$old_history:hist" "$old_config:config" "$old_gh:gh"; do
         name="${pair%%:*}"
         if volume_exists "$name"; then
-            args+=(-v "$name:/old/${pair##*:}:ro")
+            args+=(-v "$name:/old/${pair##*:}")
             found=1
             echo "state.sh: will read $name"
         else
@@ -166,7 +187,7 @@ migrate)
 
     # 1000:1000 rather than a name: the alpine doing the copying has no `node`
     # user, and numeric ownership is what the container reads it back as.
-    "$rt" run "${args[@]}" alpine sh -c '
+    run_or_hint run "${args[@]}" alpine sh -c '
         set -e
         mkdir -p /new/claude /new/gh
         [ -d /old/config ] && cp -a /old/config/. /new/claude/ || true
