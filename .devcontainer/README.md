@@ -59,23 +59,29 @@ to an IP goes stale the next time you rebuild. A name does not.
 
 ```bash
 # 1. tell the container service what domain to serve, and restart it
-#    (set domain = "test" under [dns] in ~/.config/container/config.toml)
+#    (set domain = "adev.containers" under [dns] in ~/.config/container/config.toml)
 container system stop && container system start
 
-# 2. tell macOS to route *.test at it -- Apple's own command, which writes
-#    /etc/resolver/test and reloads the resolver. Asks for your password.
-sudo container system dns create test
+# 2. tell macOS to route *.adev.containers at it -- Apple's own command, which
+#    writes the /etc/resolver file and reloads the resolver. Wants your password.
+sudo container system dns create adev.containers
 ```
 
-Then `proteolyzer.test` resolves, and `cmux-attach.sh` picks it up on its own —
-it asks `dscacheutil`, which is what `/etc/resolver` actually configures, and
-falls back to the address when there is no answer. Nothing breaks if you skip
-this; you just keep getting IPs.
+Then `proteolyzer.adev.containers` resolves, and `cmux-attach.sh` picks it up on
+its own — it asks `dscacheutil`, which is what `/etc/resolver` actually
+configures, and falls back to the address when there is no answer. Nothing breaks
+if you skip this; you just keep getting IPs.
 
-`.test` rather than something invented because RFC 6761 reserves it for exactly
-this use, so it can never collide with a real TLD — and it is what Apple's own
-tutorial uses. Set `CONTAINER_DNS_DOMAIN` if you pick a different one, or
-`CMUX_DEVCONTAINER_HOST` to name the target outright.
+The suffix says what answered and what kind of thing it was: `adev` for the CLI
+that made the container, `containers` for what it is. `.containers` is not a
+delegated TLD, so nothing on the public internet can shadow these names or be
+shadowed by them — which is why the suffix does not end in a real one like
+`.net`. Apple's own tutorial uses `.test`, reserved by RFC 6761 for this
+purpose, and that is the alternative if you would rather stand on a standard
+than on a name that reads well.
+
+`CONTAINER_DNS_DOMAIN` overrides the suffix, `CMUX_DEVCONTAINER_HOST` the whole
+target.
 
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.

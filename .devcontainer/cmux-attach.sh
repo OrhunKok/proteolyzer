@@ -96,12 +96,16 @@ adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
 # you rebuild, while a name does not.
 #
 # Names come from Apple `container`'s embedded DNS, which needs two one-off steps
-# on the Mac -- see README.md. `.test` rather than something invented because
-# RFC 6761 reserves it for exactly this and it can never collide with a real TLD.
+# on the Mac -- see README.md. The suffix is `adev.containers`, so this project
+# is `proteolyzer.adev.containers`: it says what answers the query and what kind
+# of thing answered. `.containers` is not a delegated TLD, so nothing on the
+# public internet can shadow it or be shadowed by it -- which a suffix ending in
+# a real TLD like `.net` could not promise.
+#
 # Unconfigured, this falls back to the address and everything still works.
 host="${CMUX_DEVCONTAINER_HOST:-}"
 if [ -z "$host" ]; then
-    candidate="$(basename "$repo").${CONTAINER_DNS_DOMAIN:-test}"
+    candidate="$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adev.containers}"
     # dscacheutil rather than dig: it goes through macOS's resolver, which is
     # what /etc/resolver configures and therefore what actually decides.
     if dscacheutil -q host -a name "$candidate" 2>/dev/null | grep -q '^ip_address:'; then
