@@ -26,3 +26,11 @@ repos:
       # search output being committed by accident.
       - id: check-added-large-files
         args: [--maxkb=6144]
+      # `chmod +x` in this working tree does not reach the index -- the workspace
+      # is a bind mount from macOS where the mode does not survive -- so a script
+      # gets committed 100644 and a fresh clone cannot run it. That happened
+      # twice, and both times the symptom was `permission denied` on a script
+      # that was executable locally. `git update-index --chmod=+x <file>` is the
+      # fix; this is what notices.
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
