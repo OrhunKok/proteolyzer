@@ -67,11 +67,21 @@ done < <(echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | aggregate -q)
 # PyPI and files.pythonhosted.org sit behind Fastly anycast: DNS returns a
 # rotating subset of the pool, so IPs pinned at container start go stale and
 # pip fails mid-session. Pinning the range is the reliable fix.
+#
+# 160.79.104.0/24 is Anthropic's own block, and every host Claude Code touches
+# is in it: api.anthropic.com to use a credential, claude.com and
+# platform.claude.com to obtain one, console.anthropic.com beside them. Pinned
+# rather than resolved because a login that fails on a name lookup fails with
+# "no connectivity" and nothing else, and because a name resolved once at
+# container start is a name that can move while the container runs. The
+# resolver loop below keeps the names too; belt and braces on the one thing
+# whose absence stops Claude Code working at all.
 echo "Adding static CDN ranges..."
 for cidr in \
     "151.101.0.0/16" \
     "146.75.0.0/16" \
-    "199.232.0.0/16"; do
+    "199.232.0.0/16" \
+    "160.79.104.0/24"; do
     echo "Adding static range $cidr"
     ipset add -exist allowed-domains "$cidr"
 done
@@ -176,4 +186,14 @@ if ! curl --connect-timeout 5 https://pypi.org/simple/ >/dev/null 2>&1; then
     exit 1
 else
     echo "Firewall verification passed - able to reach https://pypi.org as expected"
+fi
+
+# Verify the login path, not just the API. `claude /login` needs claude.com, and
+# a container that can reach api.anthropic.com but not this one looks perfectly
+# healthy right up until it asks you to authenticate and then says nothing.
+if ! curl --connect-timeout 5 https://claude.com/ >/dev/null 2>&1; then
+    echo "ERROR: Firewall verification failed - unable to reach https://claude.com"
+    exit 1
+else
+    echo "Firewall verification passed - able to reach https://claude.com as expected"
 fi
