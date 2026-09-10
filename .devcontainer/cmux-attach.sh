@@ -90,13 +90,41 @@ fi
 
 adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
 
-# The container's own address, asked of the container rather than derived from a
-# naming scheme that is the runtime's business. Reachable from the host under
-# Apple `container`; this one line replaces the whole published-port dance.
-ip="$(adevcontainer exec -- hostname -i | tr -d '\r' | awk '{print $1}')"
-if [ -z "$ip" ]; then
-    echo "cmux-attach: could not read the container's IP address." >&2
-    exit 1
+# Where to reach the container. A name is preferred over an address for a reason
+# that matters here: every rebuild gets a fresh IP, so a workspace or a
+# `cmux surface resume set` command pinned to an address goes stale the next time
+# you rebuild, while a name does not.
+#
+# Names come from Apple `container`'s embedded DNS, which needs two one-off steps
+# on the Mac -- see README.md. The suffix is `adevcontainers.local`, matching
+# the domain configured in Orchard, so this project is
+# `proteolyzer.adevcontainers.local`.
+#
+# `.local` is worth knowing about: RFC 6762 reserves it for multicast DNS, and
+# macOS sends .local queries to mDNSResponder rather than to a resolver. An
+# /etc/resolver entry for a subdomain of .local does often win, but it is the one
+# suffix where that is not guaranteed -- so if names stop resolving, this is the
+# first thing to suspect and CONTAINER_DNS_DOMAIN is how to change it.
+#
+# Unconfigured, this falls back to the address and everything still works.
+host="${CMUX_DEVCONTAINER_HOST:-}"
+if [ -z "$host" ]; then
+    candidate="$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}"
+    # dscacheutil rather than dig: it goes through macOS's resolver, which is
+    # what /etc/resolver configures and therefore what actually decides.
+    if dscacheutil -q host -a name "$candidate" 2>/dev/null | grep -q '^ip_address:'; then
+        host="$candidate"
+        echo "cmux-attach: using $host"
+    fi
+fi
+
+if [ -z "$host" ]; then
+    host="$(adevcontainer exec -- hostname -i | tr -d '\r' | awk '{print $1}')"
+    if [ -z "$host" ]; then
+        echo "cmux-attach: could not reach the container by name or address." >&2
+        exit 1
+    fi
+    echo "cmux-attach: using $host (no DNS; see README.md to get a name)"
 fi
 
 # Prove the login before handing the connection to cmux, which reports a refused
@@ -110,7 +138,7 @@ if ! ssh -o BatchMode=yes \
         -o UserKnownHostsFile=/dev/null \
         -o StrictHostKeyChecking=no \
         -o ConnectTimeout=10 \
-        -i "$key" -p 2222 "node@$ip" true 2>/tmp/cmux-attach-ssh.$$; then
+        -i "$key" -p 2222 "node@$host" true 2>/tmp/cmux-attach-ssh.$$; then
     echo "cmux-attach: ssh into the container failed. ssh said:" >&2
     sed 's/^/cmux-attach:   /' /tmp/cmux-attach-ssh.$$ >&2
     rm -f /tmp/cmux-attach-ssh.$$
@@ -136,7 +164,7 @@ fi
 #
 # --no-forward-agent for the reason the container holds its own gh credential:
 # it is a sandbox, and the host's ssh agent is not part of what it gets.
-exec cmux ssh "node@$ip" \
+exec cmux ssh "node@$host" \
     --port 2222 \
     --identity "$key" \
     --name "$(basename "$repo")" \

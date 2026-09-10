@@ -42,6 +42,56 @@ serves both runtimes, because the devcontainer CLI reads `image:` too.
 otherwise. `cmux-attach.sh` is Apple-only, because that is where the container
 has its own address and the whole published-port dance disappears.
 
+## Names, and giving the container one
+
+`name` in `devcontainer.json` is the project, `proteolyzer`, not a description of
+what the container is for. adevcontainer turns it into both the create name and
+the DNS hostname, so `"Claude Code Sandbox"` gave every project a container
+called `claude-code-sandbox` — indistinguishable from the next one in Orchard or
+`container list`, and useless as a hostname. Each project sets its own.
+
+A `buildkit` container appearing beside it is Apple's own builder for
+`container build`, not one of these. It comes and goes.
+
+**DNS is worth the two minutes**, and not only for looks: every rebuild gets a
+fresh address, so a cmux workspace or a `cmux surface resume set` command pinned
+to an IP goes stale the next time you rebuild. A name does not.
+
+The domain is `adevcontainers.local`, set up in Orchard, so this project is
+`proteolyzer.adevcontainers.local`. Equivalently from the command line:
+
+```bash
+# domain = "adevcontainers.local" under [dns] in ~/.config/container/config.toml
+container system stop && container system start
+sudo container system dns create adevcontainers.local
+```
+
+`cmux-attach.sh` picks the name up on its own — it asks `dscacheutil`, which is
+what `/etc/resolver` actually configures, and falls back to the address when
+there is no answer. Nothing breaks if DNS is not set up; you just keep getting
+IPs.
+
+Two things to know about it.
+
+**The name comes from `name` in `devcontainer.json`**, so it only becomes
+`proteolyzer.adevcontainers.local` once the container has been recreated under
+that name. Before that it is whatever the container is currently called.
+
+**`.local` is the one suffix where an `/etc/resolver` entry is not guaranteed to
+win.** RFC 6762 reserves it for multicast DNS, and macOS routes `.local` queries
+to mDNSResponder rather than to a resolver. A subdomain of `.local` usually does
+get through, but if names resolve intermittently or stop after a network change,
+this is the first thing to suspect rather than the last. Check with the same call
+the script makes:
+
+```bash
+dscacheutil -q host -a name proteolyzer.adevcontainers.local
+```
+
+An `ip_address:` line means it works. Nothing means it does not, and the fix is a
+suffix outside `.local` — `CONTAINER_DNS_DOMAIN` overrides it, and
+`CMUX_DEVCONTAINER_HOST` overrides the whole target.
+
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
 

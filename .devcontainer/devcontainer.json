@@ -1,5 +1,11 @@
 {
-  "name": "Claude Code Sandbox",
+  // The project, not the purpose. adevcontainer turns `name` into the container's
+  // create name and its DNS hostname, so "Claude Code Sandbox" gave every
+  // project a container called claude-code-sandbox -- indistinguishable from the
+  // next one in Orchard or `container list`, and useless as a hostname. Each
+  // project sets its own here; a literal rather than a substitution, because
+  // adevcontainer hard-errors on substitutions it does not implement.
+  "name": "proteolyzer",
 
   // Image rather than `build`, which is what makes this work on Apple
   // `container`: adevcontainer hard-rejects `build.dockerfile` as an
