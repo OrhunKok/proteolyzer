@@ -120,5 +120,20 @@ RUN chmod 0644 /etc/ssh/sshd_cmux_config && \
 # sshd runs the login shell out of /etc/passwd and ignores ENV SHELL, so without
 # this a cmux ssh session lands in bash -- no ~/.zshrc, and therefore no
 # gh-auth.sh and no `gh`. Everything else names zsh explicitly and is unaffected.
-RUN usermod --shell /bin/zsh node
+#
+# `-p '*'` is the second thing sshd reads out of the account database, and
+# without it no key is ever accepted. node arrives from the base image
+# shadow-locked -- `!` in /etc/shadow, which is what `useradd` leaves behind when
+# no password is set -- and OpenSSH's allowed_user() refuses a locked account for
+# *public key* auth whenever UsePAM is off, which sshd-cmux.conf sets. The client
+# is told `Permission denied (publickey)` and nothing else, with a correct
+# authorized_keys sitting right there.
+#
+# `*` rather than `passwd -d`: it leaves no password that can ever match, so this
+# unlocks the account without granting one. Password auth is off in the config
+# besides. The upstream fixture that config comes from logs in as root, which is
+# never locked, so it never met this; deviating to `PermitRootLogin no` and a
+# node login is what does.
+RUN usermod --shell /bin/zsh node && \
+  usermod -p '*' node
 USER node

@@ -132,6 +132,22 @@ What this repository adds for it:
   `/etc/passwd` and ignores `ENV SHELL`, so without this an ssh session lands in
   bash — no `~/.zshrc`, so no `gh-auth.sh`, so no `gh`. Everything else names
   zsh explicitly and is unaffected.
+- `usermod -p '*' node`, without which **no key is ever accepted**. The account
+  arrives from the base image shadow-locked — `!`, which is what `useradd`
+  leaves when no password is set — and OpenSSH refuses a locked account for
+  *public key* auth whenever `UsePAM` is off, which the config above sets. `*`
+  unlocks it without granting a password; password auth is off regardless.
+
+  Worth knowing how this one hides. It presents as `Permission denied
+  (publickey)` with a byte-correct `authorized_keys`, the right modes on it and
+  every directory above it, and an account that is not expired — so the search
+  goes to the key material and stays there. A throwaway sshd started on another
+  port **cannot reproduce it**: run as a non-root user it cannot read
+  `/etc/shadow`, `getspnam()` returns NULL, it falls back to the `x` in
+  `/etc/passwd` and lets the login through. If a test sshd accepts a key the
+  real one refuses, the difference is a check only root can make. The fixture
+  this config came from logs in as root, which is never locked, so
+  `PermitRootLogin no` is the deviation that exposes it.
 
 Starting sshd unconditionally is safe: the port is loopback-only, password auth
 is off, and no `authorized_keys` exists until `cmux-attach.sh` writes one. Until

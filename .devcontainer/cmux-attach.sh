@@ -95,6 +95,27 @@ if ! docker exec "$container" cat /home/node/.ssh/authorized_keys 2>/dev/null \
     exit 1
 fi
 
+# The key is only half of it: the account has to be unlocked too. node ships
+# shadow-locked from the base image, and OpenSSH refuses a locked account for
+# public key auth when UsePAM is off -- which arrives as the same bare
+# `Permission denied (publickey)` the block above exists to rule out. See the
+# Dockerfile for the long form.
+#
+# The Dockerfile is where this belongs and it does it at build time. This covers
+# a container built before it did, for the same reason the start-sshd.sh line
+# below is here. Only when `passwd -S` says L, so an image that already has it
+# right is left alone rather than rewritten on every attach.
+if ! docker exec -u root "$container" sh -c '
+    set -e
+    case "$(passwd -S node)" in
+        "node L "*) usermod -p "*" node ;;
+    esac
+'; then
+    echo "cmux-attach: could not unlock the node account in the container." >&2
+    echo "cmux-attach: sshd will refuse the key. container=$container" >&2
+    exit 1
+fi
+
 # Idempotent, and covers a container that was already up from before sshd was
 # part of this image.
 docker exec -u node "$container" sudo /usr/local/bin/start-sshd.sh
