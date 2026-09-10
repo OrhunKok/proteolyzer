@@ -513,6 +513,29 @@ config to swap in, and the one upstream issue to watch. OrbStack is the
 meanwhile option: it makes Docker faster without making it different, so nothing
 here changes.
 
+### The workspace mount lies about who owns it
+
+`/workspace` is a virtiofs bind mount, and the owner it reports for the mount
+root flaps between `node` and `root` from one syscall to the next. git's
+ownership check believes it:
+
+```
+fatal: detected dubious ownership in repository at '/workspace'
+```
+
+Intermittently, and on some commands and not others, which is what makes it read
+like anything but a mount problem. `git log` succeeds while `git fetch` in the
+same second fails — a fetch runs `git rev-list` and `git maintenance` as
+subprocesses and each re-runs the check, so it has more chances to land on a bad
+sample. Measured at 48 of 50 `git status` runs failing in one phase and 0 of 50
+in another. Nothing is wrong with the checkout: writes succeed throughout,
+including while it reads `root:root 700`.
+
+The Dockerfile answers it with `git config --system --add safe.directory
+/workspace`. `--system` rather than a session's `--global`, because `/home/node`
+is not one of the mounted volumes and a global config is lost on the next
+rebuild. One entry covers the worktrees under `.claude/` as well.
+
 ## Moving to another machine
 
 Most of it already travels, and it is worth being exact about which part does
