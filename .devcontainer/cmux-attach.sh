@@ -96,16 +96,20 @@ adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
 # you rebuild, while a name does not.
 #
 # Names come from Apple `container`'s embedded DNS, which needs two one-off steps
-# on the Mac -- see README.md. The suffix is `adev.containers`, so this project
-# is `proteolyzer.adev.containers`: it says what answers the query and what kind
-# of thing answered. `.containers` is not a delegated TLD, so nothing on the
-# public internet can shadow it or be shadowed by it -- which a suffix ending in
-# a real TLD like `.net` could not promise.
+# on the Mac -- see README.md. The suffix is `adevcontainers.local`, matching
+# the domain configured in Orchard, so this project is
+# `proteolyzer.adevcontainers.local`.
+#
+# `.local` is worth knowing about: RFC 6762 reserves it for multicast DNS, and
+# macOS sends .local queries to mDNSResponder rather than to a resolver. An
+# /etc/resolver entry for a subdomain of .local does often win, but it is the one
+# suffix where that is not guaranteed -- so if names stop resolving, this is the
+# first thing to suspect and CONTAINER_DNS_DOMAIN is how to change it.
 #
 # Unconfigured, this falls back to the address and everything still works.
 host="${CMUX_DEVCONTAINER_HOST:-}"
 if [ -z "$host" ]; then
-    candidate="$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adev.containers}"
+    candidate="$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}"
     # dscacheutil rather than dig: it goes through macOS's resolver, which is
     # what /etc/resolver configures and therefore what actually decides.
     if dscacheutil -q host -a name "$candidate" 2>/dev/null | grep -q '^ip_address:'; then

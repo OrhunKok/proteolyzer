@@ -57,31 +57,40 @@ A `buildkit` container appearing beside it is Apple's own builder for
 fresh address, so a cmux workspace or a `cmux surface resume set` command pinned
 to an IP goes stale the next time you rebuild. A name does not.
 
-```bash
-# 1. tell the container service what domain to serve, and restart it
-#    (set domain = "adev.containers" under [dns] in ~/.config/container/config.toml)
-container system stop && container system start
+The domain is `adevcontainers.local`, set up in Orchard, so this project is
+`proteolyzer.adevcontainers.local`. Equivalently from the command line:
 
-# 2. tell macOS to route *.adev.containers at it -- Apple's own command, which
-#    writes the /etc/resolver file and reloads the resolver. Wants your password.
-sudo container system dns create adev.containers
+```bash
+# domain = "adevcontainers.local" under [dns] in ~/.config/container/config.toml
+container system stop && container system start
+sudo container system dns create adevcontainers.local
 ```
 
-Then `proteolyzer.adev.containers` resolves, and `cmux-attach.sh` picks it up on
-its own — it asks `dscacheutil`, which is what `/etc/resolver` actually
-configures, and falls back to the address when there is no answer. Nothing breaks
-if you skip this; you just keep getting IPs.
+`cmux-attach.sh` picks the name up on its own — it asks `dscacheutil`, which is
+what `/etc/resolver` actually configures, and falls back to the address when
+there is no answer. Nothing breaks if DNS is not set up; you just keep getting
+IPs.
 
-The suffix says what answered and what kind of thing it was: `adev` for the CLI
-that made the container, `containers` for what it is. `.containers` is not a
-delegated TLD, so nothing on the public internet can shadow these names or be
-shadowed by them — which is why the suffix does not end in a real one like
-`.net`. Apple's own tutorial uses `.test`, reserved by RFC 6761 for this
-purpose, and that is the alternative if you would rather stand on a standard
-than on a name that reads well.
+Two things to know about it.
 
-`CONTAINER_DNS_DOMAIN` overrides the suffix, `CMUX_DEVCONTAINER_HOST` the whole
-target.
+**The name comes from `name` in `devcontainer.json`**, so it only becomes
+`proteolyzer.adevcontainers.local` once the container has been recreated under
+that name. Before that it is whatever the container is currently called.
+
+**`.local` is the one suffix where an `/etc/resolver` entry is not guaranteed to
+win.** RFC 6762 reserves it for multicast DNS, and macOS routes `.local` queries
+to mDNSResponder rather than to a resolver. A subdomain of `.local` usually does
+get through, but if names resolve intermittently or stop after a network change,
+this is the first thing to suspect rather than the last. Check with the same call
+the script makes:
+
+```bash
+dscacheutil -q host -a name proteolyzer.adevcontainers.local
+```
+
+An `ip_address:` line means it works. Nothing means it does not, and the fix is a
+suffix outside `.local` — `CONTAINER_DNS_DOMAIN` overrides it, and
+`CMUX_DEVCONTAINER_HOST` overrides the whole target.
 
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
