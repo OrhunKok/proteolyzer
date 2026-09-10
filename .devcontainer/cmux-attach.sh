@@ -4,113 +4,144 @@
 #
 # cmux has no devcontainer support and does not need any: `cmux ssh` is a
 # first-class workspace type with a Linux-side daemon, and a container running
-# sshd is a remote host like any other. cmux's own Docker integration suites
-# attach to a container exactly this way -- ephemeral published port, throwaway
-# key, host key checking off -- so this is a tested configuration rather than a
-# clever one.
+# sshd is a remote host like any other.
 #
-# What it buys over `up.sh` (which is `devcontainer exec`, and still the right
-# tool for a quick shell):
+# What it buys over `up.sh`, which is still the right tool for a quick shell:
 #
-#   - the `cmux` CLI works *inside* the container. The bootstrap installs a
-#     wrapper at ~/.cmux/bin/cmux and pins CMUX_SOCKET_PATH to a reverse-
-#     forwarded port, so `cmux notify` from a Claude Code hook reaches the app.
-#   - PTY sessions survive cmux quitting and restarting, and reconnect.
-#   - the sidebar gets real metadata, and dragging an image in uploads over sftp.
-#   - browser panes egress from the container, so they are inside the firewall.
+#   - the `cmux` CLI works *inside* the container, so `cmux notify` and
+#     `cmux workspace status set` from a Claude Code hook reach the app
+#   - terminals survive cmux quitting, and reconnect on relaunch
+#   - sidebar metadata, and dragging a file into the pane uploads over sftp
 #
-# This runs on the host, not inside the container.
+# Apple `container` only. Every container gets its own address reachable from the
+# host, so there is no published port, no `docker port` and no loopback juggling
+# -- which is most of why this is worth doing on that runtime. On Docker use
+# `up.sh`; the config publishes no port there.
 #
-#   ./.devcontainer/cmux-attach.sh                 workspace with a shell in /workspace
-#   ./.devcontainer/cmux-attach.sh claude          workspace that starts Claude Code
-#   REBUILD=1 ./.devcontainer/cmux-attach.sh       rebuild the container first
+#   ./.devcontainer/cmux-attach.sh             a workspace with a shell
+#   ./.devcontainer/cmux-attach.sh claude      a workspace running Claude Code
+#   REBUILD=1 ./.devcontainer/cmux-attach.sh   rebuild first
 set -euo pipefail
+
+# These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
+# on the Mac -- so running one *inside* the container is a mistake worth naming.
+# Left uncaught the symptom is "cmux is not on PATH" plus an invitation to
+# `brew install` it, on Linux, which sends you somewhere with no exit.
+if [ "$(uname -s)" = Linux ]; then
+    printf '%s\n' \
+        "${0##*/}: this runs on the Mac, not inside the container." \
+        "${0##*/}: \`exit\` back to the host first, or use another cmux tab." >&2
+    exit 1
+fi
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 key="${CMUX_DEVCONTAINER_KEY:-$HOME/.ssh/cmux-devcontainer}"
 
-for tool in cmux devcontainer docker; do
+for tool in cmux adevcontainer container; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "cmux-attach: $tool is not on PATH." >&2
         case "$tool" in
             cmux) echo "cmux-attach:   brew install --cask cmux" >&2 ;;
-            devcontainer) echo "cmux-attach:   npm install -g @devcontainers/cli" >&2 ;;
-            docker) echo "cmux-attach:   start Docker Desktop or OrbStack" >&2 ;;
+            adevcontainer) echo "cmux-attach:   brew install wcgomes/tap/adevcontainer" >&2 ;;
+            container) echo "cmux-attach:   see github.com/apple/container (macOS 26+)" >&2 ;;
         esac
+        echo "cmux-attach: on Docker, use ./.devcontainer/up.sh instead." >&2
         exit 1
     fi
 done
 
-# postStartCommand starts sshd, so this is also what guarantees it is running.
-log="$(mktemp)"
-trap 'rm -f "$log"' EXIT
-# shellcheck disable=SC2086
-devcontainer up --workspace-folder "$repo" ${REBUILD:+--remove-existing-container} | tee "$log"
-
-container="$(sed -n 's/.*"containerId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$log" | tail -1)"
-if [ -z "$container" ]; then
-    # The CLI labels every container it makes with the folder it came from.
-    container="$(docker ps -q --filter "label=devcontainer.local_folder=$repo" | head -1)"
-fi
-rm -f "$log"
-trap - EXIT   # the script ends in exec, which would never reach the trap
-
-if [ -z "$container" ]; then
-    echo "cmux-attach: could not work out which container is this workspace's." >&2
-    exit 1
+cd "$repo"
+if [ -n "${REBUILD:-}" ]; then
+    adevcontainer rebuild
+else
+    adevcontainer up
 fi
 
-# A key of its own, not the one that talks to GitHub: this authenticates a
-# loopback hop into a container, and giving that a key with any other reach is
-# how a sandbox stops being one.
+# A key of its own, not the one that talks to GitHub: this authenticates a hop
+# into a sandbox, and giving that a key with any other reach is how a sandbox
+# stops being one.
 if [ ! -f "$key" ]; then
     mkdir -p "$(dirname "$key")"
     ssh-keygen -t ed25519 -N '' -C cmux-devcontainer -f "$key"
 fi
 
-# Written on every attach rather than mounted: a mount that has to exist is a
-# container that will not start on the day the file is missing.
-docker exec -i -u node "$container" sh -c '
-    umask 077
-    mkdir -p "$HOME/.ssh"
-    cat > "$HOME/.ssh/authorized_keys"
-' < "$key.pub"
+# The key goes in as an argument, not on stdin. `adevcontainer exec` without -i
+# attaches no stdin, so a `cat >` inside reads EOF immediately and writes an
+# empty authorized_keys -- which is exactly what the read-back below caught. An
+# argument needs nothing of the CLI beyond running the command.
+#
+# Spelled-out paths, and both modes set explicitly: `mkdir -p` leaves an existing
+# directory's mode alone and the node image ships ~/.ssh as 755, so a umask alone
+# never makes it 700.
+adevcontainer exec -- sh -c '
+    set -e
+    mkdir -p /home/node/.ssh
+    printf "%s\n" "$1" > /home/node/.ssh/authorized_keys
+    chmod 700 /home/node/.ssh
+    chmod 600 /home/node/.ssh/authorized_keys
+' sh "$(cat "$key.pub")"
 
-# Idempotent, and covers a container that was already up from before sshd was
-# part of this image.
-docker exec -u node "$container" sudo /usr/local/bin/start-sshd.sh
-
-port="$(docker port "$container" 2222/tcp | head -1 | awk -F: '{print $NF}')"
-if [ -z "$port" ]; then
-    echo "cmux-attach: port 2222 is not published. Rebuild: REBUILD=1 $0" >&2
+# Read it back. A key that silently did not land is invisible until ssh refuses.
+if ! adevcontainer exec -- cat /home/node/.ssh/authorized_keys 2>/dev/null \
+        | grep -qF "$(cut -d' ' -f2 < "$key.pub")"; then
+    echo "cmux-attach: the public key is not in the container's authorized_keys." >&2
     exit 1
 fi
 
-if command -v nc >/dev/null 2>&1; then
-    for _ in $(seq 1 30); do
-        nc -z 127.0.0.1 "$port" 2>/dev/null && break
-        sleep 0.2
-    done
+adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
+
+# The container's own address, asked of the container rather than derived from a
+# naming scheme that is the runtime's business. Reachable from the host under
+# Apple `container`; this one line replaces the whole published-port dance.
+ip="$(adevcontainer exec -- hostname -i | tr -d '\r' | awk '{print $1}')"
+if [ -z "$ip" ]; then
+    echo "cmux-attach: could not read the container's IP address." >&2
+    exit 1
 fi
 
-remote_command="cd /workspace"
+# Prove the login before handing the connection to cmux, which reports a refused
+# key as "the remote VM may have been paused, destroyed, or lost network" -- true
+# of almost nothing, and it sends you looking in the wrong place.
+#
+# IdentitiesOnly because `-i` only *adds* a key: ssh offers the agent's first,
+# and a full agent can exhaust MaxAuthTries before reaching the one that works.
+if ! ssh -o BatchMode=yes \
+        -o IdentitiesOnly=yes \
+        -o UserKnownHostsFile=/dev/null \
+        -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=10 \
+        -i "$key" -p 2222 "node@$ip" true 2>/tmp/cmux-attach-ssh.$$; then
+    echo "cmux-attach: ssh into the container failed. ssh said:" >&2
+    sed 's/^/cmux-attach:   /' /tmp/cmux-attach-ssh.$$ >&2
+    rm -f /tmp/cmux-attach-ssh.$$
+    exit 1
+fi
+rm -f /tmp/cmux-attach-ssh.$$
+
+# sshd builds its own login environment, so what is on PATH there depends on
+# image plumbing this script has no business assuming. npm's global bin -- where
+# `claude` is -- is added here, single-quoted so $PATH expands in the container
+# and not on the Mac. Belongs in the image too, and is, but a script that only
+# works against a freshly built image is a script that fails at the worst time.
+prelude='export PATH="$PATH:/usr/local/share/npm-global/bin"'
+
+remote_command="$prelude && cd /workspace"
 if [ "$#" -gt 0 ]; then
-    remote_command="cd /workspace && $*"
+    remote_command="$prelude && cd /workspace && $*"
 fi
 
-# Host key checking off, deliberately: start-sshd.sh generates a host key per
-# container and the port is a fresh ephemeral one each rebuild, so known_hosts
-# would do nothing but reject a container it has seen before under a port some
-# other container used. What bounds this is the port being on loopback and the
-# key being one this script made.
+# Host key checking off: start-sshd.sh generates a host key per container, so
+# known_hosts could only ever reject a rebuild of the same workspace. What bounds
+# this is the address being the runtime's own and the key being one this made.
 #
 # --no-forward-agent for the reason the container holds its own gh credential:
 # it is a sandbox, and the host's ssh agent is not part of what it gets.
-exec cmux ssh "node@127.0.0.1" \
-    --port "$port" \
+exec cmux ssh "node@$ip" \
+    --port 2222 \
     --identity "$key" \
     --name "$(basename "$repo")" \
     --no-forward-agent \
+    --ssh-option IdentitiesOnly=yes \
     --ssh-option UserKnownHostsFile=/dev/null \
     --ssh-option StrictHostKeyChecking=no \
     --command "$remote_command"

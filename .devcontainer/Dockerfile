@@ -93,6 +93,48 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
+# The settings that used to live in devcontainer.json's containerEnv. They are
+# here instead because a container's environment is given to processes the
+# *runtime* starts -- an entrypoint, `docker exec`, `devcontainer exec` -- and
+# sshd is not one of those. It builds a login environment from /etc/profile and
+# friends, so under `cmux ssh` none of these were set and `claude` was not even
+# on PATH. One place, applied to both.
+ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true
+ENV DISABLE_TELEMETRY=true
+ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV CLAUDE_CONFIG_DIR=/home/node/.claude
+ENV POWERLEVEL9K_DISABLE_GITSTATUS=true
+
+# The same values again for login shells, which read files rather than the
+# container config.
+#
+# /etc/profile sources /etc/profile.d/*.sh, which covers bash. It does not cover
+# zsh: this image's /etc/zsh/zprofile is the packaged one and contains nothing
+# but comments, so a zsh login shell reads neither. sshd hands out zsh here
+# (usermod --shell, below), which is precisely the shell that needed this, so
+# zprofile gets the line Debian would otherwise have put there. `emulate sh`
+# keeps /etc/profile's sh syntax from meeting zsh's parser.
+USER root
+RUN grep -q '/etc/profile' /etc/zsh/zprofile || \
+  printf "%s\n" "emulate sh -c 'source /etc/profile'" >> /etc/zsh/zprofile
+RUN printf '%s\n' \
+  '# Written by .devcontainer/Dockerfile. A login shell -- notably one sshd' \
+  '# starts -- does not inherit the container ENV, so it is restated here.' \
+  'export PATH="$PATH:/usr/local/share/npm-global/bin"' \
+  'export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true' \
+  'export DISABLE_TELEMETRY=true' \
+  'export NODE_OPTIONS=--max-old-space-size=4096' \
+  'export CLAUDE_CONFIG_DIR=/home/node/.claude' \
+  'export POWERLEVEL9K_DISABLE_GITSTATUS=true' \
+  > /etc/profile.d/10-devcontainer.sh && \
+  chmod 0644 /etc/profile.d/10-devcontainer.sh
+
+# Belt and braces for a shell that reads no profile at all -- `bash -lc` resets
+# PATH to the Debian default, and some agents shell out that way. /usr/local/bin
+# is in every default PATH there is.
+RUN ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
+USER node
+
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
@@ -117,8 +159,26 @@ RUN chmod 0644 /etc/ssh/sshd_cmux_config && \
 # image and shared by every container built from it. start-sshd.sh regenerates
 # what is missing at first start, which makes it per container instead.
 
-# sshd runs the login shell out of /etc/passwd and ignores ENV SHELL, so without
-# this a cmux ssh session lands in bash -- no ~/.zshrc, and therefore no
-# gh-auth.sh and no `gh`. Everything else names zsh explicitly and is unaffected.
-RUN usermod --shell /bin/zsh node
+# The volume-ownership repair, on the same sudo arrangement, for a runtime that
+# does not seed a named volume from the image. See fix-volume-perms.sh.
+COPY fix-volume-perms.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/fix-volume-perms.sh && \
+  echo "node ALL=(root) NOPASSWD: /usr/local/bin/fix-volume-perms.sh" > /etc/sudoers.d/node-volperms && \
+  chmod 0440 /etc/sudoers.d/node-volperms
+
+# Two things about the node account, and the second is not cosmetic.
+#
+# sshd reads the login shell out of /etc/passwd and ignores ENV SHELL, so without
+# --shell a cmux ssh session lands in bash -- no ~/.zshrc, no gh-auth.sh, no gh.
+#
+# `usermod -p '*'` unlocks the account. node ships shadow-locked, and OpenSSH's
+# allowed_user() refuses a locked account for *public key* auth when UsePAM is
+# off, which this config sets. Every visible thing is correct -- authorized_keys
+# byte-exact, .ssh 700, the file 600 -- and the client still sees a bare
+# `Permission denied (publickey)`. cmux's own fixture logs in as root, which is
+# never locked, so this only appears once you use a normal user. `*` means "no
+# password accepted", not "no password required": password auth stays off, and
+# PasswordAuthentication no in sshd_cmux_config says so a second time.
+RUN usermod --shell /bin/zsh node && \
+  usermod -p '*' node
 USER node

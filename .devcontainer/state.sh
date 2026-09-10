@@ -18,6 +18,17 @@
 # The container does not need to be running. `docker volume` is enough.
 set -euo pipefail
 
+# These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
+# on the Mac -- so running one *inside* the container is a mistake worth naming.
+# Left uncaught the symptom is "cmux is not on PATH" plus an invitation to
+# `brew install` it, on Linux, which sends you somewhere with no exit.
+if [ "$(uname -s)" = Linux ]; then
+    printf '%s\n' \
+        "${0##*/}: this runs on the Mac, not inside the container." \
+        "${0##*/}: \`exit\` back to the host first, or use another cmux tab." >&2
+    exit 1
+fi
+
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 base="$(basename "$repo")"
 archive="$repo/devcontainer-state.tar.gz"
@@ -39,10 +50,48 @@ if [ -z "$action" ]; then
     exit 1
 fi
 
-if ! docker info >/dev/null 2>&1; then
+# Runtimes keep separate volume stores, so this is also how you move state
+# between them -- which is the migration you want the day you switch:
+#
+#   RUNTIME=docker    ./.devcontainer/state.sh export
+#   RUNTIME=container ./.devcontainer/state.sh import
+#
+# The Docker volumes are read, not touched, so the old setup stays intact until
+# you are satisfied the new one works.
+rt="${RUNTIME:-}"
+if [ -z "$rt" ]; then
+    if command -v container >/dev/null 2>&1; then
+        rt=container
+    elif command -v docker >/dev/null 2>&1; then
+        rt=docker
+    else
+        echo "state.sh: no container runtime found." >&2
+        exit 1
+    fi
+fi
+
+if ! command -v "$rt" >/dev/null 2>&1; then
+    echo "state.sh: RUNTIME=$rt is not on PATH." >&2
+    exit 1
+fi
+
+if [ "$rt" = docker ] && ! docker info >/dev/null 2>&1; then
     echo "state.sh: Docker is not running." >&2
     exit 1
 fi
+
+echo "state.sh: using $rt"
+
+# `container volume` has create/delete/prune/list but no `inspect`, and its
+# `create` errors on an existing volume where Docker's is idempotent. `volume
+# list --quiet` is spelled the same on both, so existence goes through that.
+volume_exists() {
+    "$rt" volume list --quiet 2>/dev/null | grep -qx "$1"
+}
+
+ensure_volume() {
+    volume_exists "$1" || "$rt" volume create "$1" >/dev/null
+}
 
 # Volume names are keyed on the directory basename, the same as devcontainer.json
 # does it -- so the directory has to be named the same on the far machine for
@@ -56,7 +105,7 @@ export)
     args=(--rm)
     for pair in "$history_volume:bashhistory" "$config_volume:config"; do
         volume="${pair%%:*}"
-        if docker volume inspect "$volume" >/dev/null 2>&1; then
+        if volume_exists "$volume"; then
             args+=(-v "$volume:/v/${pair##*:}:ro")
         else
             echo "state.sh: no volume $volume yet; skipping." >&2
@@ -64,7 +113,7 @@ export)
     done
 
     if [ "$with_credentials" -eq 1 ]; then
-        if docker volume inspect "$gh_volume" >/dev/null 2>&1; then
+        if volume_exists "$gh_volume"; then
             args+=(-v "$gh_volume:/v/gh:ro")
             echo "state.sh: WARNING -- including $gh_volume puts a GitHub token"
             echo "state.sh: in $archive as plaintext. Move it as you would a key,"
@@ -76,7 +125,7 @@ export)
 
     mkdir -p "$(dirname "$archive")"
     args+=(-v "$(dirname "$archive"):/out")
-    docker run "${args[@]}" alpine \
+    "$rt" run "${args[@]}" alpine \
         tar czf "/out/$(basename "$archive")" --numeric-owner -C /v .
     echo "state.sh: wrote $archive"
     ;;
@@ -85,12 +134,12 @@ import)
     [ -f "$archive" ] || { echo "state.sh: no such archive: $archive" >&2; exit 1; }
 
     args=(--rm)
-    docker volume create "$history_volume" >/dev/null
-    docker volume create "$config_volume" >/dev/null
+    ensure_volume "$history_volume"
+    ensure_volume "$config_volume"
     args+=(-v "$history_volume:/v/bashhistory" -v "$config_volume:/v/config")
 
     if [ "$with_credentials" -eq 1 ]; then
-        docker volume create "$gh_volume" >/dev/null
+        ensure_volume "$gh_volume"
         args+=(-v "$gh_volume:/v/gh")
     fi
 
@@ -98,7 +147,7 @@ import)
     # Anything in the archive without a volume mounted over its path lands in the
     # throwaway container layer and goes away with it -- which is how a `gh`
     # directory in the tarball is declined rather than half-restored.
-    docker run "${args[@]}" alpine \
+    "$rt" run "${args[@]}" alpine \
         tar xzf "/in/$(basename "$archive")" --numeric-owner -C /v
     echo "state.sh: restored into $history_volume, $config_volume$([ "$with_credentials" -eq 1 ] && echo ", $gh_volume")"
     echo "state.sh: the directory must stay named '$base' for the container to find these."

@@ -1,28 +1,60 @@
 {
   "commands": [
     {
-      "name": "Devcontainer workspace",
-      "description": "attach the sandbox as a cmux remote workspace over ssh",
-      "keywords": ["devcontainer", "workspace", "sandbox", "ssh", "attach"],
-      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/cmux-attach.sh"
+      "name": "Open sandbox",
+      "description": "a workspace with Claude and a shell, both already in the container",
+      "keywords": ["devcontainer", "sandbox", "claude", "open", "reopen"],
+      "workspace": {
+        "name": "proteolyzer",
+        "cwd": ".",
+        "layout": {
+          "direction": "horizontal",
+          "split": 0.6,
+          "children": [
+            {
+              "pane": {
+                "surfaces": [
+                  {
+                    "type": "terminal",
+                    "name": "claude",
+                    "command": "./.devcontainer/up.sh claude",
+                    "focus": true
+                  }
+                ]
+              }
+            },
+            {
+              "pane": {
+                "surfaces": [
+                  {
+                    "type": "terminal",
+                    "name": "shell",
+                    "command": "./.devcontainer/up.sh"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
     },
     {
-      "name": "Claude in devcontainer workspace",
-      "description": "same, starting Claude Code in /workspace",
-      "keywords": ["claude", "agent", "sandbox", "workspace"],
+      "name": "Open sandbox (cmux ssh)",
+      "description": "same, over ssh — durable terminals and the cmux CLI inside",
+      "keywords": ["devcontainer", "sandbox", "ssh", "workspace"],
       "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/cmux-attach.sh claude"
     },
     {
-      "name": "Devcontainer shell (exec)",
-      "description": "just a zsh in the sandbox, no ssh, no workspace metadata",
-      "keywords": ["devcontainer", "shell", "zsh", "exec"],
+      "name": "Devcontainer shell",
+      "description": "one shell in the sandbox, in this pane",
+      "keywords": ["devcontainer", "shell", "zsh"],
       "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/up.sh"
     },
     {
       "name": "Rebuild devcontainer",
-      "description": "discard the container, build from the Dockerfile, attach again",
-      "keywords": ["rebuild", "devcontainer", "docker"],
-      "command": "cd \"$(git rev-parse --show-toplevel)\" && REBUILD=1 ./.devcontainer/cmux-attach.sh",
+      "description": "rebuild the image from the Dockerfile, then replace the container",
+      "keywords": ["rebuild", "devcontainer", "image", "build"],
+      "command": "cd \"$(git rev-parse --show-toplevel)\" && ./.devcontainer/build.sh && REBUILD=1 ./.devcontainer/up.sh",
       "confirm": true
     }
   ]
