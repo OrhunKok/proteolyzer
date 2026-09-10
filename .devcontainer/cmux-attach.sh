@@ -107,9 +107,16 @@ if ! ssh -o BatchMode=yes \
 fi
 rm -f /tmp/cmux-attach-ssh.$$
 
-remote_command="cd /workspace"
+# sshd builds its own login environment, so what is on PATH there depends on
+# image plumbing this script has no business assuming. npm's global bin -- where
+# `claude` is -- is added here, single-quoted so $PATH expands in the container
+# and not on the Mac. Belongs in the image too, and is, but a script that only
+# works against a freshly built image is a script that fails at the worst time.
+prelude='export PATH="$PATH:/usr/local/share/npm-global/bin"'
+
+remote_command="$prelude && cd /workspace"
 if [ "$#" -gt 0 ]; then
-    remote_command="cd /workspace && $*"
+    remote_command="$prelude && cd /workspace && $*"
 fi
 
 # Host key checking off: start-sshd.sh generates a host key per container, so
