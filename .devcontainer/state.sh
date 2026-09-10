@@ -71,6 +71,17 @@ fi
 
 echo "state.sh: using $rt"
 
+# `container volume` has create/delete/prune/list but no `inspect`, and its
+# `create` errors on an existing volume where Docker's is idempotent. `volume
+# list --quiet` is spelled the same on both, so existence goes through that.
+volume_exists() {
+    "$rt" volume list --quiet 2>/dev/null | grep -qx "$1"
+}
+
+ensure_volume() {
+    volume_exists "$1" || "$rt" volume create "$1" >/dev/null
+}
+
 # Volume names are keyed on the directory basename, the same as devcontainer.json
 # does it -- so the directory has to be named the same on the far machine for
 # these to land where the container will look for them.
@@ -83,7 +94,7 @@ export)
     args=(--rm)
     for pair in "$history_volume:bashhistory" "$config_volume:config"; do
         volume="${pair%%:*}"
-        if "$rt" volume inspect "$volume" >/dev/null 2>&1; then
+        if volume_exists "$volume"; then
             args+=(-v "$volume:/v/${pair##*:}:ro")
         else
             echo "state.sh: no volume $volume yet; skipping." >&2
@@ -91,7 +102,7 @@ export)
     done
 
     if [ "$with_credentials" -eq 1 ]; then
-        if "$rt" volume inspect "$gh_volume" >/dev/null 2>&1; then
+        if volume_exists "$gh_volume"; then
             args+=(-v "$gh_volume:/v/gh:ro")
             echo "state.sh: WARNING -- including $gh_volume puts a GitHub token"
             echo "state.sh: in $archive as plaintext. Move it as you would a key,"
@@ -112,12 +123,12 @@ import)
     [ -f "$archive" ] || { echo "state.sh: no such archive: $archive" >&2; exit 1; }
 
     args=(--rm)
-    "$rt" volume create "$history_volume" >/dev/null
-    "$rt" volume create "$config_volume" >/dev/null
+    ensure_volume "$history_volume"
+    ensure_volume "$config_volume"
     args+=(-v "$history_volume:/v/bashhistory" -v "$config_volume:/v/config")
 
     if [ "$with_credentials" -eq 1 ]; then
-        "$rt" volume create "$gh_volume" >/dev/null
+        ensure_volume "$gh_volume"
         args+=(-v "$gh_volume:/v/gh")
     fi
 
