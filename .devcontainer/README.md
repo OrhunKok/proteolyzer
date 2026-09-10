@@ -60,8 +60,7 @@ and it works — but not the way you would expect.
 
 ### DNS is not what provides it
 
-`adevcontainer`'s containers do not get DNS records. Apple `container`'s DNS
-works fine; theirs is the exception, established on 2026-09-10 by control:
+The record is missing, established on 2026-09-10 by control:
 
 ```bash
 container run -d --rm --name dnstest docker.io/library/alpine sleep 300
@@ -75,6 +74,54 @@ and in `container system property list`, a correct
 cosmetic — macOS reads the `domain` directive inside), the service restarted, and
 the container recreated afterwards and running as `proteolyzer`. `dig` came back
 empty rather than refused, so the service was reachable and simply had no record.
+
+That was first read as *adevcontainer's containers do not get DNS records, while
+`container run --name` ones do*. *Apple's source does not support that reading*,
+and it is worth not acting on: it makes the ssh alias below a workaround for
+someone else's bug, which is the kind of thing that never gets revisited.
+`container create` and `container run` build their configuration through one
+shared helper, and the name a container registers under is decided there, once:
+
+```swift
+// apple/container — Sources/Services/ContainerAPIService/Client/Utility.swift
+config.networks = try getAttachmentConfigurations(   // :208
+    containerId: config.id, …, dnsDomain: containerSystemConfig.dns.domain)
+// and inside it: fqdn = "\(containerId).\(dnsDomain)." — or nil, if that domain is nil
+```
+
+With that domain nil the container attaches as the bare `proteolyzer`, and a bare
+hostname is what the resolver then has to answer with. **The value is read once,
+at create time, and baked into the stored config** — so setting the domain
+afterwards changes nothing until the container is *recreated*, not merely
+restarted. Create-versus-run is not the variable; created-before-versus-after the
+domain was set is.
+
+`container system dns create <domain>` does not set it. That writes
+`/etc/resolver/…` and the pf rule, which points macOS *at* the container DNS
+service and stops there. What containers register under is the `dns.domain`
+system property, whose user source is `~/.config/container/config.toml`:
+
+```toml
+[dns]
+domain = "adevcontainers.local"
+```
+
+**One line reads the answer off a running container**, which is what the
+investigation above was missing:
+
+```bash
+grep domain /etc/resolv.conf   # nothing == no domain when this container was created
+```
+
+That line comes from the same value (`RuntimeService.swift:1198`). `/etc/hosts`
+cannot answer it — the guest hostname is deliberately truncated to its first
+label (`:1190`), so it reads `proteolyzer` either way. On this container, as of
+2026-09-10, there is no `domain` line.
+
+Still unconfirmed, because it can only be checked from the Mac: whether the
+property was already set when this container was created. If it was, the above is
+wrong and the original reading stands. `container system property list` decides
+it, and a rebuild is what would then make the name resolve.
 
 **So the name comes from an ssh alias instead.** `cmux-attach.sh` writes a
 `Host` block to `~/.ssh/config` with the container's current address, and
@@ -116,10 +163,15 @@ was the less idiomatic one.
 does not seed a named volume from the image path it covers
 ([#729](https://github.com/apple/container/issues/729)). `build.sh` deletes
 derived images because adevcontainer's derived tag hashes the config and not the
-base, so a rebuilt base is silently ignored. The ssh alias exists because
-adevcontainer's containers get no DNS record while `container run --name` ones
-do. Each is a gap in a specific tool, not a disagreement with Apple's design,
-and each should be removed rather than maintained once it closes.
+base, so a rebuilt base is silently ignored. Those two are gaps in a specific
+tool, not disagreements with Apple's design, and each should be removed rather
+than maintained once it closes.
+
+The ssh alias is the odd one out, and on the reading above it is not a gap in
+anything: the container registers under whatever `dns.domain` was when it was
+created, and it was empty. The alias still earns its place — it is independent of
+DNS entirely, so it survives the property being unset again on another machine —
+but it should stop being filed as somebody else's bug to wait on.
 
 **One thing left that is more workaround than it needs to be.**
 `sshd-cmux.conf` sets `UsePAM no`, which is why the `node` account has to be
