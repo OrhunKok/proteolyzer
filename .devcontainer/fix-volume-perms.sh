@@ -12,11 +12,16 @@
 # inherits that; this is the same guarantee for a runtime that does not seed.
 set -euo pipefail
 
-for path in /commandhistory /home/node/.claude /home/node/.config/gh; do
-    [ -d "$path" ] || continue
-    owner="$(stat -c '%U' "$path")"
-    if [ "$owner" != "node" ]; then
-        echo "fix-volume-perms: $path was owned by $owner; giving it to node"
-        chown -R node:node "$path"
+state=/home/node/.state
+
+if [ -d "$state" ]; then
+    owner="$(stat -c '%U' "$state")"
+    if [ "$owner" != node ]; then
+        echo "fix-volume-perms: $state was owned by $owner; giving it to node"
+        chown -R node:node "$state"
     fi
-done
+    # The subdirectories exist in the image so a seeding runtime inherits them.
+    # A runtime that does not seed gives an empty volume, so make them here too.
+    mkdir -p "$state/claude/projects/-workspace/memory" "$state/gh"
+    chown -R node:node "$state/claude" "$state/gh"
+fi

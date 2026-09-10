@@ -53,10 +53,15 @@
   // and the command history and Claude config in the old one are silently left
   // behind. Two checkouts with the same directory name would share volumes, so
   // keep the directory names distinct.
+  // One volume, not three. Everything that must survive a rebuild is under
+  // /home/node/.state -- `claude/`, `gh/`, and the shell history file -- pointed
+  // there by CLAUDE_CONFIG_DIR, GH_CONFIG_DIR and HISTFILE in the Dockerfile.
+  // One name to keep track of per project, which is the whole reason.
+  //
+  // `state.sh` still leaves the credential out of an export by default; it
+  // excludes the gh/ subtree rather than relying on a separate volume for it.
   "mounts": [
-    "source=claude-code-bashhistory-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
-    "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
-    "source=claude-code-gh-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume"
+    "source=claude-code-state-${localWorkspaceFolderBasename},target=/home/node/.state,type=volume"
   ],
 
   // containerEnv is gone, deliberately. A container's environment reaches
