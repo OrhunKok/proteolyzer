@@ -90,42 +90,54 @@ fi
 
 adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
 
-# Where to reach the container. A name is preferred over an address for a reason
-# that matters here: every rebuild gets a fresh IP, so a workspace or a
-# `cmux surface resume set` command pinned to an address goes stale the next time
-# you rebuild, while a name does not.
+# A stable name for the container, which is the whole point: every rebuild gets a
+# fresh address, so a cmux workspace or a `cmux surface resume set` command
+# pinned to an IP goes stale the next time you rebuild.
 #
-# Names come from Apple `container`'s embedded DNS, which needs two one-off steps
-# on the Mac -- see README.md. The suffix is `adevcontainers.local`, matching
-# the domain configured in Orchard, so this project is
-# `proteolyzer.adevcontainers.local`.
+# Not via DNS. Apple `container` does publish records -- `container run --name
+# dnstest` resolved immediately under the configured domain -- but a container
+# created by `adevcontainer up` never gets one, checked on 2026-09-10 with the
+# domain in `container system property list`, the service restarted and the
+# container recreated after it. So the name works for everything except the
+# containers this repository makes.
 #
-# `.local` is worth knowing about: RFC 6762 reserves it for multicast DNS, and
-# macOS sends .local queries to mDNSResponder rather than to a resolver. An
-# /etc/resolver entry for a subdomain of .local does often win, but it is the one
-# suffix where that is not guaranteed -- so if names stop resolving, this is the
-# first thing to suspect and CONTAINER_DNS_DOMAIN is how to change it.
-#
-# Unconfigured, this falls back to the address and everything still works.
-host="${CMUX_DEVCONTAINER_HOST:-}"
-if [ -z "$host" ]; then
-    candidate="$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}"
-    # dscacheutil rather than dig: it goes through macOS's resolver, which is
-    # what /etc/resolver configures and therefore what actually decides.
-    if dscacheutil -q host -a name "$candidate" 2>/dev/null | grep -q '^ip_address:'; then
-        host="$candidate"
-        echo "cmux-attach: using $host"
-    fi
+# An ssh alias does not need DNS. ssh matches the alias literally, never resolves
+# it, and hands the hostname to ssh-proxy.sh, which looks the address up at
+# connect time. The alias is stable; the address behind it is whatever the
+# container has right now. That is strictly better than a DNS record, which would
+# still be one rebuild behind between restarts.
+host="${CMUX_DEVCONTAINER_HOST:-$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
+ssh_config="$HOME/.ssh/config"
+marker_begin="# BEGIN cmux-devcontainer $host"
+marker_end="# END cmux-devcontainer $host"
+
+# Prepended, not appended, and that matters: ssh takes the *first* value it sees
+# for each keyword, so a `Host *` block earlier in the file would win on
+# IdentityFile and the right key would never be offered.
+mkdir -p "$HOME/.ssh"
+touch "$ssh_config"
+if ! grep -qF "$marker_begin" "$ssh_config"; then
+    block="$(mktemp)"
+    {
+        echo "$marker_begin"
+        echo "# Written by .devcontainer/cmux-attach.sh. Delete this block to opt out."
+        echo "Host $host"
+        echo "    User node"
+        echo "    ProxyCommand \"$repo/.devcontainer/ssh-proxy.sh\" \"$(basename "$repo")\" 2222"
+        echo "    IdentityFile $key"
+        echo "    IdentitiesOnly yes"
+        echo "    StrictHostKeyChecking no"
+        echo "    UserKnownHostsFile /dev/null"
+        echo "$marker_end"
+        echo
+        cat "$ssh_config"
+    } > "$block"
+    mv "$block" "$ssh_config"
+    chmod 600 "$ssh_config"
+    echo "cmux-attach: added an ssh alias for $host to $ssh_config"
 fi
 
-if [ -z "$host" ]; then
-    host="$(adevcontainer exec -- hostname -i | tr -d '\r' | awk '{print $1}')"
-    if [ -z "$host" ]; then
-        echo "cmux-attach: could not reach the container by name or address." >&2
-        exit 1
-    fi
-    echo "cmux-attach: using $host (no DNS; see README.md to get a name)"
-fi
+echo "cmux-attach: using $host"
 
 # Prove the login before handing the connection to cmux, which reports a refused
 # key as "the remote VM may have been paused, destroyed, or lost network" -- true
