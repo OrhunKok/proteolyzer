@@ -53,45 +53,12 @@ called `claude-code-sandbox` — indistinguishable from the next one in Orchard 
 A `buildkit` container appearing beside it is Apple's own builder for
 `container build`, not one of these. It comes and goes.
 
-**DNS is worth the two minutes**, and not only for looks: every rebuild gets a
-fresh address, so a cmux workspace or a `cmux surface resume set` command pinned
-to an IP goes stale the next time you rebuild. A name does not.
+**A stable name matters** beyond looks: every rebuild gets a fresh address, so a
+cmux workspace or a `cmux surface resume set` command pinned to an IP goes stale
+the next time you rebuild. This project is `proteolyzer.adevcontainers.local`,
+and it works — but not the way you would expect.
 
-The domain is `adevcontainers.local`, set up in Orchard, so this project is
-`proteolyzer.adevcontainers.local`. Equivalently from the command line:
-
-```bash
-# domain = "adevcontainers.local" under [dns] in ~/.config/container/config.toml
-container system stop && container system start
-sudo container system dns create adevcontainers.local
-```
-
-`cmux-attach.sh` picks the name up on its own — it asks `dscacheutil`, which is
-what `/etc/resolver` actually configures, and falls back to the address when
-there is no answer. Nothing breaks if DNS is not set up; you just keep getting
-IPs.
-
-Two things to know about it.
-
-**The name comes from `name` in `devcontainer.json`**, so it only becomes
-`proteolyzer.adevcontainers.local` once the container has been recreated under
-that name. Before that it is whatever the container is currently called.
-
-**`.local` is the one suffix where an `/etc/resolver` entry is not guaranteed to
-win.** RFC 6762 reserves it for multicast DNS, and macOS routes `.local` queries
-to mDNSResponder rather than to a resolver. A subdomain of `.local` usually does
-get through, but if names resolve intermittently or stop after a network change,
-this is the first thing to suspect rather than the last. Check with the same call
-the script makes:
-
-```bash
-dscacheutil -q host -a name proteolyzer.adevcontainers.local
-```
-
-An `ip_address:` line means it works. It does not here, and the name works
-anyway — read on.
-
-### DNS is not what provides the name
+### DNS is not what provides it
 
 `adevcontainer`'s containers do not get DNS records. Apple `container`'s DNS
 works fine; theirs is the exception, established on 2026-09-10 by control:
@@ -109,16 +76,25 @@ cosmetic — macOS reads the `domain` directive inside), the service restarted, 
 the container recreated afterwards and running as `proteolyzer`. `dig` came back
 empty rather than refused, so the service was reachable and simply had no record.
 
-**So the name comes from an ssh alias instead**, which turns out to be better
-than a DNS record. `cmux-attach.sh` writes a `Host` block to `~/.ssh/config`
-whose `ProxyCommand` is `ssh-proxy.sh`; ssh matches the alias literally, never
-resolves it, and the proxy looks the address up **at connect time**. A DNS record
-would still be one restart stale between rebuilds. This cannot be.
+**So the name comes from an ssh alias instead.** `cmux-attach.sh` writes a
+`Host` block to `~/.ssh/config` with the container's current address, and
+rewrites it on every run.
+
+A `ProxyCommand` resolving the address at connect time was tried first and is
+tidier in principle. cmux could not bootstrap its remote daemon through it —
+`failed to query remote platform: Connection closed by UNKNOWN port 65535`,
+where `UNKNOWN` is ssh not knowing its peer because a proxy is in the way. That
+bootstrap does much more than open a session: platform probe, binary upload,
+reverse forward. A plain connection to the address was already proven to work, so
+the alias stays and the proxy went. The only staleness window is a container
+restarted without running this script — and the script is what a
+`cmux surface resume set` command runs, so it closes itself.
 
 The block is prepended rather than appended, deliberately: ssh takes the *first*
 value it sees for each keyword, so a `Host *` earlier in the file would win on
 `IdentityFile` and the right key would never be offered. It is marked with
-`# BEGIN cmux-devcontainer …`, written once, and deleting the block opts out.
+`# BEGIN cmux-devcontainer …` and replaced in place on each run, so it refreshes
+rather than accumulating. Deleting the block opts out.
 
 `CMUX_DEVCONTAINER_HOST` sets the alias, `CONTAINER_DNS_DOMAIN` just its suffix.
 Neither needs DNS to be configured at all now.
@@ -145,8 +121,9 @@ So the container holds its own credential now. Once per volume:
 gh auth login          # inside the container; device flow, github.com is allowed
 ```
 
-`~/.config/gh` is a named volume keyed on the directory name, so that login
-survives a rebuild the way the command history and the Claude config do.
+That login lands in `~/.state/gh`, inside the one named volume keyed on the
+directory name, so it survives a rebuild the way the history and the Claude
+config do.
 `gh-auth.sh` notices it on the next shell and runs `gh auth setup-git`, which
 points git at the same credential — one login, both tools, no host involved. The
 old forwarding path stays as the fallback for a VS Code session.
