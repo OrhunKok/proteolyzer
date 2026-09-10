@@ -23,37 +23,27 @@
     "memory": "4gb"
   },
 
+  // installTools was true and cost 210 MB of /usr/local/py-utils: autopep8,
+  // bandit, black, flake8, pipenv, pycodestyle, pydocstyle, pylint, and copies
+  // of mypy and pytest. This repository's gate is ruff, mypy and pytest, all
+  // from `pip install -e '.[dev]'`, so every one of those was either unused or
+  // a second copy of something the project pins itself.
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14",
-      "installTools": true
+      "installTools": false
     }
   },
 
-  // Read only when VS Code attaches, and nothing below depends on it. Formatting
-  // is enforced by `make lint` and .pre-commit-config.yaml, not by these.
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "anthropic.claude-code",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "eamodio.gitlens"
-      ],
-      "settings": {
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": "explicit"
-        },
-        "terminal.integrated.defaultProfile.linux": "zsh",
-        "terminal.integrated.profiles.linux": {
-          "bash": { "path": "bash", "icon": "terminal-bash" },
-          "zsh": { "path": "zsh" }
-        }
-      }
-    }
-  },
+  // `customizations.vscode` is gone. It was kept as a fallback for an editor
+  // that might still be opened, on the assumption it was inert otherwise -- and
+  // it is not: adevcontainer applies it, so every `up` ended with "Applying
+  // vscode extensions / Installing anthropic.claude-code, dbaeumer.vscode-eslint,
+  // eamodio.gitlens, esbenp.prettier-vscode", four downloads into a container
+  // reached over ssh by a terminal. Two of them were eslint and prettier, in a
+  // Python repository. Editing happens on the Mac against the bind mount; see
+  // README.md. `adevcontainer start --vscode` can still be used and will simply
+  // open with the editor's own settings.
 
   "remoteUser": "node",
 
