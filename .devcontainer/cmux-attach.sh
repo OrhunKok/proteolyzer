@@ -41,7 +41,15 @@ for tool in cmux adevcontainer container; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "cmux-attach: $tool is not on PATH." >&2
         case "$tool" in
-            cmux) echo "cmux-attach:   brew install --cask cmux" >&2 ;;
+            # cmux puts its CLI on the PATH of terminals *it* spawns, not on the
+            # system one, so "not on PATH" usually means a plain Terminal.app
+            # window rather than a missing install. Suggesting `brew install`
+            # first sends you to reinstall something you already have.
+            cmux)
+                echo "cmux-attach:   run this from a cmux tab -- cmux only puts" >&2
+                echo "cmux-attach:   its CLI on the PATH of terminals it starts." >&2
+                echo "cmux-attach:   Not installed at all? brew install --cask cmux" >&2
+                ;;
             adevcontainer) echo "cmux-attach:   brew install wcgomes/tap/adevcontainer" >&2 ;;
             container) echo "cmux-attach:   see github.com/apple/container (macOS 26+)" >&2 ;;
         esac
