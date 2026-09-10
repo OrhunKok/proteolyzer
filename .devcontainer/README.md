@@ -331,6 +331,7 @@ That leaves two ways in, and they are not equivalent:
 | terminal survives cmux restarting | no | yes, reconnects |
 | sidebar metadata, sftp file drop | partial | yes |
 | browser pane egress | the host's | the container's, so inside the firewall |
+| `TERM` in the container | pinned to `xterm-256color` | the host's own, `COLORTERM` included |
 
 Use `up.sh` for a shell. Use `cmux-attach.sh` for the workspace you actually
 work in.
