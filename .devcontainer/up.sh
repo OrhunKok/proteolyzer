@@ -34,7 +34,23 @@ if [ "$cli" = adevcontainer ]; then
     if [ -n "${REBUILD:-}" ]; then
         adevcontainer rebuild
     else
-        adevcontainer up
+        # `up` fails closed when devcontainer.json has changed since the
+        # container was created, which is correct of it and a dead end here: its
+        # hint names `adevcontainer rebuild` rather than the way in from this
+        # script. Translate rather than make you map it. Not automatic, because
+        # a rebuild replaces the container and would take an agent running in
+        # another pane with it -- volumes are preserved, work in progress is not.
+        if ! out="$(adevcontainer up 2>&1)"; then
+            printf '%s\n' "$out" >&2
+            if printf '%s' "$out" | grep -q config_hash; then
+                echo >&2
+                echo "up.sh: devcontainer.json changed since this container was made." >&2
+                echo "up.sh: rebuild it -- volumes are kept, the container is replaced:" >&2
+                echo "up.sh:   REBUILD=1 $0${*:+ $*}" >&2
+            fi
+            exit 1
+        fi
+        printf '%s\n' "$out"
     fi
     exec adevcontainer exec -it -- "${@:-zsh}"
 fi
