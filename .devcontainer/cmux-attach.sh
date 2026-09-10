@@ -98,54 +98,74 @@ fi
 
 adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
 
-# A stable name for the container, which is the whole point: every rebuild gets a
-# fresh address, so a cmux workspace or a `cmux surface resume set` command
-# pinned to an IP goes stale the next time you rebuild.
-#
-# Not via DNS. Apple `container` does publish records -- `container run --name
-# dnstest` resolved immediately under the configured domain -- but a container
-# created by `adevcontainer up` never gets one, checked on 2026-09-10 with the
-# domain in `container system property list`, the service restarted and the
-# container recreated after it. So the name works for everything except the
-# containers this repository makes.
-#
-# An ssh alias does not need DNS. ssh matches the alias literally, never resolves
-# it, and hands the hostname to ssh-proxy.sh, which looks the address up at
-# connect time. The alias is stable; the address behind it is whatever the
-# container has right now. That is strictly better than a DNS record, which would
-# still be one rebuild behind between restarts.
 host="${CMUX_DEVCONTAINER_HOST:-$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
+
+# The address, resolved now. `container list` is a table so this leans on column
+# order -- ID IMAGE OS ARCH STATE IP -- and asking the container itself is the
+# fallback, which does not care what that command prints.
+ip="$(container list 2>/dev/null \
+    | awk -v n="$(basename "$repo")" '$1 == n && $5 == "running" {print $6; exit}' \
+    | cut -d/ -f1 || true)"
+if [ -z "$ip" ]; then
+    ip="$(adevcontainer exec -- hostname -i 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
+fi
+if [ -z "$ip" ]; then
+    echo "cmux-attach: could not find the container's address." >&2
+    exit 1
+fi
+
+# A stable alias pointing at the current address, rewritten on every run.
+#
+# The alias is the point: every rebuild gets a fresh IP, so a cmux workspace or a
+# `cmux surface resume set` command pinned to an address goes stale, while a name
+# does not. DNS would have been the obvious way and is not available -- Apple
+# `container` publishes records for `container run --name` and not for anything
+# adevcontainer creates, see README.md.
+#
+# A ProxyCommand was tried first and resolved the address at connect time, which
+# is tidier in principle. cmux could not bootstrap its remote daemon through it:
+# `failed to query remote platform: Connection closed by UNKNOWN port 65535`,
+# where UNKNOWN is ssh not knowing its peer because a proxy is in the way. Its
+# bootstrap does considerably more than open a session -- platform probe, binary
+# upload, reverse forward -- and a plain connection to the address had already
+# been proven to work. So: same alias, no proxy, and the address refreshed here
+# instead. The one staleness window is a container restarted without running this
+# script, and the script is what the resume command runs, so it closes itself.
 ssh_config="$HOME/.ssh/config"
 marker_begin="# BEGIN cmux-devcontainer $host"
 marker_end="# END cmux-devcontainer $host"
 
+mkdir -p "$HOME/.ssh"
+touch "$ssh_config"
+
 # Prepended, not appended, and that matters: ssh takes the *first* value it sees
 # for each keyword, so a `Host *` block earlier in the file would win on
 # IdentityFile and the right key would never be offered.
-mkdir -p "$HOME/.ssh"
-touch "$ssh_config"
-if ! grep -qF "$marker_begin" "$ssh_config"; then
-    block="$(mktemp)"
-    {
-        echo "$marker_begin"
-        echo "# Written by .devcontainer/cmux-attach.sh. Delete this block to opt out."
-        echo "Host $host"
-        echo "    User node"
-        echo "    ProxyCommand \"$repo/.devcontainer/ssh-proxy.sh\" \"$(basename "$repo")\" 2222"
-        echo "    IdentityFile $key"
-        echo "    IdentitiesOnly yes"
-        echo "    StrictHostKeyChecking no"
-        echo "    UserKnownHostsFile /dev/null"
-        echo "$marker_end"
-        echo
-        cat "$ssh_config"
-    } > "$block"
-    mv "$block" "$ssh_config"
-    chmod 600 "$ssh_config"
-    echo "cmux-attach: added an ssh alias for $host to $ssh_config"
-fi
+block="$(mktemp)"
+{
+    echo "$marker_begin"
+    echo "# Written by .devcontainer/cmux-attach.sh; rewritten on every run."
+    echo "# Delete this block to opt out."
+    echo "Host $host"
+    echo "    HostName $ip"
+    echo "    Port 2222"
+    echo "    User node"
+    echo "    IdentityFile $key"
+    echo "    IdentitiesOnly yes"
+    echo "    StrictHostKeyChecking no"
+    echo "    UserKnownHostsFile /dev/null"
+    echo "$marker_end"
+    echo
+    awk -v b="$marker_begin" -v e="$marker_end" '
+        $0 == b {skip = 1}
+        skip && $0 == e {skip = 0; getline; next}
+        !skip {print}
+    ' "$ssh_config"
+} > "$block"
+mv "$block" "$ssh_config"
+chmod 600 "$ssh_config"
 
-echo "cmux-attach: using $host"
+echo "cmux-attach: $host -> $ip (alias in $ssh_config)"
 
 # Prove the login before handing the connection to cmux, which reports a refused
 # key as "the remote VM may have been paused, destroyed, or lost network" -- true
