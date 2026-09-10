@@ -136,4 +136,16 @@ RUN chmod 0644 /etc/ssh/sshd_cmux_config && \
 # node login is what does.
 RUN usermod --shell /bin/zsh node && \
   usermod -p '*' node
+
+# /workspace is a virtiofs bind mount and the owner it reports for the mount root
+# flaps between node and root from one syscall to the next. git's ownership check
+# believes it, so `fatal: detected dubious ownership in repository at
+# '/workspace'` arrives intermittently and on some commands and not others --
+# measured at 48 of 50 `git status` runs in one phase and 0 of 50 in another.
+# Nothing is wrong with the checkout; writes succeed throughout.
+#
+# --system rather than a session's --global: /home/node is not one of the mounted
+# volumes, so a global config is lost on the next rebuild. One entry covers the
+# worktrees under .claude/ as well.
+RUN git config --system --add safe.directory /workspace
 USER node
