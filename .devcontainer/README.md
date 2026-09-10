@@ -88,9 +88,40 @@ the script makes:
 dscacheutil -q host -a name proteolyzer.adevcontainers.local
 ```
 
-An `ip_address:` line means it works. Nothing means it does not, and the fix is a
-suffix outside `.local` — `CONTAINER_DNS_DOMAIN` overrides it, and
-`CMUX_DEVCONTAINER_HOST` overrides the whole target.
+An `ip_address:` line means it works. It does not here, and the name works
+anyway — read on.
+
+### DNS is not what provides the name
+
+`adevcontainer`'s containers do not get DNS records. Apple `container`'s DNS
+works fine; theirs is the exception, established on 2026-09-10 by control:
+
+```bash
+container run -d --rm --name dnstest docker.io/library/alpine sleep 300
+dig @127.0.0.1 -p 2053 +short dnstest.adevcontainers.local   # 192.168.64.3
+dig @127.0.0.1 -p 2053 +short proteolyzer.adevcontainers.local   # nothing
+```
+
+Everything else was ruled out first: the domain in `container system dns list`
+and in `container system property list`, a correct
+`/etc/resolver/containerization.adevcontainers.local` (the filename prefix is
+cosmetic — macOS reads the `domain` directive inside), the service restarted, and
+the container recreated afterwards and running as `proteolyzer`. `dig` came back
+empty rather than refused, so the service was reachable and simply had no record.
+
+**So the name comes from an ssh alias instead**, which turns out to be better
+than a DNS record. `cmux-attach.sh` writes a `Host` block to `~/.ssh/config`
+whose `ProxyCommand` is `ssh-proxy.sh`; ssh matches the alias literally, never
+resolves it, and the proxy looks the address up **at connect time**. A DNS record
+would still be one restart stale between rebuilds. This cannot be.
+
+The block is prepended rather than appended, deliberately: ssh takes the *first*
+value it sees for each keyword, so a `Host *` earlier in the file would win on
+`IdentityFile` and the right key would never be offered. It is marked with
+`# BEGIN cmux-devcontainer …`, written once, and deleting the block opts out.
+
+`CMUX_DEVCONTAINER_HOST` sets the alias, `CONTAINER_DNS_DOMAIN` just its suffix.
+Neither needs DNS to be configured at all now.
 
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
