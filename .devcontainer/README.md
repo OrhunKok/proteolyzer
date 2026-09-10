@@ -42,6 +42,41 @@ serves both runtimes, because the devcontainer CLI reads `image:` too.
 otherwise. `cmux-attach.sh` is Apple-only, because that is where the container
 has its own address and the whole published-port dance disappears.
 
+## Names, and giving the container one
+
+`name` in `devcontainer.json` is the project, `proteolyzer`, not a description of
+what the container is for. adevcontainer turns it into both the create name and
+the DNS hostname, so `"Claude Code Sandbox"` gave every project a container
+called `claude-code-sandbox` — indistinguishable from the next one in Orchard or
+`container list`, and useless as a hostname. Each project sets its own.
+
+A `buildkit` container appearing beside it is Apple's own builder for
+`container build`, not one of these. It comes and goes.
+
+**DNS is worth the two minutes**, and not only for looks: every rebuild gets a
+fresh address, so a cmux workspace or a `cmux surface resume set` command pinned
+to an IP goes stale the next time you rebuild. A name does not.
+
+```bash
+# 1. tell the container service what domain to serve, and restart it
+#    (set domain = "test" under [dns] in ~/.config/container/config.toml)
+container system stop && container system start
+
+# 2. tell macOS to route *.test at it -- Apple's own command, which writes
+#    /etc/resolver/test and reloads the resolver. Asks for your password.
+sudo container system dns create test
+```
+
+Then `proteolyzer.test` resolves, and `cmux-attach.sh` picks it up on its own —
+it asks `dscacheutil`, which is what `/etc/resolver` actually configures, and
+falls back to the address when there is no answer. Nothing breaks if you skip
+this; you just keep getting IPs.
+
+`.test` rather than something invented because RFC 6761 reserves it for exactly
+this use, so it can never collide with a real TLD — and it is what Apple's own
+tutorial uses. Set `CONTAINER_DNS_DOMAIN` if you pick a different one, or
+`CMUX_DEVCONTAINER_HOST` to name the target outright.
+
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
 
