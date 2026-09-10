@@ -54,16 +54,21 @@ if [ ! -f "$key" ]; then
     ssh-keygen -t ed25519 -N '' -C cmux-devcontainer -f "$key"
 fi
 
+# The key goes in as an argument, not on stdin. `adevcontainer exec` without -i
+# attaches no stdin, so a `cat >` inside reads EOF immediately and writes an
+# empty authorized_keys -- which is exactly what the read-back below caught. An
+# argument needs nothing of the CLI beyond running the command.
+#
 # Spelled-out paths, and both modes set explicitly: `mkdir -p` leaves an existing
 # directory's mode alone and the node image ships ~/.ssh as 755, so a umask alone
 # never makes it 700.
 adevcontainer exec -- sh -c '
     set -e
     mkdir -p /home/node/.ssh
-    cat > /home/node/.ssh/authorized_keys
+    printf "%s\n" "$1" > /home/node/.ssh/authorized_keys
     chmod 700 /home/node/.ssh
     chmod 600 /home/node/.ssh/authorized_keys
-' < "$key.pub"
+' sh "$(cat "$key.pub")"
 
 # Read it back. A key that silently did not land is invisible until ssh refuses.
 if ! adevcontainer exec -- cat /home/node/.ssh/authorized_keys 2>/dev/null \
