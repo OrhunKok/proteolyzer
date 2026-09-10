@@ -99,6 +99,36 @@ rather than accumulating. Deleting the block opts out.
 `CMUX_DEVCONTAINER_HOST` sets the alias, `CONTAINER_DNS_DOMAIN` just its suffix.
 Neither needs DNS to be configured at all now.
 
+### What is idiomatic here and what is a workaround
+
+Worth separating, because the workarounds are the parts to delete the day
+upstream fixes them.
+
+**As Apple intends it.** The image is ordinary OCI from `container build`.
+`capAdd: ["NET_ADMIN"]` is the documented spelling — Apple's
+`runtime-configuration.md` gives `container run --cap-add NET_ADMIN` verbatim.
+State is a named volume through `container volume`. And the container is reached
+on **its own address with nothing published**, which is Apple's networking model
+rather than a Docker habit carried over; the published-port version of this file
+was the less idiomatic one.
+
+**Workarounds, and what each is for.** `fix-volume-perms.sh` exists because Apple
+does not seed a named volume from the image path it covers
+([#729](https://github.com/apple/container/issues/729)). `build.sh` deletes
+derived images because adevcontainer's derived tag hashes the config and not the
+base, so a rebuilt base is silently ignored. The ssh alias exists because
+adevcontainer's containers get no DNS record while `container run --name` ones
+do. Each is a gap in a specific tool, not a disagreement with Apple's design,
+and each should be removed rather than maintained once it closes.
+
+**One thing left that is more workaround than it needs to be.**
+`sshd-cmux.conf` sets `UsePAM no`, which is why the `node` account has to be
+unlocked with `usermod -p '*'` — OpenSSH refuses a locked account for public key
+auth when PAM is off. `UsePAM yes` is Debian's own default and would need
+neither. It is left alone because the current arrangement is proven and swapping
+an authentication path that works for one that is merely more standard is a poor
+trade; but that is the reason, not an argument that this is better.
+
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
 

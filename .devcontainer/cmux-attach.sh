@@ -100,17 +100,17 @@ adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
 
 host="${CMUX_DEVCONTAINER_HOST:-$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
 
-# The address, resolved now. `container list` is a table so this leans on column
-# order -- ID IMAGE OS ARCH STATE IP -- and asking the container itself is the
-# fallback, which does not care what that command prints.
-ip="$(container list 2>/dev/null \
-    | awk -v n="$(basename "$repo")" '$1 == n && $5 == "running" {print $6; exit}' \
-    | cut -d/ -f1 || true)"
+# The address, asked of the container rather than read out of a CLI table.
+#
+# This used to parse `container list` on column position -- ID IMAGE OS ARCH
+# STATE IP, so field six, minus a prefix length. That worked and was a hostage
+# to a format nobody promised to keep. `hostname -i` inside the container is
+# authoritative, costs one exec on a path that runs once per attach, and cannot
+# be broken by a column being added.
+ip="$(adevcontainer exec -- hostname -i 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
 if [ -z "$ip" ]; then
-    ip="$(adevcontainer exec -- hostname -i 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
-fi
-if [ -z "$ip" ]; then
-    echo "cmux-attach: could not find the container's address." >&2
+    echo "cmux-attach: could not read the container's address." >&2
+    echo "cmux-attach: it should be running by now -- check \`container list\`." >&2
     exit 1
 fi
 
