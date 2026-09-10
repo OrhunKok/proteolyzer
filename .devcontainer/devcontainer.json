@@ -1,25 +1,28 @@
 {
   "name": "Claude Code Sandbox",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "args": {
-      "TZ": "${localEnv:TZ:America/New_York}",
-      "CLAUDE_CODE_VERSION": "latest",
-      "GIT_DELTA_VERSION": "0.18.2",
-      "ZSH_IN_DOCKER_VERSION": "1.2.0"
-    }
+
+  // Image rather than `build`, which is what makes this work on Apple
+  // `container`: adevcontainer hard-rejects `build.dockerfile` as an
+  // unrepresentable configuration source. `build.sh` produces this tag from the
+  // Dockerfile beside it, with whichever runtime is installed. The devcontainer
+  // CLI on Docker reads `image:` too, so one config serves both.
+  "image": "proteolyzer-devcontainer:local",
+
+  // Was runArgs. `capAdd` is a first-class devcontainer property both CLIs
+  // honour, where `runArgs` entries like `-p` are rejected outright by
+  // adevcontainer. NET_RAW is dropped because it is in the default capability
+  // set on both runtimes; NET_ADMIN is what init-firewall.sh actually needs.
+  "capAdd": ["NET_ADMIN"],
+
+  // Apple `container` gives each container its own lightweight VM, and its
+  // defaults are low enough that a dev container can go unresponsive. Raise
+  // these if the machine has room; adevcontainer fails preflight rather than
+  // overcommitting, so asking for more than the Mac has stops `up` cleanly.
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb"
   },
-  // NET_ADMIN/NET_RAW are init-firewall.sh's. The published port is sshd's, so
-  // `cmux ssh` can attach -- loopback-bound, and with no host port named, so
-  // Docker picks a free one and several of these containers coexist. Discovered
-  // with `docker port` rather than fixed, which is what cmux's own Docker suites
-  // do. See README.md.
-  "runArgs": [
-    "--cap-add=NET_ADMIN",
-    "--cap-add=NET_RAW",
-    "-p",
-    "127.0.0.1::2222"
-  ],
+
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14",
@@ -27,10 +30,8 @@
     }
   },
 
-  // Read only when VS Code attaches, and nothing below depends on it: the
-  // container is driven by `devcontainer up` from a terminal now, so treat this
-  // block as the fallback for an editor that may not be opened. Formatting is
-  // enforced by `make lint` and .pre-commit-config.yaml, not by these settings.
+  // Read only when VS Code attaches, and nothing below depends on it. Formatting
+  // is enforced by `make lint` and .pre-commit-config.yaml, not by these.
   "customizations": {
     "vscode": {
       "extensions": [
@@ -47,33 +48,27 @@
         },
         "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
-          "bash": {
-            "path": "bash",
-            "icon": "terminal-bash"
-          },
-          "zsh": {
-            "path": "zsh"
-          }
+          "bash": { "path": "bash", "icon": "terminal-bash" },
+          "zsh": { "path": "zsh" }
         }
       }
     }
   },
+
   "remoteUser": "node",
+
   // Key every volume on ${localWorkspaceFolderBasename}, never on
   // ${devcontainerId}: the stock Claude template ships the latter, and on macOS
   // it is not resolved consistently across rebuilds, so the volume name changes
   // and the command history and Claude config in the old one are silently left
   // behind. Two checkouts with the same directory name would share volumes, so
   // keep the directory names distinct.
-  //
-  // The `gh` volume is what makes this container's own GitHub login survive a
-  // rebuild. It is only load-bearing when nothing is forwarding a credential in
-  // from the host -- which is every start that is not VS Code's. See README.md.
   "mounts": [
     "source=claude-code-bashhistory-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
     "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
     "source=claude-code-gh-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume"
   ],
+
   "containerEnv": {
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true",
     "DISABLE_TELEMETRY": "true",
@@ -81,14 +76,18 @@
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
   },
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+
+  // workspaceMount is gone: adevcontainer does not implement it and both CLIs
+  // bind the workspace folder here by default anyway.
   "workspaceFolder": "/workspace",
-  // Sort out `gh` and `git` credentials for whichever way the container was
-  // started. Idempotent. This one line is what replaced a shared repository, a
-  // read-only mount, an installer and two session hooks -- see DECISIONS.md.
+
   "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /workspace/.devcontainer/gh-auth.sh' >> ~/.zshrc",
-  // Firewall first: init-firewall.sh flushes the tables, so anything holding a
-  // connection wants to be started after it rather than through it.
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && sudo /usr/local/bin/start-sshd.sh",
+
+  // Order matters twice. fix-volume-perms.sh first, because Apple `container`
+  // does not seed a named volume from the image path it covers
+  // (apple/container#729) so all three arrive empty and root-owned. Then the
+  // firewall, which flushes the tables — anything holding a connection wants to
+  // start after it rather than through it. Then sshd.
+  "postStartCommand": "sudo /usr/local/bin/fix-volume-perms.sh && sudo /usr/local/bin/init-firewall.sh && sudo /usr/local/bin/start-sshd.sh",
   "waitFor": "postStartCommand"
 }

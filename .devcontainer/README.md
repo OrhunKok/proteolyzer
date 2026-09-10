@@ -4,26 +4,46 @@ Two reasons, and the order matters when weighing a replacement. The first is
 that the environment is a file in git, so another machine is a clone rather than
 an afternoon. The second is that a firewall stands between Claude Code and
 everything that is not GitHub, PyPI, npm or the Anthropic API — see
-`init-firewall.sh`, which is why `runArgs` asks for `NET_ADMIN`.
+`init-firewall.sh`, which is why the config asks for `NET_ADMIN`.
 
 Most things that claim to replace this replace the second reason only. See
 [Moving to another machine](#moving-to-another-machine).
 
-The container is defined by `devcontainer.json` and nothing about it needs an
-editor:
+## Setup
+
+The runtime is Apple `container`; Docker still works and is the fallback path.
 
 ```bash
-npm install -g @devcontainers/cli    # once
-./.devcontainer/up.sh                # a zsh in the container
-./.devcontainer/up.sh claude         # straight into Claude Code
-./.devcontainer/cmux-attach.sh       # the same container as a cmux workspace
-REBUILD=1 ./.devcontainer/up.sh      # discard the container and build again
+brew install --cask cmux                      # once
+brew install wcgomes/tap/adevcontainer        # once — needs Apple container
+adevcontainer doctor                          # checks the runtime is usable
+
+./.devcontainer/build.sh                      # build the image
+./.devcontainer/cmux-attach.sh claude         # a cmux workspace running Claude
 ```
 
-`up.sh` is `devcontainer up` followed by `devcontainer exec`, which is the whole
-of what the Dev Containers extension was doing to the container itself. The
-extension still works — `customizations.vscode` is read when VS Code attaches —
-but nothing depends on it.
+Day to day:
+
+```bash
+./.devcontainer/up.sh                # a zsh in the container
+./.devcontainer/up.sh claude         # straight into Claude Code
+./.devcontainer/cmux-attach.sh       # the full cmux workspace
+REBUILD=1 ./.devcontainer/up.sh      # replace the container
+./.devcontainer/build.sh             # after any Dockerfile change
+```
+
+`build.sh` is separate because `devcontainer.json` says `image:` rather than
+`build:` — the one change that makes this run on Apple `container` at all, since
+`adevcontainer` rejects Dockerfile builds. The cost is that a Dockerfile edit no
+longer takes effect on its own; build first. The gain is that the same config
+serves both runtimes, because the devcontainer CLI reads `image:` too.
+
+`up.sh` picks `adevcontainer` when it is installed and the devcontainer CLI
+otherwise. `cmux-attach.sh` is Apple-only, because that is where the container
+has its own address and the whole published-port dance disappears.
+
+The VS Code extension still works — `customizations.vscode` is read when it
+attaches — but nothing depends on it.
 
 ## What VS Code was also doing, silently
 

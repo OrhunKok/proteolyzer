@@ -117,8 +117,26 @@ RUN chmod 0644 /etc/ssh/sshd_cmux_config && \
 # image and shared by every container built from it. start-sshd.sh regenerates
 # what is missing at first start, which makes it per container instead.
 
-# sshd runs the login shell out of /etc/passwd and ignores ENV SHELL, so without
-# this a cmux ssh session lands in bash -- no ~/.zshrc, and therefore no
-# gh-auth.sh and no `gh`. Everything else names zsh explicitly and is unaffected.
-RUN usermod --shell /bin/zsh node
+# The volume-ownership repair, on the same sudo arrangement, for a runtime that
+# does not seed a named volume from the image. See fix-volume-perms.sh.
+COPY fix-volume-perms.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/fix-volume-perms.sh && \
+  echo "node ALL=(root) NOPASSWD: /usr/local/bin/fix-volume-perms.sh" > /etc/sudoers.d/node-volperms && \
+  chmod 0440 /etc/sudoers.d/node-volperms
+
+# Two things about the node account, and the second is not cosmetic.
+#
+# sshd reads the login shell out of /etc/passwd and ignores ENV SHELL, so without
+# --shell a cmux ssh session lands in bash -- no ~/.zshrc, no gh-auth.sh, no gh.
+#
+# `usermod -p '*'` unlocks the account. node ships shadow-locked, and OpenSSH's
+# allowed_user() refuses a locked account for *public key* auth when UsePAM is
+# off, which this config sets. Every visible thing is correct -- authorized_keys
+# byte-exact, .ssh 700, the file 600 -- and the client still sees a bare
+# `Permission denied (publickey)`. cmux's own fixture logs in as root, which is
+# never locked, so this only appears once you use a normal user. `*` means "no
+# password accepted", not "no password required": password auth stays off, and
+# PasswordAuthentication no in sshd_cmux_config says so a second time.
+RUN usermod --shell /bin/zsh node && \
+  usermod -p '*' node
 USER node
