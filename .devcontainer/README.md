@@ -56,11 +56,11 @@ A `buildkit` container appearing beside it is Apple's own builder for
 **A stable name matters** beyond looks: every rebuild gets a fresh address, so a
 cmux workspace or a `cmux surface resume set` command pinned to an IP goes stale
 the next time you rebuild. This project is `proteolyzer.adevcontainers.local`,
-and it works — but not the way you would expect.
+and it resolves — but it did not for a while, and the reason is worth keeping.
 
-### DNS is not what provides it
+### Why the record was missing, and what a working one costs
 
-The record is missing, established on 2026-09-10 by control:
+It was missing, established on 2026-09-10 by control:
 
 ```bash
 container run -d --rm --name dnstest docker.io/library/alpine sleep 300
@@ -145,14 +145,31 @@ nameservers, which is the branch that fills them from the attachment gateway
 domain been set, the same struct would have carried it. `--no-dns` would have
 produced neither line.
 
-**So the fix is a rebuild, and nothing else.** Recreate the container and the
-name registers; `grep domain /etc/resolv.conf` inside it is the confirmation, and
-`dig @127.0.0.1 -p 2053 +short proteolyzer.adevcontainers.local` on the Mac is
-the payoff. If it resolves, the ssh alias below is no longer load-bearing.
+**So the fix was a rebuild, and nothing else** — confirmed on 2026-09-11. The
+container was recreated with the property already live, and this time it came up
+with the domain and a record to match:
 
-**Until that is done, the name comes from an ssh alias.** `cmux-attach.sh` writes a
+```bash
+# inside the new container
+cat /etc/resolv.conf                                       # nameserver 192.168.64.1
+                                                           # domain adevcontainers.local
+dig @192.168.64.1 +short proteolyzer.adevcontainers.local   # 192.168.64.6
+```
+
+Nothing was changed to achieve that. No flag, no `runArgs`, no config edit — the
+same image and the same `devcontainer.json`, created once more after the property
+had taken effect. Which is the whole claim: the name was never adevcontainer's to
+give or withhold.
+
+So `container system dns create` *and* `dns.domain` *and* a rebuild, in that
+order, is what a working name costs — and the middle one needs
+`container system start` before it counts.
+
+**The ssh alias predates all of that, and still runs.** `cmux-attach.sh` writes a
 `Host` block to `~/.ssh/config` with the container's current address, and
-rewrites it on every run.
+rewrites it on every run. It was built when the name did not resolve, and it is
+kept because it does not depend on whether the name resolves — the workaround
+list below says why that is worth something rather than just redundant.
 
 A `ProxyCommand` resolving the address at connect time was tried first and is
 tidier in principle. cmux could not bootstrap its remote daemon through it —
@@ -199,7 +216,9 @@ registers under whatever `dns.domain` was live when it was created, and for this
 one that was nothing. The alias still earns its place — it is independent of DNS
 entirely, so it survives the property being unset on the next machine, which is
 the failure it was actually bought against — but it is not waiting on anyone
-else's fix, and a rebuild is expected to make the DNS name work alongside it.
+else's fix. As of 2026-09-11 the DNS name resolves and the alias runs alongside
+it, which is the arrangement to keep: two independent ways to reach the
+container, neither of which needs the other to be working.
 
 **One thing left that is more workaround than it needs to be.**
 `sshd-cmux.conf` sets `UsePAM no`, which is why the `node` account has to be
