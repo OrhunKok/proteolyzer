@@ -10,13 +10,28 @@
 #
 # Runs on the host.
 #
-#   ./.devcontainer/state.sh export                    without the credential
-#   ./.devcontainer/state.sh export --with-credentials
+#   ./.devcontainer/state.sh export                    without the GitHub token
+#   ./.devcontainer/state.sh export --with-credentials  with it
 #   ./.devcontainer/state.sh import [--with-credentials]
 #   ./.devcontainer/state.sh migrate                   fold the old three into one
 #   ./.devcontainer/state.sh export ~/somewhere.tar.gz
 #
-# The container need not be running.
+# Every export contains Claude Code's own credential either way; see the note in
+# `export` below. Treat the archive as a secret.
+#
+# Converting a VS Code / Docker project to this setup is migrate-then-move:
+#
+#   RUNTIME=docker    ./.devcontainer/state.sh migrate
+#   RUNTIME=docker    ./.devcontainer/state.sh export --with-credentials ~/s.tar.gz
+#   RUNTIME=container ./.devcontainer/state.sh import --with-credentials ~/s.tar.gz
+#
+# `migrate` finds the old volumes by name and the default names assume the folder
+# basename; OLD_CONFIG / OLD_HISTORY / OLD_GH override that when they do not
+# match, which is usual for a project that used Anthropic's own template. See
+# README.md, "Converting an existing Docker devcontainer".
+#
+# The container need not be running -- but it must not be *running* for export or
+# migrate, because a volume attaches to one container at a time.
 set -euo pipefail
 
 # These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
@@ -118,9 +133,25 @@ run_or_hint() {
 volume="claude-code-state-$base"
 
 # The volume names from before everything moved under one. `migrate` reads these.
-old_history="claude-code-bashhistory-$base"
-old_config="claude-code-config-$base"
-old_gh="claude-code-gh-$base"
+#
+# Overridable, because the defaults only match a project whose old volumes were
+# keyed on the folder basename. Anthropic's own template keys them on
+# ${devcontainerId} instead, which resolves to a hash -- so a VS Code project
+# being converted may well have `claude-code-config-a1b2c3…` and `migrate` would
+# report three misses and stop. Find the real names first:
+#
+#   docker volume ls | grep -i claude
+#
+# then name them:
+#
+#   OLD_CONFIG=claude-code-config-a1b2c3 OLD_HISTORY=claude-code-bashhistory-a1b2c3 \
+#     RUNTIME=docker ./.devcontainer/state.sh migrate
+#
+# The target volume is still derived from the folder, never overridden: the
+# container finds it by that name and nothing else.
+old_history="${OLD_HISTORY:-claude-code-bashhistory-$base}"
+old_config="${OLD_CONFIG:-claude-code-config-$base}"
+old_gh="${OLD_GH:-claude-code-gh-$base}"
 
 case "$action" in
 export)
@@ -129,13 +160,24 @@ export)
         exit 1
     }
 
-    # The credential shares a volume with everything else now, so it is left out
-    # by subtree rather than by living somewhere separate. Same result: an
-    # ordinary export carries no token.
+    # `--with-credentials` governs the gh/ subtree and nothing else. This said
+    # "an ordinary export carries no token", which is not true and was worth
+    # correcting: claude/.credentials.json is Claude Code's own OAuth credential
+    # and it is inside config/, so **every** export contains it.
+    #
+    # Left that way on purpose rather than fixed, because carrying the Claude
+    # login is the point of an export when converting a project -- excluding it
+    # would mean re-authenticating on the other side of every migration. The
+    # consequence is the part that needs saying: any archive this writes is a
+    # secret, `--with-credentials` or not.
     exclude=(--exclude=./gh)
+    echo "state.sh: NOTE -- $archive will contain Claude Code's own credential"
+    echo "state.sh: (claude/.credentials.json). Treat the file as a secret and"
+    echo "state.sh: delete it once the other side is up. Do not leave it in a"
+    echo "state.sh: synced folder -- the repository directory often is one."
     if [ "$with_credentials" -eq 1 ]; then
         exclude=()
-        echo "state.sh: WARNING -- this includes gh/, so $archive will hold a"
+        echo "state.sh: WARNING -- this also includes gh/, so $archive will hold a"
         echo "state.sh: GitHub token in plaintext. Move it as you would a key and"
         echo "state.sh: delete it after. \`gh auth login\` is one command."
     fi
