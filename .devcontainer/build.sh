@@ -26,7 +26,13 @@ if [ "$(uname -s)" = Linux ]; then
 fi
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-tag="${IMAGE:-proteolyzer-devcontainer:local}"
+
+# Derived from the folder name, not written down, so this script is the same in
+# every project. devcontainer.json builds its `image` from
+# ${localWorkspaceFolderBasename} and lands on the same string, and state.sh
+# keys its volume on the same basename -- one source of truth, three files, no
+# edit when you copy the directory. IMAGE still overrides for a one-off build.
+tag="${IMAGE:-$(basename "$repo")-devcontainer:local}"
 
 if command -v container >/dev/null 2>&1; then
     runtime=container

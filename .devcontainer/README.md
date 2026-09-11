@@ -44,11 +44,15 @@ has its own address and the whole published-port dance disappears.
 
 ## Names, and giving the container one
 
-`name` in `devcontainer.json` is the project, `proteolyzer`, not a description of
-what the container is for. adevcontainer turns it into both the create name and
-the DNS hostname, so `"Claude Code Sandbox"` gave every project a container
-called `claude-code-sandbox` — indistinguishable from the next one in Orchard or
-`container list`, and useless as a hostname. Each project sets its own.
+`name` in `devcontainer.json` is the project — here `proteolyzer` — not a
+description of what the container is for. adevcontainer turns it into both the
+create name and the DNS hostname, so `"Claude Code Sandbox"` gave every project a
+container called `claude-code-sandbox` — indistinguishable from the next one in
+Orchard or `container list`, and useless as a hostname.
+
+It is `${localWorkspaceFolderBasename}` rather than a literal, so the file is
+identical in every project and the folder name is the only thing that decides.
+See [Copying this into another project](#copying-this-into-another-project).
 
 A `buildkit` container appearing beside it is Apple's own builder for
 `container build`, not one of these. It comes and goes.
@@ -559,6 +563,70 @@ The check exists to stop another user's repository running its hooks as you. Thi
 container has one user, and the only things mounted are that user's own workspace
 and their own state volume, so there is no second owner to be confused with. That
 is the trade, and it is worth stating rather than implying.
+
+## Copying this into another project
+
+Copy two directories and run two commands. Nothing in them names this project:
+
+```bash
+cp -R .devcontainer .cmux ../otherproject/
+cd ../otherproject
+./.devcontainer/build.sh
+./.devcontainer/up.sh            # or the "Open sandbox" palette entry
+```
+
+Then once inside, per project, because both write to that project's own volume:
+
+```bash
+gh auth login
+/workspace/.devcontainer/install-cmux-hooks.sh
+```
+
+**One folder name drives everything**, which is the only thing to get right.
+`devcontainer.json` takes `name` and `image` from
+`${localWorkspaceFolderBasename}`, `build.sh` derives the same tag with
+`basename`, and `state.sh` keys the volume on the same string. So a checkout in
+`~/src/pinpoint` is the container `pinpoint`, the image
+`pinpoint-devcontainer:local`, the volume `claude-code-state-pinpoint` and the
+hostname `pinpoint.adevcontainers.local`, with nothing written down anywhere.
+
+Keep it lowercase and DNS-safe — it becomes a hostname and an image tag — and
+**keep it distinct across projects**, because the volume name is that basename:
+two checkouts both called `api` in different parents would share one Claude
+config, history and `gh` login, silently. That is the one real hazard here.
+
+The single optional edit is cosmetic: `.cmux/cmux.json` sets the palette
+workspace's title. Left alone it says `proteolyzer`; the alternative is dropping
+the key and letting cmux title the tab from the full path, which is uglier. Every
+other value in that file is already derived — the commands run
+`git rev-parse --show-toplevel`.
+
+Two things this does not carry, both deliberate. The `agent`-label workflow wants
+the GitHub App installed on the new repository, and the DNS name wants
+`dns.domain` set once per *machine* rather than per project — see above, and both
+are one-time rather than per-copy.
+
+One edge worth knowing: run `build.sh` from a worktree rather than the checkout
+root and the basename is the worktree's, so you get a separate image and volume.
+That is consistent with `up.sh` from a worktree giving a separate container, and
+it is usually what you want, but it is not what you want by accident.
+
+### Skipping the build entirely
+
+`build.sh` is the only per-project step that costs real time, and it does not
+have to exist. `publish.sh` already pushes a multi-arch image to GHCR and takes
+`IMAGE` for a neutral name:
+
+```bash
+IMAGE=ghcr.io/orhunkok/claude-devcontainer ./.devcontainer/publish.sh
+```
+
+Point `image:` at that tag instead of `${localWorkspaceFolderBasename}-devcontainer:local`
+and a new project is `cp -R`, then `up.sh` — no build, no first-run wait. The
+trade is direction of coupling: one image for every project means a Dockerfile
+change is a publish plus a rebuild everywhere, rather than a local rebuild of the
+one project you are working on. Worth it once the Dockerfile stops changing
+weekly; not before.
 
 ## Moving to another machine
 
