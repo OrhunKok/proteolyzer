@@ -55,7 +55,11 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         export|import|migrate) action="$1" ;;
         --with-credentials) with_credentials=1 ;;
-        -h|--help) sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        # Derived, not a line range: this printed `2,19p` while the header was
+        # 19 lines, and grew silently wrong the moment the header did -- `--help`
+        # cut off mid-sentence and dropped everything after it. Print the comment
+        # block after the shebang and stop at the first line that is not one.
+        -h|--help) awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
         *) archive="$1" ;;
     esac
     shift
