@@ -2,17 +2,32 @@
   // The project, not the purpose. adevcontainer turns `name` into the container's
   // create name and its DNS hostname, so "Claude Code Sandbox" gave every
   // project a container called claude-code-sandbox -- indistinguishable from the
-  // next one in Orchard or `container list`, and useless as a hostname. Each
-  // project sets its own here; a literal rather than a substitution, because
-  // adevcontainer hard-errors on substitutions it does not implement.
-  "name": "proteolyzer",
+  // next one in Orchard or `container list`, and useless as a hostname.
+  //
+  // The folder name, substituted, so this file is the same in every project and
+  // copying it needs no edit. This said "a literal rather than a substitution,
+  // because adevcontainer hard-errors on substitutions it does not implement",
+  // which is true of the mechanism and wrong about this token. `resolve` in
+  // VariableSubstitutor.swift knows localWorkspaceFolder,
+  // localWorkspaceFolderBasename, containerWorkspaceFolder, devcontainerId and
+  // localEnv:VAR, and throws `unsupportedSubstitution` only for tokens outside
+  // that set. `substituteAny` walks the whole document before any key is read,
+  // so it reaches `name` and `image` exactly as it already reaches `mounts`
+  // below -- which has depended on this same token all along.
+  //
+  // Keep the folder name lowercase and DNS-safe. It already had to be: it
+  // becomes the hostname, and now the image tag too.
+  "name": "${localWorkspaceFolderBasename}",
 
   // Image rather than `build`, which is what makes this work on Apple
   // `container`: adevcontainer hard-rejects `build.dockerfile` as an
   // unrepresentable configuration source. `build.sh` produces this tag from the
   // Dockerfile beside it, with whichever runtime is installed. The devcontainer
   // CLI on Docker reads `image:` too, so one config serves both.
-  "image": "proteolyzer-devcontainer:local",
+  //
+  // `build.sh` derives the same tag from the same folder name, so the two agree
+  // without either being told what project this is.
+  "image": "${localWorkspaceFolderBasename}-devcontainer:local",
 
   // Was runArgs. `capAdd` is a first-class devcontainer property both CLIs
   // honour, where `runArgs` entries like `-p` are rejected outright by
