@@ -51,17 +51,27 @@ if [ "$cli" = adevcontainer ]; then
         # script. Translate rather than make you map it. Not automatic, because
         # a rebuild replaces the container and would take an agent running in
         # another pane with it -- volumes are preserved, work in progress is not.
-        if ! out="$(adevcontainer up 2>&1)"; then
-            printf '%s\n' "$out" >&2
-            if printf '%s' "$out" | grep -q config_hash; then
+        #
+        # Streamed through `tee` rather than captured into a variable. This read
+        # the output into `$out` and printed it afterwards, which meant a first
+        # start -- image pull, VM boot, postCreate -- showed nothing at all for
+        # minutes and was indistinguishable from a hang. The Docker branch below
+        # already says exactly that about itself; this branch was the one doing
+        # it. `pipefail` is set, so the pipeline still fails when adevcontainer
+        # does, and the log is kept only to grep for the one error worth
+        # translating.
+        log="$(mktemp)"
+        if ! adevcontainer up 2>&1 | tee "$log"; then
+            if grep -q config_hash "$log"; then
                 echo >&2
                 echo "up.sh: devcontainer.json changed since this container was made." >&2
                 echo "up.sh: rebuild it -- volumes are kept, the container is replaced:" >&2
                 echo "up.sh:   REBUILD=1 $0${*:+ $*}" >&2
             fi
+            rm -f "$log"
             exit 1
         fi
-        printf '%s\n' "$out"
+        rm -f "$log"
     fi
     exec adevcontainer exec -it -- "${@:-zsh}"
 fi
