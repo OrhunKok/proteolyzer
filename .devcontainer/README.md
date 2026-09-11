@@ -569,11 +569,26 @@ is the trade, and it is worth stating rather than implying.
 Copy two directories and run two commands. Nothing in them names this project:
 
 ```bash
-cp -R .devcontainer .cmux ../otherproject/
 cd ../otherproject
+rm -rf .devcontainer .cmux                        # see below if it already has them
+cp -R ../thisproject/.devcontainer ../thisproject/.cmux .
 ./.devcontainer/build.sh
 ./.devcontainer/up.sh            # or the "Open sandbox" palette entry
 ```
+
+**The `rm -rf` is not tidiness, it is the whole trap.** `cp -R src dest` copies
+*into* `dest` when `dest` already exists, so a project that already has a
+`.devcontainer/` gets `.devcontainer/.devcontainer/` and keeps its old
+`devcontainer.json`. Everything then proceeds as though the copy worked, until
+adevcontainer reads the old file and says `Dockerfile build is not supported` —
+which reads as a problem with the new setup and is the old config still sitting
+there. Either delete first as above, or copy the contents with
+`cp -R ../thisproject/.devcontainer/. .devcontainer/`.
+
+Deleting is safe for a project under git: the originals come back with
+`git checkout .devcontainer`. And a project that already had a container wants
+`REBUILD=1 ./.devcontainer/up.sh` the first time, because `up` fails closed
+against a container created from the config you just replaced.
 
 Then once inside, per project, because both write to that project's own volume:
 
@@ -614,8 +629,12 @@ it is usually what you want, but it is not what you want by accident.
 ### Converting an existing Docker devcontainer
 
 A project already running under VS Code and Docker has the part worth keeping
-already — its Claude config, session history, memory and shell history. Bring it
-over with:
+already — its Claude config, session history, memory and shell history.
+
+Replace its `.devcontainer/` and `.cmux/` with these first, **deleting rather
+than copying over** for the reason above — a converted project always already has
+a `.devcontainer/`, so this is the case where `cp -R` nests and leaves the old
+`devcontainer.json` in charge. Then:
 
 ```bash
 ./.devcontainer/state.sh adopt
