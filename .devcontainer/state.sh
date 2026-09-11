@@ -266,7 +266,20 @@ adopt)
     fi
     echo "state.sh: adopting from container $old"
 
-    staging="$(mktemp -d)"
+    # Staged inside the repository, not in `mktemp -d`. On macOS that is
+    # /var/folders/…, and Apple `container` would not attach it: the bootstrap
+    # fails with `VZErrorDomain Code=2 "The storage device attachment is
+    # invalid."`, which names the storage layer and not the path, so it reads as
+    # the volume-already-attached case and is not. `export` and `import` have
+    # always bound a directory inside the repo, which is the shareable one; this
+    # now does the same.
+    #
+    # 700 and removed on the way out, including on failure: it holds the Claude
+    # credential for the length of one copy.
+    staging="$repo/.state-adopt"
+    rm -rf "$staging"
+    mkdir -p "$staging"
+    chmod 700 "$staging"
     trap 'rm -rf "$staging"' EXIT
     found=0
 
@@ -292,6 +305,15 @@ adopt)
         echo "state.sh: that container held none of the three; nothing to adopt." >&2
         exit 1
     }
+
+    # The volume attaches to one container at a time, so this project's own
+    # container has to let go of it first. Stopping rather than asking you to:
+    # adopt runs before you work in the container, so there is nothing in there
+    # to interrupt, and `up.sh` starts it again. Quiet and ignored when it is not
+    # running, which is the usual case.
+    if "$rt" stop "$base" >/dev/null 2>&1; then
+        echo "state.sh: stopped $base to free the volume; up.sh will start it again."
+    fi
 
     # Written with $rt, read with docker: that is the runtime crossing, and it is
     # why this is one command rather than an export and an import.
