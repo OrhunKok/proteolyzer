@@ -118,9 +118,21 @@ fi
 #
 # The alias is the point: every rebuild gets a fresh IP, so a cmux workspace or a
 # `cmux surface resume set` command pinned to an address goes stale, while a name
-# does not. DNS would have been the obvious way and is not available -- Apple
-# `container` publishes records for `container run --name` and not for anything
-# adevcontainer creates, see README.md.
+# does not.
+#
+# This said DNS "is not available -- Apple `container` publishes records for
+# `container run --name` and not for anything adevcontainer creates". That was
+# wrong, and README.md now says why: the record is registered from the system
+# `dns.domain` property as it stood when the container was *created*, and that
+# property was empty when this one was. Since 2026-09-11 the name resolves.
+#
+# The alias is kept anyway, and `HostName` below is still the address rather than
+# the name. Two reasons to leave it that way for now. It does not depend on the
+# property surviving on the next machine, which is the failure it was bought
+# against. And a name in `HostName` would move resolution onto the Mac's system
+# resolver -- `/etc/resolver/…`, not the `dig @127.0.0.1 -p 2053` that proves the
+# record exists -- which is a different thing to verify and a worse way to find
+# out it is broken, since the symptom is being unable to attach at all.
 #
 # A ProxyCommand was tried first and resolved the address at connect time, which
 # is tidier in principle. cmux could not bootstrap its remote daemon through it:
