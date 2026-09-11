@@ -197,7 +197,22 @@ RUN usermod --shell /bin/zsh node && \
 # Nothing is wrong with the checkout; writes succeed throughout.
 #
 # --system rather than a session's --global: /home/node is not one of the mounted
-# volumes, so a global config is lost on the next rebuild. One entry covers the
-# worktrees under .claude/ as well.
-RUN git config --system --add safe.directory /workspace
+# volumes, so a global config is lost on the next rebuild.
+#
+# `*` and not `/workspace`, which is what this said first and which would have
+# left the case that matters broken. git reports and matches the *worktree's* own
+# path, so a linked worktree under .claude/worktrees/ is a separate entry --
+# measured with `GIT_TEST_ASSUME_DIFFERENT_OWNER=1`, which forces the check:
+# `/workspace` alone still refuses the worktree, the exact worktree path is
+# accepted, and neither `/workspace/*` nor `/workspace/.claude/worktrees/*`
+# matches anything, because git 2.39 interpolates these paths but does not glob
+# them -- `*` on its own is the only wildcard the documentation defines. Worktree
+# names are made per session, so there is no fixed list to enumerate, and the
+# agent workflow runs inside those worktrees rather than in /workspace.
+#
+# The check exists to stop another user's repository running its hooks as you.
+# This container has one user, and the only things mounted are that user's own
+# workspace and their own state volume, so there is no second owner to be
+# confused with -- which is the trade being made, not an oversight.
+RUN git config --system --add safe.directory '*'
 USER node

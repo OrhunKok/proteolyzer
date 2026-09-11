@@ -531,10 +531,34 @@ sample. Measured at 48 of 50 `git status` runs failing in one phase and 0 of 50
 in another. Nothing is wrong with the checkout: writes succeed throughout,
 including while it reads `root:root 700`.
 
-The Dockerfile answers it with `git config --system --add safe.directory
-/workspace`. `--system` rather than a session's `--global`, because `/home/node`
-is not one of the mounted volumes and a global config is lost on the next
-rebuild. One entry covers the worktrees under `.claude/` as well.
+The Dockerfile answers it with `git config --system --add safe.directory '*'`.
+`--system` rather than a session's `--global`, because `/home/node` is not one of
+the mounted volumes and a global config is lost on the next rebuild.
+
+**`*` rather than `/workspace`**, which is what this said first and which would
+have left the case that matters broken. git matches — and reports — the
+*worktree's* own path, so each linked worktree under `.claude/worktrees/` is a
+separate entry. Forcing the check with `GIT_TEST_ASSUME_DIFFERENT_OWNER=1` shows
+it plainly:
+
+```
+$ GIT_TEST_ASSUME_DIFFERENT_OWNER=1 git -c safe.directory=/workspace status
+fatal: detected dubious ownership in repository at
+'/workspace/.claude/worktrees/salvage-111'
+```
+
+The exact worktree path is accepted; `/workspace/*` and
+`/workspace/.claude/worktrees/*` match nothing, because git 2.39 interpolates
+these paths but does not glob them — `*` alone is the only wildcard the
+documentation defines. Worktree names are made per session, so there is no fixed
+list to enumerate, and the agent workflow runs *inside* those worktrees rather
+than in `/workspace`: an entry for `/workspace` only would have fixed the case
+nobody was hitting.
+
+The check exists to stop another user's repository running its hooks as you. This
+container has one user, and the only things mounted are that user's own workspace
+and their own state volume, so there is no second owner to be confused with. That
+is the trade, and it is worth stating rather than implying.
 
 ## Moving to another machine
 
