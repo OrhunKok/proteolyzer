@@ -10,25 +10,24 @@
 #
 # Runs on the host.
 #
+#   ./.devcontainer/state.sh adopt                     take over the old VS Code
+#                                                      container's state
 #   ./.devcontainer/state.sh export                    without the GitHub token
 #   ./.devcontainer/state.sh export --with-credentials  with it
 #   ./.devcontainer/state.sh import [--with-credentials]
 #   ./.devcontainer/state.sh migrate                   fold the old three into one
 #   ./.devcontainer/state.sh export ~/somewhere.tar.gz
 #
+# `adopt` is the one for converting a project that already runs under VS Code and
+# Docker. No arguments: it finds that project's old container by the label the
+# devcontainer spec stamps on it, reads the Claude config, GitHub login and shell
+# history straight out of it with `docker cp` -- so no volume names are involved,
+# hashed or otherwise -- and writes them into this project's volume. The old
+# container and its volumes are left untouched.
+#
 # Every export contains Claude Code's own credential either way; see the note in
-# `export` below. Treat the archive as a secret.
-#
-# Converting a VS Code / Docker project to this setup is migrate-then-move:
-#
-#   RUNTIME=docker    ./.devcontainer/state.sh migrate
-#   RUNTIME=docker    ./.devcontainer/state.sh export --with-credentials ~/s.tar.gz
-#   RUNTIME=container ./.devcontainer/state.sh import --with-credentials ~/s.tar.gz
-#
-# `migrate` finds the old volumes by name and the default names assume the folder
-# basename; OLD_CONFIG / OLD_HISTORY / OLD_GH override that when they do not
-# match, which is usual for a project that used Anthropic's own template. See
-# README.md, "Converting an existing Docker devcontainer".
+# `export` below. Treat the archive as a secret. `adopt` writes no archive, which
+# is the other reason to prefer it.
 #
 # The container need not be running -- but it must not be *running* for export or
 # migrate, because a volume attaches to one container at a time.
@@ -53,7 +52,7 @@ action=""
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        export|import|migrate) action="$1" ;;
+        export|import|migrate|adopt) action="$1" ;;
         --with-credentials) with_credentials=1 ;;
         # Derived, not a line range: this printed `2,19p` while the header was
         # 19 lines, and grew silently wrong the moment the header did -- `--help`
@@ -66,7 +65,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -z "$action" ]; then
-    echo "state.sh: say 'export', 'import' or 'migrate'. --help for the rest." >&2
+    echo "state.sh: say 'adopt', 'export', 'import' or 'migrate'. --help for the rest." >&2
     exit 1
 fi
 
@@ -136,30 +135,14 @@ run_or_hint() {
 
 volume="claude-code-state-$base"
 
-# The volume names from before everything moved under one. `migrate` reads these.
-#
-# Overridable, because the defaults only match a project whose old volumes were
-# keyed on the folder basename. Anthropic's own template keys them on
-# ${devcontainerId} instead, which resolves to a hash -- so a VS Code project
-# being converted may well have `claude-code-config-a1b2c3…` and `migrate` would
-# report three misses and stop. Find the real names first:
-#
-#   docker volume ls | grep -i claude
-#
-# then name all three you actually have -- `migrate` prints one line per volume,
-# `will read` or `no <name>; skipping`, and reading that back is how you know it
-# found what you meant rather than quietly folding two of three:
-#
-#   OLD_CONFIG=claude-code-config-a1b2c3 \
-#   OLD_HISTORY=claude-code-bashhistory-a1b2c3 \
-#   OLD_GH=claude-code-gh-a1b2c3 \
-#     RUNTIME=docker ./.devcontainer/state.sh migrate
-#
-# The target volume is still derived from the folder, never overridden: the
-# container finds it by that name and nothing else.
-old_history="${OLD_HISTORY:-claude-code-bashhistory-$base}"
-old_config="${OLD_CONFIG:-claude-code-config-$base}"
-old_gh="${OLD_GH:-claude-code-gh-$base}"
+# The volume names from before everything moved under one. `migrate` reads these,
+# and only matches a project whose old volumes were keyed on the folder basename.
+# When they are not -- Anthropic's template keys them on ${devcontainerId}, so
+# they come out as hashes -- use `adopt`, which asks the old container instead of
+# guessing at names.
+old_history="claude-code-bashhistory-$base"
+old_config="claude-code-config-$base"
+old_gh="claude-code-gh-$base"
 
 case "$action" in
 export)
@@ -247,5 +230,84 @@ migrate)
     '
     echo "state.sh: folded into $volume; the old volumes are untouched."
     echo "state.sh: pick it up with: ./.devcontainer/build.sh && REBUILD=1 ./.devcontainer/up.sh"
+    ;;
+
+adopt)
+    # Take over the state of this project's old VS Code / Docker devcontainer,
+    # without being told anything about it.
+    #
+    # `docker cp` reads paths out of a container, volume-backed ones included, so
+    # this needs no volume names -- which is the entire difficulty otherwise:
+    # Anthropic's template keys its volumes on ${devcontainerId}, so they come out
+    # as hashes that match nothing you could guess and nothing this script could
+    # default to.
+    #
+    # The old container is found by the label the devcontainer spec already
+    # stamps on it, so "which container" is not a question either. It is read
+    # while stopped and never written to, and the old volumes are never touched:
+    # the only thing this writes is the new volume, so a bad guess costs nothing
+    # but a `container volume delete`.
+    command -v docker >/dev/null 2>&1 || {
+        echo "state.sh: adopt reads the old container through docker, which is not on PATH." >&2
+        exit 1
+    }
+    docker info >/dev/null 2>&1 || { echo "state.sh: Docker is not running." >&2; exit 1; }
+
+    old="${OLD_CONTAINER:-$(docker ps -a \
+        --filter "label=devcontainer.local_folder=$repo" \
+        --format '{{.ID}}' | head -1)}"
+    if [ -z "$old" ]; then
+        echo "state.sh: no Docker devcontainer is labelled with $repo." >&2
+        echo "state.sh: Docker knows these, with the folder each was opened from:" >&2
+        docker ps -a --format '  {{.ID}}  {{.Names}}  {{index .Labels "devcontainer.local_folder"}}' >&2
+        echo "state.sh: if this project used to live under another path, name it:" >&2
+        echo "state.sh:   OLD_CONTAINER=<id> $0 adopt" >&2
+        exit 1
+    fi
+    echo "state.sh: adopting from container $old"
+
+    staging="$(mktemp -d)"
+    trap 'rm -rf "$staging"' EXIT
+    found=0
+
+    # Each of these is where the thing lives in a stock Claude devcontainer. A
+    # miss is printed rather than swallowed: a silent partial adopt is the defect
+    # worth avoiding -- the container comes up, and one of the three is missing.
+    take() {
+        if docker cp "$old:$1" "$staging/$2" >/dev/null 2>&1; then
+            echo "state.sh: took $1"
+            found=1
+        else
+            echo "state.sh: no $1 in that container; skipping"
+        fi
+    }
+    take /home/node/.claude claude
+    take /home/node/.config/gh gh
+    # Two spellings, and the template's own is the second. Only the first that
+    # exists is taken, so they cannot clobber each other.
+    [ -e "$staging/history" ] || take /home/node/.bash_history history
+    [ -e "$staging/history" ] || take /commandhistory/.bash_history history
+
+    [ "$found" -eq 1 ] || {
+        echo "state.sh: that container held none of the three; nothing to adopt." >&2
+        exit 1
+    }
+
+    # Written with $rt, read with docker: that is the runtime crossing, and it is
+    # why this is one command rather than an export and an import.
+    ensure_volume "$volume"
+    run_or_hint run --rm \
+        -v "$volume:/new" \
+        -v "$staging:/in" \
+        alpine sh -c '
+            set -e
+            mkdir -p /new/claude /new/gh
+            [ -d /in/claude ] && cp -a /in/claude/. /new/claude/ || true
+            [ -d /in/gh ] && cp -a /in/gh/. /new/gh/ || true
+            [ -f /in/history ] && cp -a /in/history /new/history || true
+            chown -R 1000:1000 /new
+        '
+    echo "state.sh: adopted into $volume using $rt; the old container is untouched."
+    echo "state.sh: start it with: ./.devcontainer/build.sh && ./.devcontainer/up.sh"
     ;;
 esac

@@ -613,61 +613,38 @@ it is usually what you want, but it is not what you want by accident.
 
 ### Converting an existing Docker devcontainer
 
-A project already running under VS Code and Docker has the interesting part
-already: its Claude config, session history, memory and shell history, sitting in
-Docker's volume store. Bringing it over is `migrate` then `export`/`import`,
-because the two runtimes keep separate stores and nothing is shared between them.
-
-**First, read the old volume names off Docker rather than guessing**, and keep the
-old `devcontainer.json` open long enough to see how it named its mounts:
+A project already running under VS Code and Docker has the part worth keeping
+already — its Claude config, session history, memory and shell history. Bring it
+over with:
 
 ```bash
-docker volume ls | grep -i claude
+./.devcontainer/state.sh adopt
 ```
 
-The defaults in `state.sh` assume the folder basename —
-`claude-code-config-pinpoint` and friends. Anthropic's own template keys them on
-`${devcontainerId}` instead, which resolves to a hash, so a project that started
-from that template has names like `claude-code-config-a1b2c3d4`. `migrate` looks
-up by name and will otherwise report three misses and stop, which looks like "no
-state to move" and is not.
+No arguments, and nothing to look up. It finds that project's old container by
+the `devcontainer.local_folder` label the spec already stamps on it, reads the
+three things straight out of it with `docker cp`, and writes them into this
+project's volume.
 
-`migrate` prints one line per volume — `will read …` or `no …; skipping` — and
-reading those back is the check. A single skipped `gh` volume is the easy one to
-miss: the fold succeeds, the container comes up, and the GitHub login is the one
-thing that did not arrive.
+`docker cp` is why this needs no volume names: it reads paths out of a container,
+volume-backed ones included. That matters because Anthropic's own template keys
+its volumes on `${devcontainerId}`, so they are named with a hash that matches
+nothing you could guess — the thing that makes this awkward to do by hand is
+exactly the thing `adopt` never has to know.
 
-Then, with the old container stopped — a volume attaches to one container at a
-time, so this is a real requirement rather than tidiness:
+It prints a line per item, `took …` or `no …; skipping`, because a partial adopt
+is the failure worth seeing: the container comes up fine and one of the three is
+quietly missing.
 
-```bash
-cp -R ../proteolyzer/.devcontainer ../proteolyzer/.cmux .    # gives you state.sh
+Nothing is written except this project's volume — the old container and its
+volumes are read-only throughout — so a wrong guess costs a
+`container volume delete` and nothing else. If the project used to live at
+another path and the label does not match, name the container:
+`OLD_CONTAINER=<id> ./.devcontainer/state.sh adopt`.
 
-# fold the old three into one, inside Docker's store. Names as found above --
-# set each of the three you actually have, gh included.
-OLD_CONFIG=claude-code-config-a1b2c3d4 \
-OLD_HISTORY=claude-code-bashhistory-a1b2c3d4 \
-OLD_GH=claude-code-gh-a1b2c3d4 \
-  RUNTIME=docker ./.devcontainer/state.sh migrate
+Then `./.devcontainer/build.sh && ./.devcontainer/up.sh` and it is the same
+project with its history intact.
 
-# carry it across the runtime boundary
-RUNTIME=docker    ./.devcontainer/state.sh export --with-credentials ~/s.tar.gz
-RUNTIME=container ./.devcontainer/state.sh import --with-credentials ~/s.tar.gz
-
-./.devcontainer/build.sh && REBUILD=1 ./.devcontainer/up.sh
-rm ~/s.tar.gz
-```
-
-What arrives: the Claude login, the project's session history and memory, the
-shell history, and — with `--with-credentials` — the GitHub token. Drop that flag
-and everything else still comes, with `gh auth login` to run once on the far side.
-
-Three things worth knowing. **The folder must keep its name**, because the new
-volume is keyed on the basename and the container looks it up by that and nothing
-else. **The old Docker volumes are left untouched**, so this is reversible by
-deleting the new volume and reopening the project in VS Code. And **delete the
-archive afterwards** — it holds the Claude credential whether or not you passed
-`--with-credentials`, and the repository directory is often a synced folder.
 
 ### Skipping the build entirely
 
