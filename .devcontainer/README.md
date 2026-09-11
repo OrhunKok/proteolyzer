@@ -632,15 +632,22 @@ from that template has names like `claude-code-config-a1b2c3d4`. `migrate` looks
 up by name and will otherwise report three misses and stop, which looks like "no
 state to move" and is not.
 
+`migrate` prints one line per volume — `will read …` or `no …; skipping` — and
+reading those back is the check. A single skipped `gh` volume is the easy one to
+miss: the fold succeeds, the container comes up, and the GitHub login is the one
+thing that did not arrive.
+
 Then, with the old container stopped — a volume attaches to one container at a
 time, so this is a real requirement rather than tidiness:
 
 ```bash
 cp -R ../proteolyzer/.devcontainer ../proteolyzer/.cmux .    # gives you state.sh
 
-# fold the old three into one, inside Docker's store. Names as found above.
+# fold the old three into one, inside Docker's store. Names as found above --
+# set each of the three you actually have, gh included.
 OLD_CONFIG=claude-code-config-a1b2c3d4 \
 OLD_HISTORY=claude-code-bashhistory-a1b2c3d4 \
+OLD_GH=claude-code-gh-a1b2c3d4 \
   RUNTIME=docker ./.devcontainer/state.sh migrate
 
 # carry it across the runtime boundary

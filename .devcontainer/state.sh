@@ -146,9 +146,13 @@ volume="claude-code-state-$base"
 #
 #   docker volume ls | grep -i claude
 #
-# then name them:
+# then name all three you actually have -- `migrate` prints one line per volume,
+# `will read` or `no <name>; skipping`, and reading that back is how you know it
+# found what you meant rather than quietly folding two of three:
 #
-#   OLD_CONFIG=claude-code-config-a1b2c3 OLD_HISTORY=claude-code-bashhistory-a1b2c3 \
+#   OLD_CONFIG=claude-code-config-a1b2c3 \
+#   OLD_HISTORY=claude-code-bashhistory-a1b2c3 \
+#   OLD_GH=claude-code-gh-a1b2c3 \
 #     RUNTIME=docker ./.devcontainer/state.sh migrate
 #
 # The target volume is still derived from the folder, never overridden: the
