@@ -56,12 +56,11 @@ A `buildkit` container appearing beside it is Apple's own builder for
 **A stable name matters** beyond looks: every rebuild gets a fresh address, so a
 cmux workspace or a `cmux surface resume set` command pinned to an IP goes stale
 the next time you rebuild. This project is `proteolyzer.adevcontainers.local`,
-and it works — but not the way you would expect.
+and it resolves — but it did not for a while, and the reason is worth keeping.
 
-### DNS is not what provides it
+### Why the record was missing, and what a working one costs
 
-`adevcontainer`'s containers do not get DNS records. Apple `container`'s DNS
-works fine; theirs is the exception, established on 2026-09-10 by control:
+It was missing, established on 2026-09-10 by control:
 
 ```bash
 container run -d --rm --name dnstest docker.io/library/alpine sleep 300
@@ -76,9 +75,101 @@ cosmetic — macOS reads the `domain` directive inside), the service restarted, 
 the container recreated afterwards and running as `proteolyzer`. `dig` came back
 empty rather than refused, so the service was reachable and simply had no record.
 
-**So the name comes from an ssh alias instead.** `cmux-attach.sh` writes a
+That was first read as *adevcontainer's containers do not get DNS records, while
+`container run --name` ones do*. *Apple's source does not support that reading*,
+and it is worth not acting on: it makes the ssh alias below a workaround for
+someone else's bug, which is the kind of thing that never gets revisited.
+`container create` and `container run` build their configuration through one
+shared helper, and the name a container registers under is decided there, once:
+
+```swift
+// apple/container — Sources/Services/ContainerAPIService/Client/Utility.swift
+config.networks = try getAttachmentConfigurations(   // :208
+    containerId: config.id, …, dnsDomain: containerSystemConfig.dns.domain)
+// and inside it: fqdn = "\(containerId).\(dnsDomain)." — or nil, if that domain is nil
+```
+
+With that domain nil the container attaches as the bare `proteolyzer`, and a bare
+hostname is what the resolver then has to answer with. **The value is read once,
+at create time, and baked into the stored config** — so setting the domain
+afterwards changes nothing until the container is *recreated*, not merely
+restarted. Create-versus-run is not the variable; created-before-versus-after the
+domain was set is.
+
+`container system dns create <domain>` does not set it. That writes
+`/etc/resolver/…` and the pf rule, which points macOS *at* the container DNS
+service and stops there. What containers register under is the `dns.domain`
+system property:
+
+```toml
+# ~/.config/container/config.toml
+[dns]
+domain = "adevcontainers.local"
+```
+
+**That file is not the one anything reads.** It is a source, copied to
+`~/Library/Application Support/com.apple.container/config/config.toml`, and
+`container create` reads only the copy (`Application.swift:149-158`). The copy is
+made by exactly one caller — `container system start`
+(`SystemStart.swift:76` → `ConfigurationLoader.copyConfigurationToReadOnly`). So
+editing the user config does nothing at all until the service is restarted, and
+then does nothing to containers that already exist. Two steps, both easy to miss,
+and neither reports anything.
+
+`container system property list` reads the copy, so it answers "is this live?"
+rather than "did I write it?" — which is why it is the right thing to check, and
+why checking it on its own is not enough to say when it *became* live.
+
+**One line reads the answer off a running container**, which is what the
+investigation above was missing:
+
+```bash
+grep domain /etc/resolv.conf   # nothing == no domain when this container was created
+```
+
+That line comes from the same value (`RuntimeService.swift:1198`, via
+`DNS.resolvConf` in containerization, which emits `domain …` whenever the domain
+is non-nil). `/etc/hosts` cannot answer it — the guest hostname is deliberately
+truncated to its first label (`:1190`), so it reads `proteolyzer` either way.
+
+On this container, on 2026-09-10, there is no `domain` line, while
+`container system property list` on the Mac shows `domain = "adevcontainers.local"`
+the same day. Both are true and they are not in conflict: **the property is live
+now and was not when this container was created.** Nothing rewrites the file
+afterwards — no script here touches it, it is a plain file rather than a mount,
+and its mtime predates the boot — so it still reads as it was written at create.
+
+The reading is not ambiguous either. `config.dns` was present with empty
+nameservers, which is the branch that fills them from the attachment gateway
+(`RuntimeService.swift:229-238`) — hence `nameserver 192.168.64.1`. Had the
+domain been set, the same struct would have carried it. `--no-dns` would have
+produced neither line.
+
+**So the fix was a rebuild, and nothing else** — confirmed on 2026-09-11. The
+container was recreated with the property already live, and this time it came up
+with the domain and a record to match:
+
+```bash
+# inside the new container
+cat /etc/resolv.conf                                       # nameserver 192.168.64.1
+                                                           # domain adevcontainers.local
+dig @192.168.64.1 +short proteolyzer.adevcontainers.local   # 192.168.64.6
+```
+
+Nothing was changed to achieve that. No flag, no `runArgs`, no config edit — the
+same image and the same `devcontainer.json`, created once more after the property
+had taken effect. Which is the whole claim: the name was never adevcontainer's to
+give or withhold.
+
+So `container system dns create` *and* `dns.domain` *and* a rebuild, in that
+order, is what a working name costs — and the middle one needs
+`container system start` before it counts.
+
+**The ssh alias predates all of that, and still runs.** `cmux-attach.sh` writes a
 `Host` block to `~/.ssh/config` with the container's current address, and
-rewrites it on every run.
+rewrites it on every run. It was built when the name did not resolve, and it is
+kept because it does not depend on whether the name resolves — the workaround
+list below says why that is worth something rather than just redundant.
 
 A `ProxyCommand` resolving the address at connect time was tried first and is
 tidier in principle. cmux could not bootstrap its remote daemon through it —
@@ -116,10 +207,18 @@ was the less idiomatic one.
 does not seed a named volume from the image path it covers
 ([#729](https://github.com/apple/container/issues/729)). `build.sh` deletes
 derived images because adevcontainer's derived tag hashes the config and not the
-base, so a rebuilt base is silently ignored. The ssh alias exists because
-adevcontainer's containers get no DNS record while `container run --name` ones
-do. Each is a gap in a specific tool, not a disagreement with Apple's design,
-and each should be removed rather than maintained once it closes.
+base, so a rebuilt base is silently ignored. Those two are gaps in a specific
+tool, not disagreements with Apple's design, and each should be removed rather
+than maintained once it closes.
+
+The ssh alias is the odd one out: it is not a gap in anything. A container
+registers under whatever `dns.domain` was live when it was created, and for this
+one that was nothing. The alias still earns its place — it is independent of DNS
+entirely, so it survives the property being unset on the next machine, which is
+the failure it was actually bought against — but it is not waiting on anyone
+else's fix. As of 2026-09-11 the DNS name resolves and the alias runs alongside
+it, which is the arrangement to keep: two independent ways to reach the
+container, neither of which needs the other to be working.
 
 **One thing left that is more workaround than it needs to be.**
 `sshd-cmux.conf` sets `UsePAM no`, which is why the `node` account has to be
