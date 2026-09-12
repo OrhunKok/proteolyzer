@@ -5,7 +5,6 @@
       "description": "a workspace with Claude and a shell, both already in the container",
       "keywords": ["devcontainer", "sandbox", "claude", "open", "reopen"],
       "workspace": {
-        "name": "proteolyzer",
         "cwd": ".",
         "layout": {
           "direction": "horizontal",
