@@ -169,30 +169,37 @@ So `container system dns create` *and* `dns.domain` *and* a rebuild, in that
 order, is what a working name costs — and the middle one needs
 `container system start` before it counts.
 
-**The ssh alias predates all of that, and still runs.** `cmux-attach.sh` writes a
-`Host` block to `~/.ssh/config` with the container's current address, and
-rewrites it on every run. It was built when the name did not resolve, and it is
-kept because it does not depend on whether the name resolves — the workaround
-list below says why that is worth something rather than just redundant.
+**Nothing is written to `~/.ssh/config`.** `cmux-attach.sh` used to add a `Host`
+block there per project, and that was wrong twice over. A file every project
+appends to is shared state, and one container has no business knowing which
+others exist — the same objection that collapsed three volumes into one.
 
-A `ProxyCommand` resolving the address at connect time was tried first and is
-tidier in principle. cmux could not bootstrap its remote daemon through it —
-`failed to query remote platform: Connection closed by UNKNOWN port 65535`,
+It also did not buy what it was sold on. The claim was that a pinned
+`cmux surface resume set` command would go stale when a rebuild changed the
+address. It would not: that command runs `cmux-attach.sh`, which recomputes the
+address every time, so nothing pinned ever held an IP. And the block's
+`HostName` was static until the script rewrote it, so a workspace cmux
+reconnected on its own was exactly as stale as a bare address would have been.
+It bought a prettier string in a log.
+
+What runs now: the name when this Mac can resolve it, the address when it
+cannot, passed on the command line either way.
+
+```bash
+dscacheutil -q host -a name proteolyzer.adevcontainers.local
+```
+
+`dscacheutil` and not `dig @127.0.0.1 -p 2053` — the second proves the record
+exists, the first proves *this Mac* will find it, and only that decides whether
+an attach works. `CMUX_DEVCONTAINER_HOST` names the target outright,
+`CONTAINER_DNS_DOMAIN` just its suffix.
+
+A `ProxyCommand` resolving the address at connect time was tried before either
+and is tidier in principle. cmux could not bootstrap its remote daemon through
+it — `failed to query remote platform: Connection closed by UNKNOWN port 65535`,
 where `UNKNOWN` is ssh not knowing its peer because a proxy is in the way. That
 bootstrap does much more than open a session: platform probe, binary upload,
-reverse forward. A plain connection to the address was already proven to work, so
-the alias stays and the proxy went. The only staleness window is a container
-restarted without running this script — and the script is what a
-`cmux surface resume set` command runs, so it closes itself.
-
-The block is prepended rather than appended, deliberately: ssh takes the *first*
-value it sees for each keyword, so a `Host *` earlier in the file would win on
-`IdentityFile` and the right key would never be offered. It is marked with
-`# BEGIN cmux-devcontainer …` and replaced in place on each run, so it refreshes
-rather than accumulating. Deleting the block opts out.
-
-`CMUX_DEVCONTAINER_HOST` sets the alias, `CONTAINER_DNS_DOMAIN` just its suffix.
-Neither needs DNS to be configured at all now.
+reverse forward.
 
 ### What is idiomatic here and what is a workaround
 
@@ -215,14 +222,8 @@ base, so a rebuilt base is silently ignored. Those two are gaps in a specific
 tool, not disagreements with Apple's design, and each should be removed rather
 than maintained once it closes.
 
-The ssh alias is the odd one out: it is not a gap in anything. A container
-registers under whatever `dns.domain` was live when it was created, and for this
-one that was nothing. The alias still earns its place — it is independent of DNS
-entirely, so it survives the property being unset on the next machine, which is
-the failure it was actually bought against — but it is not waiting on anyone
-else's fix. As of 2026-09-11 the DNS name resolves and the alias runs alongside
-it, which is the arrangement to keep: two independent ways to reach the
-container, neither of which needs the other to be working.
+The ssh alias is gone: it was neither a gap in anything nor worth the
+shared file it lived in. See above.
 
 **One thing left that is more workaround than it needs to be.**
 `sshd-cmux.conf` sets `UsePAM no`, which is why the `node` account has to be
