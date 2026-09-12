@@ -42,8 +42,17 @@ if [ "$cli" = adevcontainer ]; then
     # adevcontainer discovers .devcontainer/devcontainer.json from the working
     # directory and takes no --workspace-folder.
     cd "$repo"
+
+    # One log for both branches, and it has to outlive them: the container name
+    # is read out of it below. `rebuild` previously wrote no log at all and `up`
+    # deleted its own before anything could read it, so the name always fell
+    # back to the directory -- which is right only while the folder and `name`
+    # in devcontainer.json agree.
+    log="$(mktemp)"
+    trap 'rm -f "$log"' EXIT
+
     if [ -n "${REBUILD:-}" ]; then
-        adevcontainer rebuild
+        adevcontainer rebuild 2>&1 | tee "$log"
     else
         # `up` fails closed when devcontainer.json has changed since the
         # container was created, which is correct of it and a dead end here: its
@@ -60,7 +69,6 @@ if [ "$cli" = adevcontainer ]; then
         # it. `pipefail` is set, so the pipeline still fails when adevcontainer
         # does, and the log is kept only to grep for the one error worth
         # translating.
-        log="$(mktemp)"
         if ! adevcontainer up 2>&1 | tee "$log"; then
             if grep -q config_hash "$log"; then
                 echo >&2
@@ -68,12 +76,17 @@ if [ "$cli" = adevcontainer ]; then
                 echo "up.sh: rebuild it -- volumes are kept, the container is replaced:" >&2
                 echo "up.sh:   REBUILD=1 $0${*:+ $*}" >&2
             fi
-            rm -f "$log"
             exit 1
         fi
-        rm -f "$log"
     fi
-    exec adevcontainer exec -it -- "${@:-zsh}"
+    # --name for the same reason cmux-attach.sh uses it: with two managed
+    # containers running, `exec` without it opens an interactive picker and acts
+    # on whichever row is highlighted. Taken from the tool's own `containerId:`.
+    container="$(sed -n 's/.*containerId:[[:space:]]*\([A-Za-z0-9_.-][A-Za-z0-9_.-]*\).*/\1/p' "$log" | tail -1)"
+    rm -f "$log"
+    trap - EXIT   # this branch ends in exec, which would never reach the trap
+    [ -n "$container" ] || container="$(basename "$repo")"
+    exec adevcontainer exec -it --name "$container" -- "${@:-zsh}"
 fi
 
 if ! docker info >/dev/null 2>&1; then

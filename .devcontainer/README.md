@@ -235,6 +235,28 @@ trade; but that is the reason, not an argument that this is better.
 The VS Code extension still works — `customizations.vscode` is read when it
 attaches — but nothing depends on it.
 
+## More than one project at once
+
+`adevcontainer exec` opens an interactive **"Select a container:"** picker when
+more than one managed container is running. A script that execs four times
+therefore stops four times, and acts on whichever row happens to be highlighted
+— not on the project it was started from.
+
+That is not theoretical. With `pinpoint` and `proteolyzer` both up, an attach
+from `proteolyzer` wrote the ssh key into one container, read sshd's pid from
+the other, and reported the wrong address as the project's, so the alias for
+`proteolyzer` pointed at `pinpoint`'s IP and Claude opened with the wrong
+history. The hangs were the pickers waiting.
+
+So every `exec` in `up.sh` and `cmux-attach.sh` passes `--name`, taken from the
+`containerId:` line of the tool's own output rather than guessed from the
+directory. The ssh alias and the cmux workspace name follow the same value, so
+they name the container they actually reach even if `name` in
+`devcontainer.json` and the folder ever disagree.
+
+Worth knowing when you run these by hand too: `adevcontainer stop`,
+`adevcontainer exec` and friends will all prompt. Pass `--name <project>`.
+
 ## Skipping permission prompts
 
 The palette entries run `claude --dangerously-skip-permissions`, which is what
