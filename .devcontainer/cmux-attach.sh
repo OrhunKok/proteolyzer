@@ -139,70 +139,21 @@ if [ -z "$ip" ]; then
     exit 1
 fi
 
-# A stable alias pointing at the current address, rewritten on every run.
+# Which of the two to hand cmux. Nothing is written to ~/.ssh/config: a file
+# every project appends a block to is shared state, and one container has no
+# business knowing which others exist. Whatever this needs, it passes on the
+# command line.
 #
-# The alias is the point: every rebuild gets a fresh IP, so a cmux workspace or a
-# `cmux surface resume set` command pinned to an address goes stale, while a name
-# does not.
-#
-# This said DNS "is not available -- Apple `container` publishes records for
-# `container run --name` and not for anything adevcontainer creates". That was
-# wrong, and README.md now says why: the record is registered from the system
-# `dns.domain` property as it stood when the container was *created*, and that
-# property was empty when this one was. Since 2026-09-11 the name resolves.
-#
-# The alias is kept anyway, and `HostName` below is still the address rather than
-# the name. Two reasons to leave it that way for now. It does not depend on the
-# property surviving on the next machine, which is the failure it was bought
-# against. And a name in `HostName` would move resolution onto the Mac's system
-# resolver -- `/etc/resolver/…`, not the `dig @127.0.0.1 -p 2053` that proves the
-# record exists -- which is a different thing to verify and a worse way to find
-# out it is broken, since the symptom is being unable to attach at all.
-#
-# A ProxyCommand was tried first and resolved the address at connect time, which
-# is tidier in principle. cmux could not bootstrap its remote daemon through it:
-# `failed to query remote platform: Connection closed by UNKNOWN port 65535`,
-# where UNKNOWN is ssh not knowing its peer because a proxy is in the way. Its
-# bootstrap does considerably more than open a session -- platform probe, binary
-# upload, reverse forward -- and a plain connection to the address had already
-# been proven to work. So: same alias, no proxy, and the address refreshed here
-# instead. The one staleness window is a container restarted without running this
-# script, and the script is what the resume command runs, so it closes itself.
-ssh_config="$HOME/.ssh/config"
-marker_begin="# BEGIN cmux-devcontainer $host"
-marker_end="# END cmux-devcontainer $host"
-
-mkdir -p "$HOME/.ssh"
-touch "$ssh_config"
-
-# Prepended, not appended, and that matters: ssh takes the *first* value it sees
-# for each keyword, so a `Host *` block earlier in the file would win on
-# IdentityFile and the right key would never be offered.
-block="$(mktemp)"
-{
-    echo "$marker_begin"
-    echo "# Written by .devcontainer/cmux-attach.sh; rewritten on every run."
-    echo "# Delete this block to opt out."
-    echo "Host $host"
-    echo "    HostName $ip"
-    echo "    Port 2222"
-    echo "    User node"
-    echo "    IdentityFile $key"
-    echo "    IdentitiesOnly yes"
-    echo "    StrictHostKeyChecking no"
-    echo "    UserKnownHostsFile /dev/null"
-    echo "$marker_end"
-    echo
-    awk -v b="$marker_begin" -v e="$marker_end" '
-        $0 == b {skip = 1}
-        skip && $0 == e {skip = 0; getline; next}
-        !skip {print}
-    ' "$ssh_config"
-} > "$block"
-mv "$block" "$ssh_config"
-chmod 600 "$ssh_config"
-
-echo "cmux-attach: $host -> $ip (alias in $ssh_config)"
+# The name is preferred when the Mac can actually resolve it, and the address is
+# used when it cannot, so a machine without the DNS domain set up is not stuck.
+# `dscacheutil` rather than `dig @127.0.0.1 -p 2053`: the second proves the
+# record exists, the first proves *this Mac* will find it, and only the second
+# question decides whether an attach works.
+target="$ip"
+if dscacheutil -q host -a name "$host" 2>/dev/null | grep -q '^ip_address:'; then
+    target="$host"
+fi
+echo "cmux-attach: $container at $target"
 
 # Prove the login before handing the connection to cmux, which reports a refused
 # key as "the remote VM may have been paused, destroyed, or lost network" -- true
@@ -215,7 +166,7 @@ if ! ssh -o BatchMode=yes \
         -o UserKnownHostsFile=/dev/null \
         -o StrictHostKeyChecking=no \
         -o ConnectTimeout=10 \
-        -i "$key" -p 2222 "node@$host" true 2>/tmp/cmux-attach-ssh.$$; then
+        -i "$key" -p 2222 "node@$target" true 2>/tmp/cmux-attach-ssh.$$; then
     echo "cmux-attach: ssh into the container failed. ssh said:" >&2
     sed 's/^/cmux-attach:   /' /tmp/cmux-attach-ssh.$$ >&2
     rm -f /tmp/cmux-attach-ssh.$$
@@ -241,7 +192,7 @@ fi
 #
 # --no-forward-agent for the reason the container holds its own gh credential:
 # it is a sandbox, and the host's ssh agent is not part of what it gets.
-exec cmux ssh "node@$host" \
+exec cmux ssh "node@$target" \
     --port 2222 \
     --identity "$key" \
     --name "$container" \
