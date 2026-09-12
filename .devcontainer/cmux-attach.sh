@@ -59,10 +59,32 @@ for tool in cmux adevcontainer container; do
 done
 
 cd "$repo"
+
+# Every `adevcontainer exec` below is given --name, and that is not tidiness.
+# With more than one managed container running, `exec` without it opens an
+# interactive "Select a container:" picker -- so a script that does four execs
+# stops four times, and whichever entry happens to be highlighted is the
+# container it acts on. That is how this ended up writing a key into one
+# project, reading sshd's pid from a second, and reporting a third one's address
+# as this project's: the alias for `proteolyzer` pointed at `pinpoint`.
+#
+# The name comes from `containerId:` in the tool's own output rather than being
+# guessed from the directory, so it stays right even if `name` in
+# devcontainer.json and the folder ever disagree.
+log="$(mktemp)"
+trap 'rm -f "$log"' EXIT
 if [ -n "${REBUILD:-}" ]; then
-    adevcontainer rebuild
+    adevcontainer rebuild 2>&1 | tee "$log"
 else
-    adevcontainer up
+    adevcontainer up 2>&1 | tee "$log"
+fi
+
+container="$(sed -n 's/.*containerId:[[:space:]]*\([A-Za-z0-9_.-][A-Za-z0-9_.-]*\).*/\1/p' "$log" | tail -1)"
+rm -f "$log"
+trap - EXIT
+if [ -z "$container" ]; then
+    container="$(basename "$repo")"
+    echo "cmux-attach: no containerId in the output; assuming '$container'." >&2
 fi
 
 # A key of its own, not the one that talks to GitHub: this authenticates a hop
@@ -81,7 +103,7 @@ fi
 # Spelled-out paths, and both modes set explicitly: `mkdir -p` leaves an existing
 # directory's mode alone and the node image ships ~/.ssh as 755, so a umask alone
 # never makes it 700.
-adevcontainer exec -- sh -c '
+adevcontainer exec --name "$container" -- sh -c '
     set -e
     mkdir -p /home/node/.ssh
     printf "%s\n" "$1" > /home/node/.ssh/authorized_keys
@@ -90,15 +112,18 @@ adevcontainer exec -- sh -c '
 ' sh "$(cat "$key.pub")"
 
 # Read it back. A key that silently did not land is invisible until ssh refuses.
-if ! adevcontainer exec -- cat /home/node/.ssh/authorized_keys 2>/dev/null \
+if ! adevcontainer exec --name "$container" -- cat /home/node/.ssh/authorized_keys 2>/dev/null \
         | grep -qF "$(cut -d' ' -f2 < "$key.pub")"; then
     echo "cmux-attach: the public key is not in the container's authorized_keys." >&2
     exit 1
 fi
 
-adevcontainer exec -- sudo /usr/local/bin/start-sshd.sh
+adevcontainer exec --name "$container" -- sudo /usr/local/bin/start-sshd.sh
 
-host="${CMUX_DEVCONTAINER_HOST:-$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
+# Built from the container's name rather than the directory's. They agree when
+# `name` in devcontainer.json matches the folder, and when they do not, the alias
+# should follow the thing it actually reaches.
+host="${CMUX_DEVCONTAINER_HOST:-$container.${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
 
 # The address, asked of the container rather than read out of a CLI table.
 #
@@ -107,7 +132,7 @@ host="${CMUX_DEVCONTAINER_HOST:-$(basename "$repo").${CONTAINER_DNS_DOMAIN:-adev
 # to a format nobody promised to keep. `hostname -i` inside the container is
 # authoritative, costs one exec on a path that runs once per attach, and cannot
 # be broken by a column being added.
-ip="$(adevcontainer exec -- hostname -i 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
+ip="$(adevcontainer exec --name "$container" -- hostname -i 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
 if [ -z "$ip" ]; then
     echo "cmux-attach: could not read the container's address." >&2
     echo "cmux-attach: it should be running by now -- check \`container list\`." >&2
@@ -219,7 +244,7 @@ fi
 exec cmux ssh "node@$host" \
     --port 2222 \
     --identity "$key" \
-    --name "$(basename "$repo")" \
+    --name "$container" \
     --no-forward-agent \
     --ssh-option IdentitiesOnly=yes \
     --ssh-option UserKnownHostsFile=/dev/null \
