@@ -589,7 +589,12 @@ is the trade, and it is worth stating rather than implying.
 
 ## Copying this into another project
 
-Copy two directories and run two commands. Nothing in them names this project:
+Copy two directories and run two commands. Nothing in them names this project —
+that is a property worth keeping, so check it holds before you rely on it:
+
+```bash
+grep -rn thisproject .devcontainer .cmux    # expect nothing
+```
 
 ```bash
 cd ../otherproject
@@ -619,6 +624,13 @@ Then once inside, per project, because both write to that project's own volume:
 gh auth login
 /workspace/.devcontainer/install-cmux-hooks.sh
 ```
+
+`.cmux/cmux.json` carried the last hardcoded name, in the workspace block, and
+no longer does: the `name` key is omitted so cmux takes the workspace's name
+from its working directory, which is the project folder. If a future cmux
+requires the key, the symptom is that palette entry not appearing, and putting
+`"name": "<project>"` back beside `"cwd"` restores it at the cost of one edit
+per project.
 
 **One folder name drives everything**, which is the only thing to get right.
 `devcontainer.json` takes `name` and `image` from
