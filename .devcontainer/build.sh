@@ -27,12 +27,37 @@ fi
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Derived from the folder name, not written down, so this script is the same in
-# every project. devcontainer.json builds its `image` from
-# ${localWorkspaceFolderBasename} and lands on the same string, and state.sh
-# keys its volume on the same basename -- one source of truth, three files, no
-# edit when you copy the directory. IMAGE still overrides for a one-off build.
-tag="${IMAGE:-$(basename "$repo")-devcontainer:local}"
+# Read out of devcontainer.json rather than derived independently, so the image
+# this builds and the image adevcontainer starts cannot drift apart. The one
+# substitution that file uses is applied here too. IMAGE still overrides.
+config="$repo/.devcontainer/devcontainer.json"
+declared="$(sed -n 's/^[[:space:]]*"image"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | head -1)"
+tag="${IMAGE:-${declared//\$\{localWorkspaceFolderBasename\}/$(basename "$repo")}}"
+
+if [ -z "$tag" ]; then
+    echo "build: no \"image\" in $config." >&2
+    exit 1
+fi
+
+# An OCI reference has to be lowercase, and a folder name does not. streamlit-DO-MS
+# derives streamlit-DO-MS-devcontainer:local, which Apple `container` rejects as
+# `invalid reference` -- an error that names neither the cause nor the fix, and
+# does not say which of the two files to change. Both read the same declaration
+# now, so there is only one place to change, and this says so before the build.
+case "$tag" in
+    *[A-Z]*)
+        lower="$(printf '%s' "$tag" | tr '[:upper:]' '[:lower:]')"
+        echo "build: \"$tag\" is not a legal image reference -- they must be lowercase," >&2
+        echo "build: and this folder's name is not. Set it explicitly in" >&2
+        echo "build: $config:" >&2
+        echo "build:" >&2
+        echo "build:     \"image\": \"$lower\"," >&2
+        echo "build:" >&2
+        echo "build: then rerun. Both this script and adevcontainer read that line," >&2
+        echo "build: so they cannot disagree about which image is meant." >&2
+        exit 1
+        ;;
+esac
 
 if command -v container >/dev/null 2>&1; then
     runtime=container

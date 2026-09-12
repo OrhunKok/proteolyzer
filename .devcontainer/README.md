@@ -632,6 +632,20 @@ requires the key, the symptom is that palette entry not appearing, and putting
 `"name": "<project>"` back beside `"cwd"` restores it at the cost of one edit
 per project.
 
+**Unless the folder has a capital letter in it.** An OCI reference must be
+lowercase and a directory name need not be, so `streamlit-DO-MS` derives
+`streamlit-DO-MS-devcontainer:local` and Apple `container` answers `invalid
+reference` — which names neither the cause nor which file to change. `build.sh`
+catches that before building and prints the line to paste:
+
+```jsonc
+"image": "streamlit-do-ms-devcontainer:local",
+```
+
+That is the one edit such a project needs, and it is safe because `build.sh`
+reads `image` out of `devcontainer.json` rather than deriving it separately —
+the two cannot end up meaning different images.
+
 **One folder name drives everything**, which is the only thing to get right.
 `devcontainer.json` takes `name` and `image` from
 `${localWorkspaceFolderBasename}`, `build.sh` derives the same tag with
