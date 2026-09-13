@@ -74,13 +74,24 @@ cd "$repo"
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 if [ -n "${REBUILD:-}" ]; then
-    # --name, or `rebuild` opens the container picker when more than one is
-    # running. Read from devcontainer.json, not assumed from the folder.
-    project="$(sed -n 's/^[[:space:]]*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
-        "$repo/.devcontainer/devcontainer.json" | head -1)"
-    project="${project//\$\{localWorkspaceFolderBasename\}/$(basename "$repo")}"
-    [ -n "$project" ] || project="$(basename "$repo")"
-    adevcontainer rebuild --name "$project" 2>&1 | tee "$log"
+    # `rebuild --name` selects an *existing* container, so the name has to be the
+    # one that exists -- not the one devcontainer.json would create. Those differ
+    # whenever `name` has been edited or the folder renamed, and the failure is
+    # `No managed container named ...` while the container is sitting right there
+    # under another name. `list` knows which container belongs to this folder;
+    # ask it. The leading slash in the match keeps `notpinpoint` from answering
+    # for `pinpoint`.
+    existing="$(adevcontainer list 2>/dev/null \
+        | awk -v b="/$(basename "$repo")" \
+            'NR>1 { n=length(b); if (substr($NF, length($NF)-n+1) == b) { print $1; exit } }' \
+        || true)"
+
+    if [ -n "$existing" ]; then
+        adevcontainer rebuild --name "$existing" 2>&1 | tee "$log"
+    else
+        echo "cmux-attach: no container for this folder yet; creating one." >&2
+        adevcontainer up 2>&1 | tee "$log"
+    fi
 else
     adevcontainer up 2>&1 | tee "$log"
 fi
