@@ -196,6 +196,88 @@ import)
     echo "state.sh: the directory must stay named '$base' for the container to find it."
     ;;
 
+adopt)
+    # Bring this project's pre-existing Claude state into its volume, from
+    # wherever it happens to live, and never clobber what is already there.
+    #
+    # This exists because copying .devcontainer into a project gave it an empty
+    # volume and no route to its own history -- so a repository that had been
+    # used with Claude for months opened with no sessions, and the only fix was
+    # a hand-run sequence per project. That is the sort of thing a setup should
+    # do for itself. `up.sh` calls this once per volume.
+    #
+    # Idempotent by marker rather than by inspection: it writes /.adopted and
+    # returns early next time, so a project that genuinely has nothing to adopt
+    # does not pay for the search on every start.
+    ensure_volume "$volume"
+
+    src_rt=""
+    if volume_exists "$old_config" || volume_exists "$old_history"; then
+        src_rt="$rt"
+    elif [ "$rt" != docker ] && command -v docker >/dev/null 2>&1 \
+         && docker info >/dev/null 2>&1 \
+         && docker volume list --quiet 2>/dev/null | grep -qx "$old_config"; then
+        # The common case after moving runtimes: the history is in Docker's
+        # volumes and the live container is Apple's.
+        src_rt=docker
+    fi
+
+    if [ -z "$src_rt" ]; then
+        echo "state.sh: nothing to adopt for $base."
+        "$rt" run --rm -v "$volume:/v" alpine touch /v/.adopted >/dev/null 2>&1 || true
+        exit 0
+    fi
+
+    echo "state.sh: adopting $base's earlier state from $src_rt"
+
+    # Copy only what the target does not already have. `cp -n` and
+    # `tar --skip-old-files` are both absent from busybox, so the no-clobber is
+    # spelled out -- which also keeps the credential from a fresh login.
+    copier='
+        copy_missing() {
+            [ -d "$1" ] || return 0
+            ( cd "$1" && find . -type f ) | while read -r f; do
+                [ -e "$2/$f" ] && continue
+                mkdir -p "$2/$(dirname "$f")"
+                cp -a "$1/$f" "$2/$f"
+            done
+        }
+        mkdir -p /new/claude /new/gh
+        copy_missing /old/config /new/claude
+        copy_missing /old/gh /new/gh
+        [ -f /old/hist/.bash_history ] && [ ! -f /new/history ] && cp -a /old/hist/.bash_history /new/history
+        chown -R 1000:1000 /new
+        touch /new/.adopted
+        true
+    '
+
+    if [ "$src_rt" = "$rt" ]; then
+        args=(--rm)
+        volume_exists "$old_history" && args+=(-v "$old_history:/old/hist")
+        volume_exists "$old_config" && args+=(-v "$old_config:/old/config")
+        volume_exists "$old_gh" && args+=(-v "$old_gh:/old/gh")
+        args+=(-v "$volume:/new")
+        run_or_hint run "${args[@]}" alpine sh -c "$copier"
+    else
+        # Across runtimes there is no shared volume namespace, so it goes out as
+        # a tarball and comes back in. The staging directory is the hop.
+        stage="$(mktemp -d)"
+        dargs=(--rm)
+        docker volume list --quiet | grep -qx "$old_history" && dargs+=(-v "$old_history:/old/hist:ro")
+        docker volume list --quiet | grep -qx "$old_config" && dargs+=(-v "$old_config:/old/config:ro")
+        docker volume list --quiet | grep -qx "$old_gh" && dargs+=(-v "$old_gh:/old/gh:ro")
+        dargs+=(-v "$stage:/out")
+        docker run "${dargs[@]}" alpine tar czf /out/legacy.tgz --numeric-owner -C /old .
+
+        run_or_hint run --rm -v "$volume:/new" -v "$stage:/in:ro" alpine sh -c '
+            mkdir -p /old && tar xzf /in/legacy.tgz --numeric-owner -C /old
+        '"$copier"
+        rm -rf "$stage"
+    fi
+
+    echo "state.sh: adopted. Anything already in the volume was left alone."
+    ;;
+
 migrate)
     # One-off, for a container that predates the single volume: fold
     # bashhistory, config and gh into .state/{history,claude,gh}. The old volumes
