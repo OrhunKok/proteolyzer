@@ -632,19 +632,17 @@ requires the key, the symptom is that palette entry not appearing, and putting
 `"name": "<project>"` back beside `"cwd"` restores it at the cost of one edit
 per project.
 
-**Unless the folder has a capital letter in it.** An OCI reference must be
-lowercase and a directory name need not be, so `streamlit-DO-MS` derives
-`streamlit-DO-MS-devcontainer:local` and Apple `container` answers `invalid
-reference` — which names neither the cause nor which file to change. `build.sh`
-catches that before building and prints the line to paste:
+**The image tag is fixed, not derived**, and that is the second attempt.
+Deriving it from the folder produced `streamlit-DO-MS-devcontainer:local` for a
+project whose name has capitals in it, which no runtime accepts — references must
+be lowercase and directory names need not be. The fix was a per-project edit to
+`devcontainer.json`, and a per-project edit is destroyed the next time someone
+copies this directory in. Which is exactly what happened, an hour later.
 
-```jsonc
-"image": "streamlit-do-ms-devcontainer:local",
-```
-
-That is the one edit such a project needs, and it is safe because `build.sh`
-reads `image` out of `devcontainer.json` rather than deriving it separately —
-the two cannot end up meaning different images.
+So every project builds and runs `claude-devcontainer:local`. Nothing in the
+Dockerfile is project-specific, so one image serves all of them, builds once
+rather than N times, and cannot be spelled wrongly. A project that genuinely
+needs its own diverges with `IMAGE=`, out loud, rather than by accident.
 
 **One folder name drives everything**, which is the only thing to get right.
 `devcontainer.json` takes `name` and `image` from

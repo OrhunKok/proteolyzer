@@ -27,7 +27,18 @@
   //
   // `build.sh` derives the same tag from the same folder name, so the two agree
   // without either being told what project this is.
-  "image": "${localWorkspaceFolderBasename}-devcontainer:local",
+  // A fixed tag, not one derived from the folder, and that is the second
+  // attempt. Deriving it looked tidy until a folder with a capital in it --
+  // streamlit-DO-MS -- produced an image reference no runtime accepts, because
+  // references must be lowercase and directory names need not be. The fix was a
+  // per-project edit to this line, and a per-project edit is destroyed the next
+  // time someone copies this directory in, which is exactly what happened.
+  //
+  // Nothing in the Dockerfile is project-specific -- it is node, the tools, gh,
+  // Claude Code, the firewall and sshd -- so one image genuinely serves every
+  // project, builds once instead of N times, and cannot be spelled wrongly. A
+  // project that needs its own diverges with IMAGE= and says so out loud.
+  "image": "claude-devcontainer:local",
 
   // Was runArgs. `capAdd` is a first-class devcontainer property both CLIs
   // honour, where `runArgs` entries like `-p` are rejected outright by

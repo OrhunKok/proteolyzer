@@ -52,7 +52,15 @@ if [ "$cli" = adevcontainer ]; then
     trap 'rm -f "$log"' EXIT
 
     if [ -n "${REBUILD:-}" ]; then
-        adevcontainer rebuild 2>&1 | tee "$log"
+        # --name for the same reason every exec has it: `rebuild` opens the
+        # container picker when more than one is running, and a picker in a
+        # script is a hang. Read from devcontainer.json rather than assumed
+        # from the folder, since `name` may not be the directory's name.
+        project="$(sed -n 's/^[[:space:]]*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+            "$repo/.devcontainer/devcontainer.json" | head -1)"
+        project="${project//\$\{localWorkspaceFolderBasename\}/$(basename "$repo")}"
+        [ -n "$project" ] || project="$(basename "$repo")"
+        adevcontainer rebuild --name "$project" 2>&1 | tee "$log"
     else
         # `up` fails closed when devcontainer.json has changed since the
         # container was created, which is correct of it and a dead end here: its
