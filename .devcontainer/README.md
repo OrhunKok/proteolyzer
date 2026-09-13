@@ -731,6 +731,28 @@ change is a publish plus a rebuild everywhere, rather than a local rebuild of th
 one project you are working on. Worth it once the Dockerfile stops changing
 weekly; not before.
 
+## Bringing a project's earlier state with it
+
+A project that has been used with Claude before copying this in has history
+worth keeping, and it is not in the new volume — it is in whatever the project
+used previously, usually the three `claude-code-*` Docker volumes from the stock
+template. Nothing looked for it, so such a project opened with no sessions and
+the only remedy was a hand-run sequence. That was a gap in this setup rather
+than a thing to do per project.
+
+`up.sh` now runs `state.sh adopt` once per volume. It finds the legacy volumes in
+whichever runtime has them — the same one, or Docker when the live container is
+Apple's — and copies in **only what the volume does not already have**, so a
+credential from a login you just completed is never overwritten. `cp -n` and
+`tar --skip-old-files` are both missing from busybox, so that no-clobber is
+written out explicitly.
+
+It is idempotent by marker: `/.adopted` in the volume, written whether or not
+anything was found, so a project with nothing to adopt does not pay for the
+search on every start. Running `./.devcontainer/state.sh adopt` by hand does the
+same thing, and the cross-runtime path needs Docker running to read the old
+volumes.
+
 ## Moving to another machine
 
 Most of it already travels, and it is worth being exact about which part does

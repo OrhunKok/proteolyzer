@@ -86,6 +86,14 @@ if [ "$cli" = adevcontainer ]; then
     rm -f "$log"
     trap - EXIT   # this branch ends in exec, which would never reach the trap
     [ -n "$container" ] || container="$(basename "$repo")"
+    # Once per volume, bring this project's earlier Claude state in if it has
+    # any. The marker check is one cheap exec against a container that is
+    # already running; the search behind it only happens the first time.
+    if ! adevcontainer exec --name "$container" -- test -e /home/node/.state/.adopted 2>/dev/null; then
+        "$repo/.devcontainer/state.sh" adopt || \
+            echo "up.sh: could not adopt earlier state; continuing." >&2
+    fi
+
     exec adevcontainer exec -it --name "$container" -- "${@:-zsh}"
 fi
 
