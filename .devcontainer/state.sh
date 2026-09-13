@@ -208,7 +208,8 @@ adopt)
     #
     # Idempotent by marker rather than by inspection: it writes /.adopted and
     # returns early next time, so a project that genuinely has nothing to adopt
-    # does not pay for the search on every start.
+    # does not pay for the search on every start. The marker is only written
+    # when the answer was knowable -- see the Docker check below.
     ensure_volume "$volume"
 
     src_rt=""
@@ -222,7 +223,25 @@ adopt)
         src_rt=docker
     fi
 
+    # Whether Docker could be asked at all decides whether "found nothing" means
+    # anything. If it is not running, the legacy volumes are simply invisible --
+    # and marking the volume adopted on that basis retires the search forever,
+    # on exactly the run that was least able to do it. That is how a project can
+    # end up permanently without its own history and no indication why.
+    docker_checked=1
+    if [ "$rt" != docker ]; then
+        if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+            docker_checked=0
+        fi
+    fi
+
     if [ -z "$src_rt" ]; then
+        if [ "$docker_checked" -eq 0 ]; then
+            echo "state.sh: Docker is not running, so earlier state kept in its volumes" >&2
+            echo "state.sh: could not be looked for. Not marking this done -- start Docker" >&2
+            echo "state.sh: Desktop and run up.sh again if this project had history." >&2
+            exit 0
+        fi
         echo "state.sh: nothing to adopt for $base."
         "$rt" run --rm -v "$volume:/v" alpine touch /v/.adopted >/dev/null 2>&1 || true
         exit 0
