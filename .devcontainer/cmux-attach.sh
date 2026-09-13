@@ -203,6 +203,38 @@ if [ "$#" -gt 0 ]; then
     remote_command="$prelude && cd /workspace && $*"
 fi
 
+# Pin how to get back here, from inside, where the relayed cmux CLI lives.
+#
+# cmux reconnects a saved ssh workspace on relaunch, and reconnecting is all it
+# can do -- Apple `container` has no restart policy, so a container stopped while
+# cmux was closed stays stopped and the workspace comes back as a remote daemon
+# error. The only thing that recovers it is this script, which starts the
+# container before attaching. A resume command is how cmux is told to run it.
+#
+# Set on every attach rather than once by hand, because "once by hand, per
+# project, remembered" is the kind of step that is never done for the fourth
+# project. cmux keeps a socket-set command for manual restore until its prefix is
+# approved under Settings > Terminal > Resume Commands; approving it once makes
+# relaunch recover by itself.
+#
+# Guarded rather than escaped: a quote in the path would need careful nesting
+# through two shells, and a checked skip is worth more than clever quoting that
+# is wrong once.
+case "$repo" in
+    *"'"*)
+        echo "cmux-attach: path contains a quote; not pinning a resume command." >&2
+        ;;
+    *)
+        # Double quotes around the path, single around the assignment. The
+        # reverse -- which is what this said first -- ends the outer quoting at
+        # the path and silently leaves it bare, which works until a path has a
+        # space in it and then does not.
+        resume="cd \"$repo\" && ./.devcontainer/cmux-attach.sh${*:+ $*}"
+        remote_command="command -v cmux >/dev/null 2>&1 && cmux surface resume set --shell \"\$CMUX_ATTACH_RESUME\" >/dev/null 2>&1; $remote_command"
+        remote_command="CMUX_ATTACH_RESUME='$resume'; $remote_command"
+        ;;
+esac
+
 # Host key checking off: start-sshd.sh generates a host key per container, so
 # known_hosts could only ever reject a rebuild of the same workspace. What bounds
 # this is the address being the runtime's own and the key being one this made.
