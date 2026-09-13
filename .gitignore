@@ -87,3 +87,8 @@ yarn-error.log*
 # way out. Ignored because a killed run would otherwise leave a directory
 # holding a credential sitting in `git status`.
 /.state-adopt/
+
+# Transient: `state.sh adopt` stages a project's earlier state here, under the
+# bind mount, because the target volume is attached to the running container and
+# cannot be mounted twice. Deleted in the same run; ignored in case one crashes.
+.devcontainer/.adopt.tgz
