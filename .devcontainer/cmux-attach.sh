@@ -74,7 +74,13 @@ cd "$repo"
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 if [ -n "${REBUILD:-}" ]; then
-    adevcontainer rebuild 2>&1 | tee "$log"
+    # --name, or `rebuild` opens the container picker when more than one is
+    # running. Read from devcontainer.json, not assumed from the folder.
+    project="$(sed -n 's/^[[:space:]]*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+        "$repo/.devcontainer/devcontainer.json" | head -1)"
+    project="${project//\$\{localWorkspaceFolderBasename\}/$(basename "$repo")}"
+    [ -n "$project" ] || project="$(basename "$repo")"
+    adevcontainer rebuild --name "$project" 2>&1 | tee "$log"
 else
     adevcontainer up 2>&1 | tee "$log"
 fi
