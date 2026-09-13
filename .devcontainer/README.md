@@ -52,7 +52,7 @@ Orchard or `container list`, and useless as a hostname.
 
 It is `${localWorkspaceFolderBasename}` rather than a literal, so the file is
 identical in every project and the folder name is the only thing that decides.
-See [Copying this into another project](#copying-this-into-another-project).
+See [Migrating another project onto this](#migrating-another-project-onto-this).
 
 A `buildkit` container appearing beside it is Apple's own builder for
 `container build`, not one of these. It comes and goes.
@@ -587,147 +587,107 @@ container has one user, and the only things mounted are that user's own workspac
 and their own state volume, so there is no second owner to be confused with. That
 is the trade, and it is worth stating rather than implying.
 
-## Copying this into another project
+## Migrating another project onto this
 
-Copy two directories and run two commands. Nothing in them names this project —
-that is a property worth keeping, so check it holds before you rely on it:
+The procedure, in order, for a project still on Docker and the VS Code extension.
+It has been run three times; every step below exists because one of them went
+wrong.
+
+**Before anything, look at what you are about to delete.**
+
+```bash
+cd ../otherproject
+git status                    # commit or stash first -- step 2 is destructive
+ls .devcontainer              # anything here that is not the stock template?
+```
+
+The stock Claude template is replaced wholesale by this. A project that added
+packages to its own `Dockerfile` wants those carried over by hand, and this is
+the only moment you will remember to look.
+
+**1. Start Docker Desktop.** The project's history lives in its old Docker
+volumes, and step 4 reads them. Skip this and the container comes up with no
+sessions — which is recoverable, but only if you notice.
+
+**2. Replace the config.**
+
+```bash
+rm -rf .devcontainer .cmux
+cp -R ../thisproject/.devcontainer ../thisproject/.cmux .
+```
+
+The `rm -rf` is not tidiness, it is the whole trap. `cp -R src dest` copies
+*into* `dest` when `dest` exists, so a project that already has a
+`.devcontainer/` gets `.devcontainer/.devcontainer/` and keeps its old
+`devcontainer.json`. Everything then proceeds as though the copy worked, until
+adevcontainer reads the old file and says `Dockerfile build is not supported` —
+which reads as a fault in the new setup and is the old config still sitting
+there. `cp -R ../thisproject/.devcontainer/. .devcontainer/` is the alternative,
+and for a project under git the delete is safe anyway: `git checkout
+.devcontainer` brings the originals back.
+
+Nothing in either directory names a project, so there is nothing to edit. Check
+rather than trust:
 
 ```bash
 grep -rn thisproject .devcontainer .cmux    # expect nothing
 ```
 
+**3. Build, once per machine rather than once per project.**
+
 ```bash
-cd ../otherproject
-rm -rf .devcontainer .cmux                        # see below if it already has them
-cp -R ../thisproject/.devcontainer ../thisproject/.cmux .
 ./.devcontainer/build.sh
-./.devcontainer/up.sh            # or the "Open sandbox" palette entry
 ```
 
-**The `rm -rf` is not tidiness, it is the whole trap.** `cp -R src dest` copies
-*into* `dest` when `dest` already exists, so a project that already has a
-`.devcontainer/` gets `.devcontainer/.devcontainer/` and keeps its old
-`devcontainer.json`. Everything then proceeds as though the copy worked, until
-adevcontainer reads the old file and says `Dockerfile build is not supported` —
-which reads as a problem with the new setup and is the old config still sitting
-there. Either delete first as above, or copy the contents with
-`cp -R ../thisproject/.devcontainer/. .devcontainer/`.
+Every project runs `claude-devcontainer:local`, so after the first this is a
+no-op and takes seconds.
 
-Deleting is safe for a project under git: the originals come back with
-`git checkout .devcontainer`. And a project that already had a container wants
-`REBUILD=1 ./.devcontainer/up.sh` the first time, because `up` fails closed
-against a container created from the config you just replaced.
+**4. Start it, and watch what it says.**
 
-Then once inside, per project, because both write to that project's own volume:
+```bash
+./.devcontainer/up.sh
+```
+
+Plain `up.sh`, not `REBUILD=1`: there is no container for this folder yet, and
+nothing to rebuild. You are looking for
+
+```
+state.sh: adopting otherproject's earlier state from docker
+state.sh: adopted. Anything already in the volume was left alone.
+```
+
+`nothing to adopt` means Docker was reachable and the old volumes are not there
+— check `docker volume ls | grep claude-code`. A complaint that Docker is not
+running means step 1 was skipped; start it and run `up.sh` again, which is safe
+because the volume is only marked done when the answer was knowable.
+
+**5. Log in, once per project**, because each has its own volume:
 
 ```bash
 gh auth login
+claude                       # paste the URL with ⌘V; selecting it truncates it
 /workspace/.devcontainer/install-cmux-hooks.sh
 ```
 
-`.cmux/cmux.json` carried the last hardcoded name, in the workspace block, and
-no longer does: the `name` key is omitted so cmux takes the workspace's name
-from its working directory, which is the project folder. If a future cmux
-requires the key, the symptom is that palette entry not appearing, and putting
-`"name": "<project>"` back beside `"cwd"` restores it at the cost of one edit
-per project.
-
-**The image tag is fixed, not derived**, and that is the second attempt.
-Deriving it from the folder produced `streamlit-DO-MS-devcontainer:local` for a
-project whose name has capitals in it, which no runtime accepts — references must
-be lowercase and directory names need not be. The fix was a per-project edit to
-`devcontainer.json`, and a per-project edit is destroyed the next time someone
-copies this directory in. Which is exactly what happened, an hour later.
-
-So every project builds and runs `claude-devcontainer:local`. Nothing in the
-Dockerfile is project-specific, so one image serves all of them, builds once
-rather than N times, and cannot be spelled wrongly. A project that genuinely
-needs its own diverges with `IMAGE=`, out loud, rather than by accident.
-
-**One folder name drives everything**, which is the only thing to get right.
-`devcontainer.json` takes `name` and `image` from
-`${localWorkspaceFolderBasename}`, `build.sh` derives the same tag with
-`basename`, and `state.sh` keys the volume on the same string. So a checkout in
-`~/src/pinpoint` is the container `pinpoint`, the image
-`pinpoint-devcontainer:local`, the volume `claude-code-state-pinpoint` and the
-hostname `pinpoint.adevcontainers.local`, with nothing written down anywhere.
-
-Keep it lowercase and DNS-safe — it becomes a hostname and an image tag — and
-**keep it distinct across projects**, because the volume name is that basename:
-two checkouts both called `api` in different parents would share one Claude
-config, history and `gh` login, silently. That is the one real hazard here.
-
-The single optional edit is cosmetic: `.cmux/cmux.json` sets the palette
-workspace's title. Left alone it says `proteolyzer`; the alternative is dropping
-the key and letting cmux title the tab from the full path, which is uglier. Every
-other value in that file is already derived — the commands run
-`git rev-parse --show-toplevel`.
-
-Two things this does not carry, both deliberate. The `agent`-label workflow wants
-the GitHub App installed on the new repository, and the DNS name wants
-`dns.domain` set once per *machine* rather than per project — see above, and both
-are one-time rather than per-copy.
-
-One edge worth knowing: run `build.sh` from a worktree rather than the checkout
-root and the basename is the worktree's, so you get a separate image and volume.
-That is consistent with `up.sh` from a worktree giving a separate container, and
-it is usually what you want, but it is not what you want by accident.
-
-### Converting an existing Docker devcontainer
-
-A project already running under VS Code and Docker has the part worth keeping
-already — its Claude config, session history, memory and shell history.
-
-Replace its `.devcontainer/` and `.cmux/` with these first, **deleting rather
-than copying over** for the reason above — a converted project always already has
-a `.devcontainer/`, so this is the case where `cp -R` nests and leaves the old
-`devcontainer.json` in charge. Then:
+**6. Confirm the history actually arrived**, rather than assuming:
 
 ```bash
-./.devcontainer/state.sh adopt
+# on the Mac
+docker run --rm -v claude-code-config-otherproject:/v alpine \
+  sh -c 'ls /v/projects/-workspace/*.jsonl 2>/dev/null | wc -l'
+# inside the container
+ls ~/.state/claude/projects/-workspace/*.jsonl | wc -l
 ```
 
-No arguments, and nothing to look up. It finds that project's old container by
-the `devcontainer.local_folder` label the spec already stamps on it, reads the
-three things straight out of it with `docker cp`, and writes them into this
-project's volume.
+Those are the conversation transcripts and the numbers should match. `-workspace`
+is the right key for every project: Claude records a project by the path it ran
+at, and that is `/workspace` in every container.
 
-`docker cp` is why this needs no volume names: it reads paths out of a container,
-volume-backed ones included. That matters because Anthropic's own template keys
-its volumes on `${devcontainerId}`, so they are named with a hash that matches
-nothing you could guess — the thing that makes this awkward to do by hand is
-exactly the thing `adopt` never has to know.
+**7. Commit it**, or a stray `git checkout` takes the whole setup with it.
 
-It prints a line per item, `took …` or `no …; skipping`, because a partial adopt
-is the failure worth seeing: the container comes up fine and one of the three is
-quietly missing.
-
-Nothing is written except this project's volume — the old container and its
-volumes are read-only throughout — so a wrong guess costs a
-`container volume delete` and nothing else. If the project used to live at
-another path and the label does not match, name the container:
-`OLD_CONTAINER=<id> ./.devcontainer/state.sh adopt`.
-
-Then `./.devcontainer/build.sh && ./.devcontainer/up.sh` and it is the same
-project with its history intact.
-
-
-### Skipping the build entirely
-
-`build.sh` is the only per-project step that costs real time, and it does not
-have to exist. `publish.sh` already pushes a multi-arch image to GHCR and takes
-`IMAGE` for a neutral name:
-
-```bash
-IMAGE=ghcr.io/orhunkok/claude-devcontainer ./.devcontainer/publish.sh
-```
-
-Point `image:` at that tag instead of `${localWorkspaceFolderBasename}-devcontainer:local`
-and a new project is `cp -R`, then `up.sh` — no build, no first-run wait. The
-trade is direction of coupling: one image for every project means a Dockerfile
-change is a publish plus a rebuild everywhere, rather than a local rebuild of the
-one project you are working on. Worth it once the Dockerfile stops changing
-weekly; not before.
+Afterwards, `⌘⇧P` → "Open sandbox (cmux ssh)" from a cmux tab, and the old
+Docker volumes can be deleted once you trust the copy — not before, since until
+adopt has run they are the only one.
 
 ## Bringing a project's earlier state with it
 
