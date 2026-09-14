@@ -230,11 +230,20 @@ case "$repo" in
         # the path and silently leaves it bare, which works until a path has a
         # space in it and then does not.
         resume="cd \"$repo\" && ./.devcontainer/cmux-attach.sh${*:+ $*}"
-        # Reported, not silenced. This was `>/dev/null 2>&1` on the grounds that
-        # a failure should not spoil the session, and the result was a question
-        # nobody could answer: Settings showed no command to approve and there
-        # was no way to tell whether the call had failed, found no cmux, or
-        # simply never run. A line of output is cheaper than that.
+        # Manual restore is all this buys, so the message says so. It used to
+        # say "approve it under Settings > Terminal > Resume Commands", which
+        # sent the reader to a pane that stays at 0 commands forever: cmux
+        # writes no approval record for a remote surface, and raises no prompt
+        # for a CLI-set binding. A managed cmux ssh workspace is meant to come
+        # back by remote PTY reattach instead, which is why the guards are
+        # there. README.md, "What still does not work", cites the source.
+        #
+        # So this pin is not load-bearing. It is here so that a later session
+        # can ask `cmux surface resume show` what a pane was for.
+        #
+        # Reported rather than silenced because while that was unknown there was
+        # no way to tell a failed call from a missing cmux from one that never
+        # ran. A line of output is cheaper than that question.
         pin='if command -v cmux >/dev/null 2>&1; then
     # --cwd explicitly. It defaults to $PWD, and $PWD in here is /workspace --
     # a path that does not exist on the Mac, where the restore actually runs, so
@@ -242,9 +251,9 @@ case "$repo" in
     # comment: the whole block is a single-quoted string and one ends it.
     if cmux surface resume set --cwd "$CMUX_ATTACH_CWD" --name "$CMUX_ATTACH_NAME" \
             --shell "$CMUX_ATTACH_RESUME" >/dev/null 2>&1; then
-        echo "cmux-attach: resume command pinned -- approve it under Settings > Terminal > Resume Commands"
+        echo "cmux-attach: resume command pinned for manual restore"
     else
-        echo "cmux-attach: cmux surface resume set failed; relaunch will not recover on its own" >&2
+        echo "cmux-attach: cmux surface resume set failed; nothing pinned" >&2
     fi
 else
     echo "cmux-attach: no cmux CLI in the container, so nothing was pinned." >&2
