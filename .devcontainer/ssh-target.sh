@@ -13,10 +13,11 @@
 # has been through that with `CoordinatesMapping` and does not need to do it
 # again.
 #
-# Apple `container` only. Every container gets its own address reachable from the
-# host, so there is no published port, no `docker port` and no loopback juggling
-# -- which is most of why this is worth doing on that runtime. On Docker use
-# `up.sh`; the config publishes no port there.
+# Apple `container`, like everything else on the host side here. Every container
+# gets its own address reachable from the host, so there is no published port, no
+# port discovery and no loopback juggling -- which is most of why this is worth
+# doing on that runtime, and why nothing here has a second path for one that
+# publishes ports instead.
 #
 # Callers are expected to have `set -euo pipefail` already; this does not set it,
 # because a sourced file changing its caller's shell options is a surprise.
@@ -51,7 +52,6 @@ for tool in adevcontainer container; do
             adevcontainer) echo "$_st_me:   brew install wcgomes/tap/adevcontainer" >&2 ;;
             container) echo "$_st_me:   see github.com/apple/container (macOS 26+)" >&2 ;;
         esac
-        echo "$_st_me: on Docker, use ./.devcontainer/up.sh instead." >&2
         exit 1
     fi
 done

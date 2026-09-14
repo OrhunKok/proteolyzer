@@ -11,7 +11,7 @@ Most things that claim to replace this replace the second reason only. See
 
 ## Setup
 
-The runtime is Apple `container`; Docker still works and is the fallback path.
+The runtime is Apple `container`, and the only one the host-side scripts drive.
 
 ```bash
 brew install wcgomes/tap/adevcontainer        # once — needs Apple container
@@ -35,12 +35,11 @@ REBUILD=1 ./.devcontainer/up.sh      # replace the container
 `build.sh` is separate because `devcontainer.json` says `image:` rather than
 `build:` — the one change that makes this run on Apple `container` at all, since
 `adevcontainer` rejects Dockerfile builds. The cost is that a Dockerfile edit no
-longer takes effect on its own; build first. The gain is that the same config
-serves both runtimes, because the devcontainer CLI reads `image:` too.
+longer takes effect on its own; build first.
 
-`up.sh` picks `adevcontainer` when it is installed and the devcontainer CLI
-otherwise. The ssh path is Apple-only, because that is where the container has
-its own address and the whole published-port dance disappears.
+Both `up.sh` and the ssh path go through `adevcontainer`. The ssh path could not
+be much else: Apple `container` is the runtime where a container has its own
+address and the whole published-port dance disappears.
 
 ## Names, and giving the container one
 
@@ -58,8 +57,9 @@ A `buildkit` container appearing beside it is Apple's own builder for
 `container build`, not one of these. It comes and goes.
 
 **A stable name matters** beyond looks: every rebuild gets a fresh address, so a
-saved ssh target pinned to an IP goes stale the next time you rebuild. This project is `proteolyzer.adevcontainers.local`,
-and it resolves — but it did not for a while, and the reason is worth keeping.
+saved ssh target pinned to an IP goes stale the next time you rebuild. This
+project is `proteolyzer.adevcontainers.local`, and it resolves — but it did not
+for a while, and the reason is worth keeping.
 
 ### Why the record was missing, and what a working one costs
 
@@ -373,10 +373,9 @@ than a migration.
 
 That leaves two ways in, and they are not equivalent:
 
-| | `up.sh` (`devcontainer exec`) | `orca-target.sh` (ssh) |
+| | `up.sh` (`adevcontainer exec`) | `orca-target.sh` (ssh) |
 |---|---|---|
 | extra surface in the image | none | `openssh-server` on port 2222 |
-| runtime | Apple `container` or Docker | Apple `container` only |
 | file tree, editor, diff view | no | yes, on the container's filesystem |
 | terminal survives the app quitting | no | yes, leased by a relay on this side |
 | sftp file drop | no | yes |
@@ -530,16 +529,28 @@ devcontainer as a first-class feature, with the manager on the host. The trade i
 a session manager instead of a terminal — no browser pane, no splits, no socket
 API.
 
-### A different runtime under all of this
+### The runtime under all of this
 
-Docker is not the only way to get a Linux container on a Mac, and the one that
-suits this best is Apple's own — every container gets an address reachable from
-the host, which deletes the published port and the port-discovery step from the
-ssh path rather than adding to them. `NET_ADMIN` is supported, so the firewall
-survives the move. What does not work yet is `build.dockerfile`, which is what
-this repository uses. [APPLE.md](./APPLE.md) has the evidence, the config to swap
-in, and the one upstream issue to watch. OrbStack is the meanwhile option: it
-makes Docker faster without making it different, so nothing here changes.
+Apple `container`, and the host side no longer carries a path for anything else.
+Every container gets an address reachable from the host, which is what deletes
+the published port and the port-discovery step from the ssh path rather than
+adding to them, and `NET_ADMIN` is supported, so the firewall came across
+intact. [APPLE.md](./APPLE.md) has the evidence that decided it, and the one
+upstream issue still worth watching: `build.dockerfile`, which is why `build.sh`
+exists as a separate step at all.
+
+Two Docker-shaped things survive that deliberately, and it is worth being exact
+about why, because neither is a fallback left lying around.
+
+`state.sh adopt` reads the *legacy* `claude-code-*` volumes a project used under
+Docker and the VS Code extension, and Apple `container` cannot read a Docker
+volume — so Docker there is the only way to reach data that is inside Docker,
+not a second way of doing something. It retires itself once the last project has
+been migrated.
+
+`publish.sh` needs buildx for a multi-arch push, which Apple `container` has no
+equivalent for. It only earns its keep on a second machine; nothing pulls its
+output today, because `image:` names a locally built tag.
 
 ### The workspace mount lies about who owns it
 
@@ -739,9 +750,11 @@ desktop app nor Apple `container` runs on Linux — but neither of them is the
 environment. The image is OCI, so Docker, podman, containerd and Apple
 `container` all take it and none of them cares which one built it; the runtime
 underneath is interchangeable and picking a Mac-native one costs nothing here.
-What is runtime-specific is the two ways in, and that is why there are two:
-`orca-target.sh` is the nice thing on a Mac, `up.sh` is the one that still works
-on a Linux box, and neither is the source of truth.
+What is *not* interchangeable is the handful of host-side scripts that drive it,
+and they are the small part: a Linux box would need its own way to start the
+image and would get the same container out of it. `Dockerfile` and
+`devcontainer.json` are the source of truth about what that container is; no
+script here is.
 
 **`publish.sh` is the step that makes migration a pull instead of a build.** It
 cross-builds `linux/amd64` and `linux/arm64` with buildx and pushes both to

@@ -6,9 +6,8 @@
 # builds. The trade is that the Dockerfile stops being built implicitly: change
 # it and run this before the change takes effect.
 #
-# Runs on the host. Uses Apple `container` when it is installed, Docker
-# otherwise; the image is ordinary OCI either way, so the one built by either
-# runs under both.
+# Runs on the host, on Apple `container`. What it produces is ordinary OCI, so
+# any runtime would take it -- `container build` is simply the one installed here.
 #
 #   ./.devcontainer/build.sh
 #   IMAGE=my-devcontainer:local ./.devcontainer/build.sh
@@ -59,14 +58,9 @@ case "$tag" in
         ;;
 esac
 
-if command -v container >/dev/null 2>&1; then
-    runtime=container
-elif command -v docker >/dev/null 2>&1; then
-    runtime=docker
-else
-    echo "build: no container runtime found." >&2
-    echo "build:   brew install --cask container      (Apple, macOS 26+)" >&2
-    echo "build:   or start Docker Desktop / OrbStack" >&2
+if ! command -v container >/dev/null 2>&1; then
+    echo "build: Apple \`container\` is not on PATH." >&2
+    echo "build:   brew install --cask container      (macOS 26+)" >&2
     exit 1
 fi
 
@@ -74,13 +68,13 @@ fi
 # (apple/container#735). Well clear of it today; worth saying before someone
 # doubles the Dockerfile and gets `Stream unexpectedly closed` instead.
 size="$(wc -c < "$repo/.devcontainer/Dockerfile")"
-if [ "$runtime" = container ] && [ "$size" -gt 14336 ]; then
+if [ "$size" -gt 14336 ]; then
     echo "build: warning: Dockerfile is ${size} bytes; Apple container's build" >&2
     echo "build: request limit is around 16 KiB and failures there are opaque." >&2
 fi
 
-echo "build: $runtime build -t $tag"
-"$runtime" build \
+echo "build: container build -t $tag"
+container build \
     --build-arg TZ="${TZ:-America/New_York}" \
     --build-arg CLAUDE_CODE_VERSION=latest \
     --build-arg GIT_DELTA_VERSION=0.18.2 \
@@ -100,22 +94,20 @@ echo "build: $tag is ready."
 #
 # Dropping the derived images makes it re-derive from what was just built. The
 # cost is re-fetching the feature, which is seconds.
-if [ "$runtime" = container ]; then
-    stale="$(container image list 2>/dev/null | awk '/adev-/ {print $1":"$2}' || true)"
-    if [ -n "$stale" ]; then
-        echo "build: dropping derived images so the new base is actually used:"
-        printf '%s\n' "$stale" | sed 's/^/build:   /'
-        printf '%s\n' "$stale" | while read -r image; do
-            container image delete "$image" >/dev/null 2>&1 || \
-                echo "build: could not delete $image; delete it by hand" >&2
-        done
-    else
-        # Not fatal, but said out loud: the column layout of
-        # `container image list` is not a contract, and a silently missed purge
-        # presents as a change that did not apply -- this exact bug.
-        echo "build: no derived adev- images found. If a change does not take" >&2
-        echo "build: effect, check \`container image list\` for one and delete it." >&2
-    fi
+stale="$(container image list 2>/dev/null | awk '/adev-/ {print $1":"$2}' || true)"
+if [ -n "$stale" ]; then
+    echo "build: dropping derived images so the new base is actually used:"
+    printf '%s\n' "$stale" | sed 's/^/build:   /'
+    printf '%s\n' "$stale" | while read -r image; do
+        container image delete "$image" >/dev/null 2>&1 || \
+            echo "build: could not delete $image; delete it by hand" >&2
+    done
+else
+    # Not fatal, but said out loud: the column layout of `container image list`
+    # is not a contract, and a silently missed purge presents as a change that
+    # did not apply -- this exact bug.
+    echo "build: no derived adev- images found. If a change does not take" >&2
+    echo "build: effect, check \`container image list\` for one and delete it." >&2
 fi
 
 echo "build: next: REBUILD=1 ./.devcontainer/up.sh"

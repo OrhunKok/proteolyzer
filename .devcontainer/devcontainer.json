@@ -22,8 +22,8 @@
   // Image rather than `build`, which is what makes this work on Apple
   // `container`: adevcontainer hard-rejects `build.dockerfile` as an
   // unrepresentable configuration source. `build.sh` produces this tag from the
-  // Dockerfile beside it, with whichever runtime is installed. The devcontainer
-  // CLI on Docker reads `image:` too, so one config serves both.
+  // Dockerfile beside it with `container build`, which reads a Dockerfile the
+  // same way any OCI builder does -- the file name is the format, not a runtime.
   //
   // `build.sh` derives the same tag from the same folder name, so the two agree
   // without either being told what project this is.
