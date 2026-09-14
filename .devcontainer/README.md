@@ -480,8 +480,45 @@ workspace naming. The manual equivalent, once per pane:
 cmux surface resume set --shell '/path/to/repo/.devcontainer/cmux-attach.sh claude'
 ```
 
-cmux keeps a socket-set command for manual restore until its prefix is approved
-under Settings › Terminal › Resume Commands, which is deliberate on its part.
+Settings › Terminal › Resume Commands is **not** where that gets approved, and
+reading its subtitle as though it were costs an evening. The pane reviews
+`terminal.resumeCommands` in `~/.config/cmux/cmux.json` — signed records
+carrying a `policy` of `manual`, `prompt` or `auto`, and `auto` is real
+automatic restore. Three guards in cmux's `Sources/SessionPersistence.swift`
+put it out of reach here, and all three are deliberate:
+
+- `shouldPromptForProposal` opens with `guard binding.launchFlavor == .local`,
+  and a `cmux ssh` surface is `.persistentSSH`. No prompt.
+- the same function has `guard !binding.isCLIBinding`, where `isCLIBinding` is
+  `source == "cli"` — exactly what `cmux surface resume set` produces. So even a
+  local pane would not prompt for a command pinned this way.
+- `approve(...)` itself refuses: `guard binding.launchFlavor == .local else
+  { return nil }`, above the comment *"Location-scoped signed records are the
+  follow-up if remote approvals are wanted."* No record is written for a remote
+  surface by any path, so the pane stays at 0 however many times the pin runs.
+
+The reason those guards are there is the part worth knowing: **a managed
+`cmux ssh` workspace is not supposed to restore by resume command at all.**
+`TerminalSSHSessionDetector.resumeBinding` does mint `autoResume: true` bindings
+with no approval anywhere in sight, and it excludes this setup on purpose —
+*"Managed `cmux ssh` wrappers are excluded because their stable remote PTY
+binding is authoritative; this path is only the muscle-memory `ssh host` command
+typed into a local pane."* Managed means any of `CMUX_SSH_PTY_SESSION_ID`,
+`CMUX_REMOTE_PTY_SESSION_ID`, `CMUX_SSH_ATTEMPT_ID` or `CMUX_SSH_STARTUP_PID` is
+set, which `cmux ssh` sets.
+
+So the empty pane was never what stood between a relaunch and a restored
+session. The mechanism that is meant to do it is persistent remote PTY reattach
+(`Workspace+PersistentRemotePTYReattach.swift`), and *that* is what reports
+"remote daemon error" in the sidebar when it fails — a separate problem, and the
+one actually worth chasing.
+
+Meanwhile **`⌘⇧P` › "Open sandbox (cmux ssh)" is the answer**, one pick per
+project. The pin above is not load-bearing; it is worth keeping only because
+`cmux surface resume show --json` then tells a later session what a pane was for.
+Query it *inside* the ssh session — the binding belongs to that surface, and the
+same command in a Mac tab answers `resume_binding: null` truthfully, about a
+different one.
 
 **Browser panes are inside the firewall.** cmux routes a remote workspace's
 browser through a SOCKS5 proxy tunnelled over the daemon, so it egresses from the
