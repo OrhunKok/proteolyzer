@@ -408,7 +408,13 @@ port is a fresh ephemeral one each rebuild, so `known_hosts` could only ever
 reject a container it had seen before on a port something else used. What bounds
 this is the port being on loopback and the key being one the script made.
 
-### The same sshd serves a second frontend
+### The same sshd serves other frontends
+
+This is the part worth protecting. Nothing in the image or in `up.sh` is
+cmux-specific; what a frontend needs is a host, a port and an identity file, and
+`ssh-target.sh` produces those for whoever asks. `cmux-attach.sh` and
+`orca-target.sh` are both thin things on top of it, which is why trying a
+different app costs an afternoon rather than a migration.
 
 The Claude Code desktop app has an SSH environment — its documentation names dev
 containers as a target — and it asks for exactly what `cmux-attach.sh` already
@@ -424,6 +430,54 @@ mode sets `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST=1` with its own
 `ANTHROPIC_BASE_URL` and token, overriding provider configuration on the remote
 — which costs nothing here, and would matter to a container pointed at Bedrock
 or Vertex.
+
+### Orca, and the thing it does that cmux will not
+
+[Orca](https://github.com/stablyai/orca) is an MIT-licensed Electron app from
+Stably AI in the same territory as cmux — parallel agents, each in its own
+worktree — and it has an SSH mode with a file tree, a fuzzy finder, an editor
+and a diff view that all operate on the remote filesystem. `orca-target.sh`
+prepares the container and prints the four fields its Add Target form wants.
+
+The reason to care is not the editor. It is this, from its `docs/site/content/docs/ssh.mdx`:
+
+> Closing the desktop app no longer kills your remote PTY sessions. Remote
+> terminal sessions are leased through the relay running on the remote host, so
+> they survive Orca closing on your laptop. When you reopen the app and reconnect
+> to the target, leased PTYs are restored to their tabs in the **attached**
+> state, with their scrollback intact.
+
+That is the problem the section below this one describes, solved from the right
+end — the session keeps running on the container instead of being relaunched
+from a command the host remembered. "Keep terminals alive until reset" is on by
+default for every target.
+
+**What it needs from the image**, and it is a hard requirement: the relay builds
+a native `node-pty` on the remote, Linux has no prebuild, so the container needs
+`make`, a C++ compiler and `python3`. Without them Orca still connects — files,
+git and the editor all work — and remote terminals simply do not, which is a
+confusing way to lose the only feature that matters. `node:20` brings the first
+two from `buildpack-deps`; `python3` comes from the python feature, which
+installs outside `/usr/local/bin` and so is invisible to the non-login shell
+Orca's installer runs in. Hence the symlink in the Dockerfile, next to the one
+`claude` needs for the same reason. `orca-target.sh` checks all three over ssh
+rather than trusting any of this.
+
+**Two things to set.** Point the target at the DNS name, not the address: an Orca
+target is a saved host entry, and the address changes on every rebuild.
+`cmux-attach.sh` re-resolves per attach and so never noticed. And set the repo's
+worktree base path to something **relative** — `.claude/worktrees` is what this
+repository already uses. Orca ignores an absolute base path for an ssh repo and
+falls back to a sibling of the repo (`join(repoPath, '..', …)` in
+`src/main/ipc/worktree-logic.ts`); the repo here is `/workspace`, so a sibling is
+the container's own root filesystem, which is invisible from the Mac, outside
+the state volume, and destroyed by the next rebuild.
+
+One more that has not been chased: the relay keeps terminal history under
+`~/.orca-remote/` in the container's home, which is *not* the state volume, so
+scrollback does not survive a rebuild the way the Claude and `gh` state does.
+The fix is the same shape as the rest — a path under `/home/node/.state` — if it
+turns out to matter.
 
 ### What now works inside the container
 
