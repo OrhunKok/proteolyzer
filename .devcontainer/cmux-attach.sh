@@ -230,7 +230,23 @@ case "$repo" in
         # the path and silently leaves it bare, which works until a path has a
         # space in it and then does not.
         resume="cd \"$repo\" && ./.devcontainer/cmux-attach.sh${*:+ $*}"
-        remote_command="command -v cmux >/dev/null 2>&1 && cmux surface resume set --shell \"\$CMUX_ATTACH_RESUME\" >/dev/null 2>&1; $remote_command"
+        # Reported, not silenced. This was `>/dev/null 2>&1` on the grounds that
+        # a failure should not spoil the session, and the result was a question
+        # nobody could answer: Settings showed no command to approve and there
+        # was no way to tell whether the call had failed, found no cmux, or
+        # simply never run. A line of output is cheaper than that.
+        pin='if command -v cmux >/dev/null 2>&1; then
+    if cmux surface resume set --shell "$CMUX_ATTACH_RESUME" >/dev/null 2>&1; then
+        echo "cmux-attach: resume command pinned -- approve it under Settings > Terminal > Resume Commands"
+    else
+        echo "cmux-attach: cmux surface resume set failed; relaunch will not recover on its own" >&2
+    fi
+else
+    echo "cmux-attach: no cmux CLI in the container, so nothing was pinned." >&2
+    echo "cmux-attach: that means this is not a cmux ssh session -- up.sh does not provide one." >&2
+fi'
+        remote_command="$pin
+$remote_command"
         remote_command="CMUX_ATTACH_RESUME='$resume'; $remote_command"
         ;;
 esac
