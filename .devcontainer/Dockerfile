@@ -47,9 +47,10 @@ ENV DEVCONTAINER=true
 #
 # Everything that must survive a rebuild lives under /home/node/.state, which is
 # the single named volume: `claude/` for Claude Code's config, projects and
-# memory, `gh/` for the GitHub login, and `history` for the shell. There were
-# three volumes and one is easier to keep track of; CLAUDE_CONFIG_DIR and
-# GH_CONFIG_DIR do the redirecting, and HISTFILE above.
+# memory, `gh/` for the GitHub login, `git/` for the git identity, and `history`
+# for the shell. There were three volumes and one is easier to keep track of;
+# CLAUDE_CONFIG_DIR, GH_CONFIG_DIR and GIT_CONFIG_GLOBAL do the redirecting, and
+# HISTFILE above.
 #
 # Every subdirectory is created here, node-owned, and that is load-bearing: a
 # named volume is initialised from the image path it covers, ownership included,
@@ -58,9 +59,20 @@ ENV DEVCONTAINER=true
 # exactly that on a shared memory volume: five files failed to restore and the
 # script died on a bare Permission denied. Apple `container` does not seed
 # volumes at all, which fix-volume-perms.sh covers.
+#
+# git/config is seeded with an include rather than left empty, and that include
+# is the whole reason this works. GIT_CONFIG_GLOBAL moves the global file onto
+# the volume; ~/.gitconfig is where adevcontainer writes its credential helper at
+# every start. Relocating the global file without pulling that back in would stop
+# git finding the helper, and `git push` from inside the container would fail
+# instead. A missing include path is ignored by git, so it costs nothing on a
+# runtime that never writes one.
 RUN mkdir -p /workspace \
   /home/node/.state/claude/projects/-workspace/memory \
-  /home/node/.state/gh && \
+  /home/node/.state/gh \
+  /home/node/.state/git && \
+  printf '%s\n' '[include]' '  path = /home/node/.gitconfig' \
+    > /home/node/.state/git/config && \
   chown -R node:node /workspace /home/node/.state
 
 WORKDIR /workspace
@@ -109,6 +121,13 @@ ENV DISABLE_TELEMETRY=true
 ENV NODE_OPTIONS=--max-old-space-size=4096
 ENV CLAUDE_CONFIG_DIR=/home/node/.state/claude
 ENV GH_CONFIG_DIR=/home/node/.state/gh
+# git's global config, moved onto the volume for the same reason as those two:
+# /home/node is not mounted, so an identity set with `git config --global` is
+# gone on the next rebuild, and `git commit` then fails with "Author identity
+# unknown" in a container that worked yesterday. The path is set here; the value
+# is not, because publish.sh pushes this image to GHCR and an identity belongs to
+# a person rather than to an image.
+ENV GIT_CONFIG_GLOBAL=/home/node/.state/git/config
 ENV POWERLEVEL9K_DISABLE_GITSTATUS=true
 
 # The same values again for login shells, which read files rather than the
@@ -132,6 +151,7 @@ RUN printf '%s\n' \
   'export NODE_OPTIONS=--max-old-space-size=4096' \
   'export CLAUDE_CONFIG_DIR=/home/node/.state/claude' \
   'export GH_CONFIG_DIR=/home/node/.state/gh' \
+  'export GIT_CONFIG_GLOBAL=/home/node/.state/git/config' \
   'export POWERLEVEL9K_DISABLE_GITSTATUS=true' \
   > /etc/profile.d/10-devcontainer.sh && \
   chmod 0644 /etc/profile.d/10-devcontainer.sh

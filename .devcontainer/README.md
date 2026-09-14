@@ -316,6 +316,31 @@ VS Code to a container and then go back to the terminal, its helper is left
 behind pointing at a pipe that is gone. `git config --global --unset-all
 credential.helper` clears it, or rebuild.
 
+**The git identity is on the volume too, and had to be moved there.**
+`/home/node` is not mounted, so an identity set with `git config --global` was
+gone on the next rebuild — and the symptom arrives much later, as
+`Author identity unknown` on a commit, in a container that had been working.
+`GIT_CONFIG_GLOBAL=/home/node/.state/git/config` moves the global file onto the
+volume, so it survives and `git config --global` writes somewhere durable. Once
+per volume, beside `gh auth login`:
+
+```bash
+git config --global user.name  '<name>'
+git config --global user.email '<email>'
+```
+
+That file is seeded with an `[include]` of `~/.gitconfig` rather than left empty,
+and the include is load-bearing: adevcontainer writes its credential helper to
+`~/.gitconfig` at every start, so relocating the global file without pulling that
+back in would stop git finding the helper and `git push` would fail from inside
+the container instead. Includes are followed on an ordinary read — which is what
+git's credential machinery does — but *not* under an explicit scope flag, so
+`git config --global --get credential.helper` answers empty while
+`git config --get credential.helper` answers correctly. Worth knowing before
+reading the first as evidence of a problem. `fix-volume-perms.sh` writes the file
+when the volume has none, because Apple `container` seeds nothing, and leaves it
+alone once it holds an identity.
+
 **Formatting on save.** `editor.formatOnSave` and the eslint fixer in
 `customizations.vscode` do nothing without the editor. `make lint` and
 `.pre-commit-config.yaml` are what enforce formatting here, and they run in the
@@ -641,6 +666,8 @@ because the volume is only marked done when the answer was knowable.
 
 ```bash
 gh auth login
+git config --global user.name  '<name>'    # lands on the volume, not ~/.gitconfig
+git config --global user.email '<email>'
 claude                       # paste the URL with ⌘V; selecting it truncates it
 ```
 

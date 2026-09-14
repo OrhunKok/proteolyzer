@@ -5,8 +5,13 @@
 # new machine is `git clone`, `build.sh` and `up.sh`. What does not travel is the
 # named volume, and it is the interesting part: /home/node/.state holds Claude
 # Code's config, projects and memory under `claude/`, the GitHub login under
-# `gh/`, and the shell history. Losing that on every machine change is what makes
-# a portable environment feel unportable.
+# `gh/`, the git identity under `git/`, and the shell history. Losing that on
+# every machine change is what makes a portable environment feel unportable.
+#
+# `export` tars the volume whole and excludes rather than enumerates, so a new
+# subdirectory on it travels without this script being told about it. `git/` is
+# name and email, which are not secrets; `gh/` holds a token and is the one
+# subtree left out unless asked for.
 #
 # Runs on the host.
 #
