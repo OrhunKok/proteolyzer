@@ -21,9 +21,14 @@
 #   REBUILD=1 ./.devcontainer/cmux-attach.sh   rebuild first
 set -euo pipefail
 
-# Before `ssh-target.sh`, which builds and starts a container. Discovering the
-# frontend is missing after two minutes of that is a worse order to fail in.
-if ! command -v cmux >/dev/null 2>&1; then
+# Called by `ssh-target.sh` after its "you are on Linux" guard and before it
+# builds anything, which is the only correct place for it. Defining it here
+# rather than checking inline above: checked above, this fires *first*, and on
+# Linux -- inside a container, where cmux's CLI is absent until a `cmux ssh`
+# session relays it -- the answer to "I am in the wrong shell" becomes "install
+# cmux with brew", on Linux, where that goes nowhere. The guard has to win.
+st_frontend_check() {
+    command -v cmux >/dev/null 2>&1 && return 0
     echo "cmux-attach: cmux is not on PATH." >&2
     # cmux puts its CLI on the PATH of terminals *it* spawns, not on the system
     # one, so "not on PATH" usually means a plain Terminal.app window rather than
@@ -34,7 +39,7 @@ if ! command -v cmux >/dev/null 2>&1; then
     echo "cmux-attach:   Not installed at all? brew install --cask cmux" >&2
     echo "cmux-attach: on Docker, use ./.devcontainer/up.sh instead." >&2
     exit 1
-fi
+}
 
 # Sourced without arguments so "$@" stays this script's -- it is the command to
 # run in the workspace, and the helper has no business seeing it.

@@ -37,6 +37,22 @@ if [ "$(uname -s)" = Linux ]; then
     exit 1
 fi
 
+# The frontend's own tool check, if it has one, runs here: after the guard above
+# and before anything is built.
+#
+# Both halves of that matter. A frontend checked *before* the guard turns "you
+# are inside the container" into "cmux is not on PATH, try brew install" on
+# Linux, which is the trap the guard exists for -- `cmux` is genuinely absent in
+# a container that has not been attached to yet, so it is the check most likely
+# to fire there and mislead. And a frontend checked *after* the build discovers
+# it is missing two minutes into an `adevcontainer up`.
+#
+# A function rather than a list of names because the useful part of these checks
+# is the hint, and cmux's is four lines about how its CLI reaches a terminal.
+if declare -F st_frontend_check >/dev/null 2>&1; then
+    st_frontend_check
+fi
+
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # One identity for every project, and a dedicated one: this authenticates a hop
