@@ -13,183 +13,33 @@
 #   - terminals survive cmux quitting, and reconnect on relaunch
 #   - sidebar metadata, and dragging a file into the pane uploads over sftp
 #
-# Apple `container` only. Every container gets its own address reachable from the
-# host, so there is no published port, no `docker port` and no loopback juggling
-# -- which is most of why this is worth doing on that runtime. On Docker use
-# `up.sh`; the config publishes no port there.
+# Getting the container up and reachable is `ssh-target.sh`, shared with
+# `orca-target.sh`. What is left here is the part that is about cmux.
 #
 #   ./.devcontainer/cmux-attach.sh             a workspace with a shell
 #   ./.devcontainer/cmux-attach.sh claude      a workspace running Claude Code
 #   REBUILD=1 ./.devcontainer/cmux-attach.sh   rebuild first
 set -euo pipefail
 
-# These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
-# on the Mac -- so running one *inside* the container is a mistake worth naming.
-# Left uncaught the symptom is "cmux is not on PATH" plus an invitation to
-# `brew install` it, on Linux, which sends you somewhere with no exit.
-if [ "$(uname -s)" = Linux ]; then
-    printf '%s\n' \
-        "${0##*/}: this runs on the Mac, not inside the container." \
-        "${0##*/}: \`exit\` back to the host first, or use another cmux tab." >&2
+# Before `ssh-target.sh`, which builds and starts a container. Discovering the
+# frontend is missing after two minutes of that is a worse order to fail in.
+if ! command -v cmux >/dev/null 2>&1; then
+    echo "cmux-attach: cmux is not on PATH." >&2
+    # cmux puts its CLI on the PATH of terminals *it* spawns, not on the system
+    # one, so "not on PATH" usually means a plain Terminal.app window rather than
+    # a missing install. Suggesting `brew install` first sends you to reinstall
+    # something you already have.
+    echo "cmux-attach:   run this from a cmux tab -- cmux only puts" >&2
+    echo "cmux-attach:   its CLI on the PATH of terminals it starts." >&2
+    echo "cmux-attach:   Not installed at all? brew install --cask cmux" >&2
+    echo "cmux-attach: on Docker, use ./.devcontainer/up.sh instead." >&2
     exit 1
 fi
 
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-key="${CMUX_DEVCONTAINER_KEY:-$HOME/.ssh/cmux-devcontainer}"
-
-for tool in cmux adevcontainer container; do
-    if ! command -v "$tool" >/dev/null 2>&1; then
-        echo "cmux-attach: $tool is not on PATH." >&2
-        case "$tool" in
-            # cmux puts its CLI on the PATH of terminals *it* spawns, not on the
-            # system one, so "not on PATH" usually means a plain Terminal.app
-            # window rather than a missing install. Suggesting `brew install`
-            # first sends you to reinstall something you already have.
-            cmux)
-                echo "cmux-attach:   run this from a cmux tab -- cmux only puts" >&2
-                echo "cmux-attach:   its CLI on the PATH of terminals it starts." >&2
-                echo "cmux-attach:   Not installed at all? brew install --cask cmux" >&2
-                ;;
-            adevcontainer) echo "cmux-attach:   brew install wcgomes/tap/adevcontainer" >&2 ;;
-            container) echo "cmux-attach:   see github.com/apple/container (macOS 26+)" >&2 ;;
-        esac
-        echo "cmux-attach: on Docker, use ./.devcontainer/up.sh instead." >&2
-        exit 1
-    fi
-done
-
-cd "$repo"
-
-# Every `adevcontainer exec` below is given --name, and that is not tidiness.
-# With more than one managed container running, `exec` without it opens an
-# interactive "Select a container:" picker -- so a script that does four execs
-# stops four times, and whichever entry happens to be highlighted is the
-# container it acts on. That is how this ended up writing a key into one
-# project, reading sshd's pid from a second, and reporting a third one's address
-# as this project's: the alias for `proteolyzer` pointed at `pinpoint`.
-#
-# The name comes from `containerId:` in the tool's own output rather than being
-# guessed from the directory, so it stays right even if `name` in
-# devcontainer.json and the folder ever disagree.
-log="$(mktemp)"
-trap 'rm -f "$log"' EXIT
-if [ -n "${REBUILD:-}" ]; then
-    # `rebuild --name` selects an *existing* container, so the name has to be the
-    # one that exists -- not the one devcontainer.json would create. Those differ
-    # whenever `name` has been edited or the folder renamed, and the failure is
-    # `No managed container named ...` while the container is sitting right there
-    # under another name. `list` knows which container belongs to this folder;
-    # ask it. The leading slash in the match keeps `notpinpoint` from answering
-    # for `pinpoint`.
-    existing="$(adevcontainer list 2>/dev/null \
-        | awk -v b="/$(basename "$repo")" \
-            'NR>1 { n=length(b); if (substr($NF, length($NF)-n+1) == b) { print $1; exit } }' \
-        || true)"
-
-    if [ -n "$existing" ]; then
-        adevcontainer rebuild --name "$existing" 2>&1 | tee "$log"
-    else
-        echo "cmux-attach: no container for this folder yet; creating one." >&2
-        adevcontainer up 2>&1 | tee "$log"
-    fi
-else
-    adevcontainer up 2>&1 | tee "$log"
-fi
-
-container="$(sed -n 's/.*containerId:[[:space:]]*\([A-Za-z0-9_.-][A-Za-z0-9_.-]*\).*/\1/p' "$log" | tail -1)"
-rm -f "$log"
-trap - EXIT
-if [ -z "$container" ]; then
-    container="$(basename "$repo")"
-    echo "cmux-attach: no containerId in the output; assuming '$container'." >&2
-fi
-
-# A key of its own, not the one that talks to GitHub: this authenticates a hop
-# into a sandbox, and giving that a key with any other reach is how a sandbox
-# stops being one.
-if [ ! -f "$key" ]; then
-    mkdir -p "$(dirname "$key")"
-    ssh-keygen -t ed25519 -N '' -C cmux-devcontainer -f "$key"
-fi
-
-# The key goes in as an argument, not on stdin. `adevcontainer exec` without -i
-# attaches no stdin, so a `cat >` inside reads EOF immediately and writes an
-# empty authorized_keys -- which is exactly what the read-back below caught. An
-# argument needs nothing of the CLI beyond running the command.
-#
-# Spelled-out paths, and both modes set explicitly: `mkdir -p` leaves an existing
-# directory's mode alone and the node image ships ~/.ssh as 755, so a umask alone
-# never makes it 700.
-adevcontainer exec --name "$container" -- sh -c '
-    set -e
-    mkdir -p /home/node/.ssh
-    printf "%s\n" "$1" > /home/node/.ssh/authorized_keys
-    chmod 700 /home/node/.ssh
-    chmod 600 /home/node/.ssh/authorized_keys
-' sh "$(cat "$key.pub")"
-
-# Read it back. A key that silently did not land is invisible until ssh refuses.
-if ! adevcontainer exec --name "$container" -- cat /home/node/.ssh/authorized_keys 2>/dev/null \
-        | grep -qF "$(cut -d' ' -f2 < "$key.pub")"; then
-    echo "cmux-attach: the public key is not in the container's authorized_keys." >&2
-    exit 1
-fi
-
-adevcontainer exec --name "$container" -- sudo /usr/local/bin/start-sshd.sh
-
-# Built from the container's name rather than the directory's. They agree when
-# `name` in devcontainer.json matches the folder, and when they do not, the alias
-# should follow the thing it actually reaches.
-host="${CMUX_DEVCONTAINER_HOST:-$container.${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
-
-# The address, asked of the container rather than read out of a CLI table.
-#
-# This used to parse `container list` on column position -- ID IMAGE OS ARCH
-# STATE IP, so field six, minus a prefix length. That worked and was a hostage
-# to a format nobody promised to keep. `hostname -i` inside the container is
-# authoritative, costs one exec on a path that runs once per attach, and cannot
-# be broken by a column being added.
-ip="$(adevcontainer exec --name "$container" -- hostname -i 2>/dev/null | tr -d '\r' | awk '{print $1}' || true)"
-if [ -z "$ip" ]; then
-    echo "cmux-attach: could not read the container's address." >&2
-    echo "cmux-attach: it should be running by now -- check \`container list\`." >&2
-    exit 1
-fi
-
-# Which of the two to hand cmux. Nothing is written to ~/.ssh/config: a file
-# every project appends a block to is shared state, and one container has no
-# business knowing which others exist. Whatever this needs, it passes on the
-# command line.
-#
-# The name is preferred when the Mac can actually resolve it, and the address is
-# used when it cannot, so a machine without the DNS domain set up is not stuck.
-# `dscacheutil` rather than `dig @127.0.0.1 -p 2053`: the second proves the
-# record exists, the first proves *this Mac* will find it, and only the second
-# question decides whether an attach works.
-target="$ip"
-if dscacheutil -q host -a name "$host" 2>/dev/null | grep -q '^ip_address:'; then
-    target="$host"
-fi
-echo "cmux-attach: $container at $target"
-
-# Prove the login before handing the connection to cmux, which reports a refused
-# key as "the remote VM may have been paused, destroyed, or lost network" -- true
-# of almost nothing, and it sends you looking in the wrong place.
-#
-# IdentitiesOnly because `-i` only *adds* a key: ssh offers the agent's first,
-# and a full agent can exhaust MaxAuthTries before reaching the one that works.
-if ! ssh -o BatchMode=yes \
-        -o IdentitiesOnly=yes \
-        -o UserKnownHostsFile=/dev/null \
-        -o StrictHostKeyChecking=no \
-        -o ConnectTimeout=10 \
-        -i "$key" -p 2222 "node@$target" true 2>/tmp/cmux-attach-ssh.$$; then
-    echo "cmux-attach: ssh into the container failed. ssh said:" >&2
-    sed 's/^/cmux-attach:   /' /tmp/cmux-attach-ssh.$$ >&2
-    rm -f /tmp/cmux-attach-ssh.$$
-    exit 1
-fi
-rm -f /tmp/cmux-attach-ssh.$$
+# Sourced without arguments so "$@" stays this script's -- it is the command to
+# run in the workspace, and the helper has no business seeing it.
+# shellcheck source=./ssh-target.sh
+. "$(dirname "${BASH_SOURCE[0]}")/ssh-target.sh"
 
 # sshd builds its own login environment, so what is on PATH there depends on
 # image plumbing this script has no business assuming. npm's global bin -- where
@@ -213,9 +63,7 @@ fi
 #
 # Set on every attach rather than once by hand, because "once by hand, per
 # project, remembered" is the kind of step that is never done for the fourth
-# project. cmux keeps a socket-set command for manual restore until its prefix is
-# approved under Settings > Terminal > Resume Commands; approving it once makes
-# relaunch recover by itself.
+# project.
 #
 # Guarded rather than escaped: a quote in the path would need careful nesting
 # through two shells, and a checked skip is worth more than clever quoting that

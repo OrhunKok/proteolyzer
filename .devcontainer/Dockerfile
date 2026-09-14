@@ -140,6 +140,20 @@ RUN printf '%s\n' \
 # PATH to the Debian default, and some agents shell out that way. /usr/local/bin
 # is in every default PATH there is.
 RUN ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
+
+# python3, for the same reason and one more caller. The python feature installs
+# to /usr/local/python/current/bin and puts nothing in /usr/local/bin, so a
+# non-login non-interactive shell -- which is what `ssh host '<command>'` gets,
+# and what Orca's relay installer runs in -- does not find it. node-gyp then
+# cannot build `node-pty` and Orca connects with a working file tree and dead
+# terminals, which is a confusing way to lose the only feature that matters.
+#
+# Created before the feature that provides the target: features are layered on
+# top of this image, so this is a dangling symlink until the build finishes and
+# a working one afterwards. If that path ever moves, `command -v python3` sees a
+# non-executable dangling link and reports nothing -- the same answer as today,
+# not a worse one. orca-target.sh checks it over ssh rather than assuming.
+RUN ln -sf /usr/local/python/current/bin/python3 /usr/local/bin/python3
 USER node
 
 
