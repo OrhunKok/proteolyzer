@@ -88,6 +88,12 @@ yarn-error.log*
 # holding a credential sitting in `git status`.
 /.state-adopt/
 
+# Linked worktrees, made per session by whoever is driving -- an agent, or the
+# frontend's worktree base path, which points here. Each holds a checkout of
+# this repository, so leaving them untracked means every one of them sits in
+# `git status` until it is removed, and `git add -A` offers to embed it.
+/.claude/worktrees/
+
 # Transient: `state.sh adopt` stages a project's earlier state here, under the
 # bind mount, because the target volume is attached to the running container and
 # cannot be mounted twice. Deleted in the same run; ignored in case one crashes.

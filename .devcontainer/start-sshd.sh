@@ -1,15 +1,15 @@
 #!/bin/bash
-# Start the sshd that `cmux ssh` attaches to. Idempotent, run from
+# Start the sshd the remote frontend attaches to. Idempotent, run from
 # postStartCommand, and reachable through sudo for the same reason
 # init-firewall.sh is: it needs root and nothing else here does.
 #
-# Starting it unconditionally is safe. The port is published on loopback only,
-# password auth is off, and no authorized_keys exists until cmux-attach.sh
-# writes one -- so until you ask for it, this listens and refuses everything.
+# Starting it unconditionally is safe. No port is published to the host, password
+# auth is off, and no authorized_keys exists until ssh-target.sh writes one -- so
+# until you ask for it, this listens and refuses everything.
 set -euo pipefail
 
-CONFIG=/etc/ssh/sshd_cmux_config
-PIDFILE=/run/sshd-cmux.pid
+CONFIG=/etc/ssh/sshd_remote_config
+PIDFILE=/run/sshd-remote.pid
 
 # Generated at first start rather than baked into the image, so two containers
 # from the same image do not share a host key.
@@ -30,7 +30,7 @@ fi
 # upload path cares, so say so rather than refusing to start.
 if [ ! -x /usr/lib/openssh/sftp-server ]; then
     echo "start-sshd: warning: /usr/lib/openssh/sftp-server missing;" >&2
-    echo "start-sshd: dragging a file into a cmux pane will not upload." >&2
+    echo "start-sshd: dragging a file into the editor will not upload." >&2
 fi
 
 # Rejects its own config before backgrounding, so a mistake in the file shows up

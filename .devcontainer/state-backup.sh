@@ -23,7 +23,7 @@ set -euo pipefail
 if [ "$(uname -s)" = Linux ]; then
     printf '%s\n' \
         "${0##*/}: this runs on the Mac, not inside the container." \
-        "${0##*/}: \`exit\` back to the host first, or use another cmux tab." >&2
+        "${0##*/}: \`exit\` back to the host first, or open a terminal there." >&2
     exit 1
 fi
 

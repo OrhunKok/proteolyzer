@@ -33,14 +33,14 @@
 # migrate, because a volume attaches to one container at a time.
 set -euo pipefail
 
-# These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
-# on the Mac -- so running one *inside* the container is a mistake worth naming.
-# Left uncaught the symptom is "cmux is not on PATH" plus an invitation to
+# These drive macOS-side tooling -- `container`, `adevcontainer`, Docker on the
+# Mac -- so running one *inside* the container is a mistake worth naming. Left
+# uncaught the symptom is a tool "not on PATH" plus an invitation to
 # `brew install` it, on Linux, which sends you somewhere with no exit.
 if [ "$(uname -s)" = Linux ]; then
     printf '%s\n' \
         "${0##*/}: this runs on the Mac, not inside the container." \
-        "${0##*/}: \`exit\` back to the host first, or use another cmux tab." >&2
+        "${0##*/}: \`exit\` back to the host first, or open a terminal there." >&2
     exit 1
 fi
 

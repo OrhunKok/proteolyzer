@@ -7,11 +7,11 @@
 #   target     the DNS name if this Mac resolves it, else the address
 #
 # This is everything a frontend needs and nothing any particular frontend wants,
-# which is the reason it is a file of its own: `cmux-attach.sh` and
-# `orca-target.sh` both need all of it, and the alternative was two copies of a
-# hundred lines whose every paragraph records a bug that already happened once.
-# This repository has been through that with `CoordinatesMapping` and does not
-# need to do it again.
+# which is the reason it is a file of its own: the next app to try is a thin
+# thing on top of this, and the alternative is a second copy of a hundred lines
+# whose every paragraph records a bug that already happened once. This repository
+# has been through that with `CoordinatesMapping` and does not need to do it
+# again.
 #
 # Apple `container` only. Every container gets its own address reachable from the
 # host, so there is no published port, no `docker port` and no loopback juggling
@@ -22,7 +22,7 @@
 # because a sourced file changing its caller's shell options is a surprise.
 
 # Message prefix. `$0` is still the *calling* script inside a sourced file, so
-# this reads `cmux-attach:` or `orca-target:` without either having to say which.
+# this reads `orca-target:` without the caller having to name itself.
 _st_me="${0##*/}"
 _st_me="${_st_me%.sh}"
 
@@ -37,28 +37,12 @@ if [ "$(uname -s)" = Linux ]; then
     exit 1
 fi
 
-# The frontend's own tool check, if it has one, runs here: after the guard above
-# and before anything is built.
-#
-# Both halves of that matter. A frontend checked *before* the guard turns "you
-# are inside the container" into "cmux is not on PATH, try brew install" on
-# Linux, which is the trap the guard exists for -- `cmux` is genuinely absent in
-# a container that has not been attached to yet, so it is the check most likely
-# to fire there and mislead. And a frontend checked *after* the build discovers
-# it is missing two minutes into an `adevcontainer up`.
-#
-# A function rather than a list of names because the useful part of these checks
-# is the hint, and cmux's is four lines about how its CLI reaches a terminal.
-if declare -F st_frontend_check >/dev/null 2>&1; then
-    st_frontend_check
-fi
-
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # One identity for every project, and a dedicated one: this authenticates a hop
 # into a sandbox, and giving that a key with any other reach -- the GitHub key,
 # say -- is how a sandbox stops being one.
-key="${CMUX_DEVCONTAINER_KEY:-$HOME/.ssh/cmux-devcontainer}"
+key="${DEVCONTAINER_SSH_KEY:-$HOME/.ssh/devcontainer}"
 
 for tool in adevcontainer container; do
     if ! command -v "$tool" >/dev/null 2>&1; then
@@ -120,7 +104,16 @@ fi
 
 if [ ! -f "$key" ]; then
     mkdir -p "$(dirname "$key")"
-    ssh-keygen -t ed25519 -N '' -C cmux-devcontainer -f "$key"
+    ssh-keygen -t ed25519 -N '' -C devcontainer -f "$key"
+
+    # Said here because this is the line that makes it true. The write below
+    # replaces the container's authorized_keys outright, so a target saved
+    # against an older identity -- a previous name for this file, a key from
+    # another machine -- stops authenticating the moment that happens, and the
+    # frontend reports it as a refused connection rather than as a stale field.
+    echo "$_st_me: generated a new identity at $key." >&2
+    echo "$_st_me: any saved target still naming an older one needs its" >&2
+    echo "$_st_me: Identity file field updated before the next connect." >&2
 fi
 
 # The key goes in as an argument, not on stdin. `adevcontainer exec` without -i
@@ -151,7 +144,7 @@ adevcontainer exec --name "$container" -- sudo /usr/local/bin/start-sshd.sh
 # Built from the container's name rather than the directory's. They agree when
 # `name` in devcontainer.json matches the folder, and when they do not, the alias
 # should follow the thing it actually reaches.
-host="${CMUX_DEVCONTAINER_HOST:-$container.${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
+host="${DEVCONTAINER_SSH_HOST:-$container.${CONTAINER_DNS_DOMAIN:-adevcontainers.local}}"
 
 # The address, asked of the container rather than read out of a CLI table.
 #
@@ -182,10 +175,11 @@ if dscacheutil -q host -a name "$host" 2>/dev/null | grep -q '^ip_address:'; the
 fi
 echo "$_st_me: $container at $target"
 
-# Prove the login before handing the connection to anything else. cmux reports a
-# refused key as "the remote VM may have been paused, destroyed, or lost network"
-# -- true of almost nothing, and it sends you looking in the wrong place. Orca is
-# clearer about it but still after the fact.
+# Prove the login before handing the connection to anything else. A frontend that
+# meets a refused key reports it in its own words and after the fact -- at best
+# clearly, at worst as a paused or destroyed VM or a lost network, which is true
+# of almost nothing and sends you looking in the wrong place. One `ssh true` here
+# says it plainly instead.
 #
 # IdentitiesOnly because `-i` only *adds* a key: ssh offers the agent's first,
 # and a full agent can exhaust MaxAuthTries before reaching the one that works.

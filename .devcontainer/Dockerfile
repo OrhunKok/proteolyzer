@@ -102,8 +102,8 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 # here instead because a container's environment is given to processes the
 # *runtime* starts -- an entrypoint, `docker exec`, `devcontainer exec` -- and
 # sshd is not one of those. It builds a login environment from /etc/profile and
-# friends, so under `cmux ssh` none of these were set and `claude` was not even
-# on PATH. One place, applied to both.
+# friends, so over ssh none of these were set and `claude` was not even on PATH.
+# One place, applied to both.
 ENV CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=true
 ENV DISABLE_TELEMETRY=true
 ENV NODE_OPTIONS=--max-old-space-size=4096
@@ -141,18 +141,29 @@ RUN printf '%s\n' \
 # is in every default PATH there is.
 RUN ln -sf /usr/local/share/npm-global/bin/claude /usr/local/bin/claude
 
-# python3, for the same reason and one more caller. The python feature installs
-# to /usr/local/python/current/bin and puts nothing in /usr/local/bin, so a
-# non-login non-interactive shell -- which is what `ssh host '<command>'` gets,
-# and what Orca's relay installer runs in -- does not find it. node-gyp then
-# cannot build `node-pty` and Orca connects with a working file tree and dead
-# terminals, which is a confusing way to lose the only feature that matters.
+# python3, for the same reason and one more caller: the remote frontend's relay
+# installer runs node-gyp in a non-login non-interactive shell -- what
+# `ssh host '<command>'` gets -- to build a native `node-pty`, because Linux has
+# no prebuild. With no python3 reachable there the frontend connects with a
+# working file tree and dead terminals, which is a confusing way to lose the one
+# feature that matters.
+#
+# What this symlink actually decides is *which* python3 wins, and that is worth
+# being exact about. Debian's python3-minimal already puts 3.11 at
+# /usr/bin/python3, which is on sshd's built-in PATH, so the build was never
+# failing for want of an interpreter -- measured off a relay's own
+# build/config.gypi, which recorded `"python": "/usr/bin/python3"`.
+# /usr/local/bin precedes /usr/bin in every default PATH there is, so this hands
+# node-gyp the python feature's interpreter instead, which is the one the
+# interactive environment already uses. Both were checked against this package:
+# `node-gyp configure` succeeds under either, and a full rebuild under the
+# feature's 3.14 produces the same pty.node as 3.11 did.
 #
 # Created before the feature that provides the target: features are layered on
 # top of this image, so this is a dangling symlink until the build finishes and
-# a working one afterwards. If that path ever moves, `command -v python3` sees a
-# non-executable dangling link and reports nothing -- the same answer as today,
-# not a worse one. orca-target.sh checks it over ssh rather than assuming.
+# a working one afterwards. A dangling link is not executable, so a PATH search
+# skips it and falls through to /usr/bin/python3 -- which is why getting this
+# wrong degrades rather than breaks. orca-target.sh checks over ssh regardless.
 RUN ln -sf /usr/local/python/current/bin/python3 /usr/local/bin/python3
 USER node
 
@@ -164,12 +175,12 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
 
-# The sshd `cmux ssh` attaches to. Copied in rather than read off /workspace: the
-# bind mount is writable by whatever is running in the container, and a config
-# that decides who may log in should not be.
-COPY sshd-cmux.conf /etc/ssh/sshd_cmux_config
+# The sshd the remote frontend attaches to. Copied in rather than read off
+# /workspace: the bind mount is writable by whatever is running in the container,
+# and a config that decides who may log in should not be.
+COPY sshd-remote.conf /etc/ssh/sshd_remote_config
 COPY start-sshd.sh /usr/local/bin/
-RUN chmod 0644 /etc/ssh/sshd_cmux_config && \
+RUN chmod 0644 /etc/ssh/sshd_remote_config && \
   chmod +x /usr/local/bin/start-sshd.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/start-sshd.sh" > /etc/sudoers.d/node-sshd && \
   chmod 0440 /etc/sudoers.d/node-sshd && \
@@ -190,16 +201,17 @@ RUN chmod +x /usr/local/bin/fix-volume-perms.sh && \
 # Two things about the node account, and the second is not cosmetic.
 #
 # sshd reads the login shell out of /etc/passwd and ignores ENV SHELL, so without
-# --shell a cmux ssh session lands in bash -- no ~/.zshrc, no gh-auth.sh, no gh.
+# --shell an ssh session lands in bash -- no ~/.zshrc, no gh-auth.sh, no gh.
 #
 # `usermod -p '*'` unlocks the account. node ships shadow-locked, and OpenSSH's
 # allowed_user() refuses a locked account for *public key* auth when UsePAM is
-# off, which this config sets. Every visible thing is correct -- authorized_keys
-# byte-exact, .ssh 700, the file 600 -- and the client still sees a bare
-# `Permission denied (publickey)`. cmux's own fixture logs in as root, which is
-# never locked, so this only appears once you use a normal user. `*` means "no
-# password accepted", not "no password required": password auth stays off, and
-# PasswordAuthentication no in sshd_cmux_config says so a second time.
+# off, which sshd-remote.conf sets. Every visible thing is correct --
+# authorized_keys byte-exact, .ssh 700, the file 600 -- and the client still sees
+# a bare `Permission denied (publickey)`. A test fixture that logs in as root
+# never meets this, because root is never locked; it appears the moment a normal
+# user is the one logging in. `*` means "no password accepted", not "no password
+# required": password auth stays off, and PasswordAuthentication no in
+# sshd_remote_config says so a second time.
 RUN usermod --shell /bin/zsh node && \
   usermod -p '*' node
 

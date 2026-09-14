@@ -14,20 +14,20 @@ Most things that claim to replace this replace the second reason only. See
 The runtime is Apple `container`; Docker still works and is the fallback path.
 
 ```bash
-brew install --cask cmux                      # once
 brew install wcgomes/tap/adevcontainer        # once — needs Apple container
 adevcontainer doctor                          # checks the runtime is usable
 
 ./.devcontainer/build.sh                      # build the image
-./.devcontainer/cmux-attach.sh claude         # a cmux workspace running Claude
+./.devcontainer/orca-target.sh                # prepare it, print the ssh target
 ```
 
-Day to day:
+That last one prints the four fields to type into the frontend's Add Target form,
+once. Day to day:
 
 ```bash
 ./.devcontainer/up.sh                # a zsh in the container
 ./.devcontainer/up.sh claude         # straight into Claude Code
-./.devcontainer/cmux-attach.sh       # the full cmux workspace
+./.devcontainer/orca-target.sh       # re-check the target after a rebuild
 REBUILD=1 ./.devcontainer/up.sh      # replace the container
 ./.devcontainer/build.sh             # after any Dockerfile change
 ```
@@ -39,8 +39,8 @@ longer takes effect on its own; build first. The gain is that the same config
 serves both runtimes, because the devcontainer CLI reads `image:` too.
 
 `up.sh` picks `adevcontainer` when it is installed and the devcontainer CLI
-otherwise. `cmux-attach.sh` is Apple-only, because that is where the container
-has its own address and the whole published-port dance disappears.
+otherwise. The ssh path is Apple-only, because that is where the container has
+its own address and the whole published-port dance disappears.
 
 ## Names, and giving the container one
 
@@ -58,8 +58,7 @@ A `buildkit` container appearing beside it is Apple's own builder for
 `container build`, not one of these. It comes and goes.
 
 **A stable name matters** beyond looks: every rebuild gets a fresh address, so a
-cmux workspace or a `cmux surface resume set` command pinned to an IP goes stale
-the next time you rebuild. This project is `proteolyzer.adevcontainers.local`,
+saved ssh target pinned to an IP goes stale the next time you rebuild. This project is `proteolyzer.adevcontainers.local`,
 and it resolves — but it did not for a while, and the reason is worth keeping.
 
 ### Why the record was missing, and what a working one costs
@@ -169,18 +168,17 @@ So `container system dns create` *and* `dns.domain` *and* a rebuild, in that
 order, is what a working name costs — and the middle one needs
 `container system start` before it counts.
 
-**Nothing is written to `~/.ssh/config`.** `cmux-attach.sh` used to add a `Host`
+**Nothing is written to `~/.ssh/config`.** The attach script used to add a `Host`
 block there per project, and that was wrong twice over. A file every project
 appends to is shared state, and one container has no business knowing which
 others exist — the same objection that collapsed three volumes into one.
 
-It also did not buy what it was sold on. The claim was that a pinned
-`cmux surface resume set` command would go stale when a rebuild changed the
-address. It would not: that command runs `cmux-attach.sh`, which recomputes the
-address every time, so nothing pinned ever held an IP. And the block's
-`HostName` was static until the script rewrote it, so a workspace cmux
-reconnected on its own was exactly as stale as a bare address would have been.
-It bought a prettier string in a log.
+It also did not buy what it was sold on. The claim was that a launch command
+pinned to a pane would go stale when a rebuild changed the address. It would not:
+that command runs the script, which recomputes the address every time, so nothing
+pinned ever held an IP. And the block's `HostName` was static until the script
+rewrote it, so anything that reconnected on its own was exactly as stale as a
+bare address would have been. It bought a prettier string in a log.
 
 What runs now: the name when this Mac can resolve it, the address when it
 cannot, passed on the command line either way.
@@ -191,15 +189,15 @@ dscacheutil -q host -a name proteolyzer.adevcontainers.local
 
 `dscacheutil` and not `dig @127.0.0.1 -p 2053` — the second proves the record
 exists, the first proves *this Mac* will find it, and only that decides whether
-an attach works. `CMUX_DEVCONTAINER_HOST` names the target outright,
+an attach works. `DEVCONTAINER_SSH_HOST` names the target outright,
 `CONTAINER_DNS_DOMAIN` just its suffix.
 
 A `ProxyCommand` resolving the address at connect time was tried before either
-and is tidier in principle. cmux could not bootstrap its remote daemon through
-it — `failed to query remote platform: Connection closed by UNKNOWN port 65535`,
-where `UNKNOWN` is ssh not knowing its peer because a proxy is in the way. That
-bootstrap does much more than open a session: platform probe, binary upload,
-reverse forward.
+and is tidier in principle. A frontend that bootstraps a daemon on the remote
+could not get through it — `failed to query remote platform: Connection closed by
+UNKNOWN port 65535`, where `UNKNOWN` is ssh not knowing its peer because a proxy
+is in the way. That bootstrap does much more than open a session: platform probe,
+binary upload, forward.
 
 ### What is idiomatic here and what is a workaround
 
@@ -226,7 +224,7 @@ The ssh alias is gone: it was neither a gap in anything nor worth the
 shared file it lived in. See above.
 
 **One thing left that is more workaround than it needs to be.**
-`sshd-cmux.conf` sets `UsePAM no`, which is why the `node` account has to be
+`sshd-remote.conf` sets `UsePAM no`, which is why the `node` account has to be
 unlocked with `usermod -p '*'` — OpenSSH refuses a locked account for public key
 auth when PAM is off. `UsePAM yes` is Debian's own default and would need
 neither. It is left alone because the current arrangement is proven and swapping
@@ -249,11 +247,11 @@ the other, and reported the wrong address as the project's, so the alias for
 `proteolyzer` pointed at `pinpoint`'s IP and Claude opened with the wrong
 history. The hangs were the pickers waiting.
 
-So every `exec` in `up.sh` and `cmux-attach.sh` passes `--name`, taken from the
+So every `exec` in `up.sh` and `ssh-target.sh` passes `--name`, taken from the
 `containerId:` line of the tool's own output rather than guessed from the
-directory. The ssh alias and the cmux workspace name follow the same value, so
-they name the container they actually reach even if `name` in
-`devcontainer.json` and the folder ever disagree.
+directory. The host that gets reported follows the same value, so it names the
+container it actually reaches even if `name` in `devcontainer.json` and the
+folder ever disagree.
 
 Worth knowing when you run these by hand too: `adevcontainer stop`,
 `adevcontainer exec` and friends will all prompt. Pass `--name <project>`.
@@ -325,8 +323,8 @@ container either way.
 
 **Where you edit is not one of them**, though it looks like it should be. The
 Dev Containers extension puts the editor *inside* the container, so losing it
-reads as losing somewhere to write code — and cmux is a terminal with no editor
-in it. But `workspaceMount` is a bind: the files are on the Mac the whole time,
+reads as losing somewhere to write code. But `workspaceMount` is a bind: the
+files are on the Mac the whole time,
 and `/workspace` is a view of them. Any native editor opens the checkout
 directly, with no container in the path. What belongs in here is running things
 — the agent, the tests, anything that should be behind the firewall — not
@@ -340,89 +338,75 @@ are dead weight once nothing attaches. They are left in because they cost
 nothing and are the difference between VS Code working and VS Code hanging on
 the day you want it back.
 
-## cmux
+## The remote frontend
 
-cmux has no devcontainer support and does not need any. It has something better:
-**`cmux ssh` is a first-class workspace type with a Linux-side daemon, and a
-container running sshd is a remote host like any other.** cmux's own integration
-suites attach to a Docker container this way — `tests_v2/test_ssh_remote_docker_forwarding.py`
-and friends, with an ephemeral published port, a throwaway key and host key
-checking off — so it is a tested configuration rather than a clever one.
+The container runs sshd, and an app on the Mac treats it as a remote host. That
+is the whole arrangement: **a frontend needs a host, a port and an identity file,
+and `ssh-target.sh` produces those for whoever asks.** `orca-target.sh` is a thin
+thing on top of it, which is why trying a different app costs an afternoon rather
+than a migration.
 
 That leaves two ways in, and they are not equivalent:
 
-| | `up.sh` (`devcontainer exec`) | `cmux-attach.sh` (`cmux ssh`) |
+| | `up.sh` (`devcontainer exec`) | `orca-target.sh` (ssh) |
 |---|---|---|
-| extra surface in the image | none | `openssh-server`, a published loopback port |
-| `cmux` CLI inside the container | no | **yes** |
-| terminal survives cmux restarting | no | yes, reconnects |
-| sidebar metadata, sftp file drop | partial | yes |
-| browser pane egress | the host's | the container's, so inside the firewall |
+| extra surface in the image | none | `openssh-server` on port 2222 |
+| runtime | Apple `container` or Docker | Apple `container` only |
+| file tree, editor, diff view | no | yes, on the container's filesystem |
+| terminal survives the app quitting | no | yes, leased by a relay on this side |
+| sftp file drop | no | yes |
 | `TERM` in the container | pinned to `xterm-256color` | the host's own, `COLORTERM` included |
 
-Use `up.sh` for a shell. Use `cmux-attach.sh` for the workspace you actually
-work in.
+Use `up.sh` for a shell. Use the ssh path for the workspace you actually work in.
 
 ### How the ssh path works
 
-`cmux ssh` probes the remote platform, uploads a release-pinned `cmuxd-remote`
-binary verified against a SHA-256 manifest embedded in the app, and runs it over
-stdio. **The daemon arrives over the SSH connection, not from the internet**,
-which is why the firewall does not have to be opened to allow any of this.
-
-It then reverse-forwards a TCP port — `ssh -N -R` — to an authenticated local
-relay, installs a `cmux` wrapper at `~/.cmux/bin/cmuxd-remote`/`bin/cmux` on the
-remote, prepends that to `PATH`, and pins `CMUX_SOCKET_PATH=127.0.0.1:<port>` in
-the session. The relay port is per workspace. That is the whole trick: it is why
-the `cmux` CLI works *from inside the container*.
-
 What this repository adds for it:
 
-- `openssh-server` in the image, and `sshd-cmux.conf` — cmux's own test fixture,
-  minus root login and moved to port 2222. `AllowTcpForwarding yes` is
-  load-bearing, not boilerplate: the reverse forward runs with
-  `ExitOnForwardFailure=yes`, so refusing it fails the attach rather than
-  degrading it.
+- `openssh-server` in the image, and `sshd-remote.conf` — port 2222, no root
+  login. `AllowTcpForwarding yes` is load-bearing, not boilerplate: a frontend
+  that leases terminals through a relay on this side reaches that relay over the
+  ssh connection, and asks with `ExitOnForwardFailure=yes`, so refusing it fails
+  the connection rather than degrading it.
 - `start-sshd.sh`, reachable through `sudo` for the same reason
   `init-firewall.sh` is, and run from `postStartCommand` after it — the firewall
   flushes the tables, so anything holding a connection wants to start after it.
   Host keys are generated at first start rather than baked into the image, so two
   containers from one image do not share one.
-- `-p 127.0.0.1::2222` in `runArgs`. No host port is named, so Docker picks a
-  free one and several of these containers coexist; `cmux-attach.sh` finds it
-  with `docker port`. Bound to loopback, so it is not on the network.
 - `usermod --shell /bin/zsh node`. sshd reads the login shell out of
   `/etc/passwd` and ignores `ENV SHELL`, so without this an ssh session lands in
   bash — no `~/.zshrc`, so no `gh-auth.sh`, so no `gh`. Everything else names
   zsh explicitly and is unaffected.
+- `usermod -p '*' node`, because `UsePAM no` makes OpenSSH refuse a locked
+  account for public key auth. See the workaround note above.
 
-Starting sshd unconditionally is safe: the port is loopback-only, password auth
-is off, and no `authorized_keys` exists until `cmux-attach.sh` writes one. Until
-you ask for it, it listens and refuses everything.
+**No port is published.** Under Apple `container` every container has its own
+address, reachable from the host, so there is nothing to discover and nothing
+bound to loopback — which is also why this path is Apple-only. `capAdd` replaced
+`runArgs` once adevcontainer turned out to reject `-p` entries outright, and the
+ssh path stopped needing a published port in the same move.
 
-The key is a dedicated one, `~/.ssh/cmux-devcontainer`, not the one that talks to
-GitHub — giving a loopback hop into a sandbox a key with any other reach is how a
-sandbox stops being one. Agent forwarding is explicitly off for the same reason.
-Host key checking is off because a host key is generated per container and the
-port is a fresh ephemeral one each rebuild, so `known_hosts` could only ever
-reject a container it had seen before on a port something else used. What bounds
-this is the port being on loopback and the key being one the script made.
+Starting sshd unconditionally is safe: nothing is published, password auth is
+off, and no `authorized_keys` exists until `ssh-target.sh` writes one. Until you
+ask for it, it listens and refuses everything.
 
-### The same sshd serves other frontends
+The key is a dedicated one, `~/.ssh/devcontainer`, not the one that talks to
+GitHub — giving a hop into a sandbox a key with any other reach is how a sandbox
+stops being one. Agent forwarding is explicitly off for the same reason. Host key
+checking is off because a host key is generated per container and the address
+changes on every rebuild, so `known_hosts` could only ever reject a container it
+had seen before at an address something else now answers on. What bounds this is
+the address being on Apple's container network and the key being one the script
+made.
 
-This is the part worth protecting. Nothing in the image or in `up.sh` is
-cmux-specific; what a frontend needs is a host, a port and an identity file, and
-`ssh-target.sh` produces those for whoever asks. `cmux-attach.sh` and
-`orca-target.sh` are both thin things on top of it, which is why trying a
-different app costs an afternoon rather than a migration.
+### A second app on the same sshd
 
 The Claude Code desktop app has an SSH environment — its documentation names dev
-containers as a target — and it asks for exactly what `cmux-attach.sh` already
-produces: a host, a port, and an identity file. `node@127.0.0.1`, whatever
-`docker port` reports, and `~/.ssh/cmux-devcontainer`. It installs Claude Code
-on the remote itself and uses the remote `/home/node/.claude`, which is the
-volume. So the sshd here is not cmux-specific, and a native app is a second way
-in rather than a different setup.
+containers as a target — and it asks for exactly what `ssh-target.sh` already
+produces: a host, a port, and an identity file.
+`node@proteolyzer.adevcontainers.local`, `2222`, and `~/.ssh/devcontainer`. It
+installs Claude Code on the remote itself and uses the remote
+`/home/node/.claude`, which is the volume.
 
 Two things to expect if you try it. There is no terminal panel in a remote
 session, so it wants a terminal beside it rather than replacing one. And SSH
@@ -431,13 +415,13 @@ mode sets `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST=1` with its own
 — which costs nothing here, and would matter to a container pointed at Bedrock
 or Vertex.
 
-### Orca, and the thing it does that cmux will not
+### Orca
 
 [Orca](https://github.com/stablyai/orca) is an MIT-licensed Electron app from
-Stably AI in the same territory as cmux — parallel agents, each in its own
-worktree — and it has an SSH mode with a file tree, a fuzzy finder, an editor
-and a diff view that all operate on the remote filesystem. `orca-target.sh`
-prepares the container and prints the four fields its Add Target form wants.
+Stably AI — parallel agents, each in its own worktree — with an SSH mode carrying
+a file tree, a fuzzy finder, an editor and a diff view that all operate on the
+remote filesystem. `orca-target.sh` prepares the container and prints the four
+fields its Add Target form wants.
 
 The reason to care is not the editor. It is this, from its `docs/site/content/docs/ssh.mdx`:
 
@@ -447,31 +431,40 @@ The reason to care is not the editor. It is this, from its `docs/site/content/do
 > to the target, leased PTYs are restored to their tabs in the **attached**
 > state, with their scrollback intact.
 
-That is the problem the section below this one describes, solved from the right
-end — the session keeps running on the container instead of being relaunched
-from a command the host remembered. "Keep terminals alive until reset" is on by
-default for every target.
+The session keeps running on the container instead of being relaunched from a
+command the host remembered, which is the right end to solve it from. "Keep
+terminals alive until reset" is on by default for every target.
 
 **What it needs from the image**, and it is a hard requirement: the relay builds
-a native `node-pty` on the remote, Linux has no prebuild, so the container needs
-`make`, a C++ compiler and `python3`. Without them Orca still connects — files,
-git and the editor all work — and remote terminals simply do not, which is a
-confusing way to lose the only feature that matters. `node:20` brings the first
-two from `buildpack-deps`; `python3` comes from the python feature, which
-installs outside `/usr/local/bin` and so is invisible to the non-login shell
-Orca's installer runs in. Hence the symlink in the Dockerfile, next to the one
-`claude` needs for the same reason. `orca-target.sh` checks all three over ssh
-rather than trusting any of this.
+a native `node-pty` on the remote and Linux has no prebuild — the package ships
+`prebuilds/` for darwin and win32 only — so the container needs `make`, a C++
+compiler and `python3`. Without them Orca still connects — files, git and the
+editor all work — and remote terminals simply do not, which is a confusing way to
+lose the only feature that matters. `node:20` brings the first two from
+`buildpack-deps`. `python3` is present twice over: Debian's `python3-minimal` at
+`/usr/bin/python3`, and the python feature's, which installs outside
+`/usr/local/bin` and is therefore invisible to the non-login shell Orca's
+installer runs in — hence the symlink in the Dockerfile, next to the one `claude`
+needs for the same reason. `orca-target.sh` checks all three over ssh rather than
+trusting any of this.
 
 **Two things to set.** Point the target at the DNS name, not the address: an Orca
-target is a saved host entry, and the address changes on every rebuild.
-`cmux-attach.sh` re-resolves per attach and so never noticed. And set the repo's
-worktree base path to something **relative** — `.claude/worktrees` is what this
-repository already uses. Orca ignores an absolute base path for an ssh repo and
-falls back to a sibling of the repo (`join(repoPath, '..', …)` in
+target is a saved host entry, and the address changes on every rebuild. And set
+the repo's worktree base path to something **relative** — `.claude/worktrees` is
+what this repository already uses. Orca ignores an absolute base path for an ssh
+repo and falls back to a sibling of the repo (`join(repoPath, '..', …)` in
 `src/main/ipc/worktree-logic.ts`); the repo here is `/workspace`, so a sibling is
 the container's own root filesystem, which is invisible from the Mac, outside
 the state volume, and destroyed by the next rebuild.
+
+**It rewrites `~/.claude/settings.json`.** A first connect installs Orca's own
+hook block there and keeps nothing else — `model`, and any hook already in the
+file, are gone afterwards, silently. Copy the file aside first. An older copy is
+recoverable from a state tarball:
+
+```bash
+tar -xzOf devcontainer-state.tar.gz --wildcards '*/.claude/settings.json'
+```
 
 One more that has not been chased: the relay keeps terminal history under
 `~/.orca-remote/` in the container's home, which is *not* the state volume, so
@@ -479,27 +472,9 @@ scrollback does not survive a rebuild the way the Claude and `gh` state does.
 The fix is the same shape as the rest — a path under `/home/node/.state` — if it
 turns out to matter.
 
-### What now works inside the container
+### Notifying from inside the container
 
-- **`cmux notify`**, so a Claude Code hook can raise the ring and the sidebar
-  badge directly rather than by printing an escape sequence. The relay is
-  per-workspace, which is what lets cmux resolve which workspace a notification
-  came from. Worth confirming once on the machine.
-- `cmux workspace loading on`, `cmux read-screen`, `cmux send` — the CLI is
-  relayed as a whole, not a subset.
-- Terminals that survive cmux quitting, and reconnect on relaunch.
-
-`install-cmux-hooks.sh`, run once per `~/.claude` volume from inside the
-container, uses that to fix the one thing cmux gets wrong about a containerised
-agent. It only draws its status pill for a process it recognises as an agent,
-and it recognises the `claude` its own wrapper started on the host — not one in
-here, which is a generic process to it. So the hooks drive the documented
-workspace lane instead: `cmux workspace status set needs-attention` when Claude
-asks something, `auto` when it stops. The sidebar row goes amber and back on its
-own. Every hook is guarded on `command -v cmux`, so it is silent on the `up.sh`
-path rather than an error every turn.
-
-An OSC escape sequence still works too, and needs nothing installed:
+An OSC escape sequence needs nothing installed:
 
 ```json
 {
@@ -520,116 +495,26 @@ An OSC escape sequence still works too, and needs nothing installed:
 
 `> /dev/tty` is the part that matters — hook stdout is captured by Claude Code,
 so a sequence merely printed never reaches the terminal. That settings.json
-belongs in `/home/node/.claude`, which is a persisted volume.
-
-### What still does not work
-
-**Native Claude session restore.** cmux's Claude Code integration is a wrapper
-around the `claude` binary *on the host*, and its session records live in
-`~/.cmuxterm/` there. A `claude` inside a container is not wrapped, so no
-automatic `claude --resume <id>` on relaunch, no agent hibernation, and no AI
-workspace naming. The manual equivalent, once per pane:
-
-```bash
-cmux surface resume set --shell '/path/to/repo/.devcontainer/cmux-attach.sh claude'
-```
-
-Settings › Terminal › Resume Commands is **not** where that gets approved, and
-reading its subtitle as though it were costs an evening. The pane reviews
-`terminal.resumeCommands` in `~/.config/cmux/cmux.json` — signed records
-carrying a `policy` of `manual`, `prompt` or `auto`, and `auto` is real
-automatic restore. Three guards in cmux's `Sources/SessionPersistence.swift`
-put it out of reach here, and all three are deliberate:
-
-- `shouldPromptForProposal` opens with `guard binding.launchFlavor == .local`,
-  and a `cmux ssh` surface is `.persistentSSH`. No prompt.
-- the same function has `guard !binding.isCLIBinding`, where `isCLIBinding` is
-  `source == "cli"` — exactly what `cmux surface resume set` produces. So even a
-  local pane would not prompt for a command pinned this way.
-- `approve(...)` itself refuses: `guard binding.launchFlavor == .local else
-  { return nil }`, above the comment *"Location-scoped signed records are the
-  follow-up if remote approvals are wanted."* No record is written for a remote
-  surface by any path, so the pane stays at 0 however many times the pin runs.
-
-The reason those guards are there is the part worth knowing: **a managed
-`cmux ssh` workspace is not supposed to restore by resume command at all.**
-`TerminalSSHSessionDetector.resumeBinding` does mint `autoResume: true` bindings
-with no approval anywhere in sight, and it excludes this setup on purpose —
-*"Managed `cmux ssh` wrappers are excluded because their stable remote PTY
-binding is authoritative; this path is only the muscle-memory `ssh host` command
-typed into a local pane."* Managed means any of `CMUX_SSH_PTY_SESSION_ID`,
-`CMUX_REMOTE_PTY_SESSION_ID`, `CMUX_SSH_ATTEMPT_ID` or `CMUX_SSH_STARTUP_PID` is
-set, which `cmux ssh` sets.
-
-So the empty pane was never what stood between a relaunch and a restored
-session. The mechanism that is meant to do it is persistent remote PTY reattach
-(`Workspace+PersistentRemotePTYReattach.swift`), and *that* is what reports
-"remote daemon error" in the sidebar when it fails — a separate problem, and the
-one actually worth chasing.
-
-Meanwhile **`⌘⇧P` › "Open sandbox (cmux ssh)" is the answer**, one pick per
-project. The pin above is not load-bearing; it is worth keeping only because
-`cmux surface resume show --json` then tells a later session what a pane was for.
-Query it *inside* the ssh session — the binding belongs to that surface, and the
-same command in a Mac tab answers `resume_binding: null` truthfully, about a
-different one.
-
-**Browser panes are inside the firewall.** cmux routes a remote workspace's
-browser through a SOCKS5 proxy tunnelled over the daemon, so it egresses from the
-container — and the allowlist blocks nearly everything. That is correct rather
-than broken, but it means browsing happens in a local workspace, which cmux does
-not force-proxy.
-
-**`--transport mosh`.** Mosh needs inbound UDP in the 60000 range and the
-firewall drops all UDP but DNS. Stay on the SSH transport.
+belongs in `/home/node/.claude`, which is a persisted volume — and which the note
+above about Orca rewriting it applies to.
 
 ### Other answers to the same problem
 
-[cmux-devcontainer-bridge](https://github.com/zackey-heuristics/cmux-devcontainer-bridge)
-is a Go daemon on the host listening on `127.0.0.1:8765`. A Claude Code hook in
-the container `POST`s to `host.docker.internal:8765/notify`, and the bridge
-execs `cmux notify` on the host. It exists for exactly the gap this file
-describes, and it solves it from the other side: instead of getting a `cmux`
-into the container, it gets the container's message out to the one on the host.
-
-Not adopted here, for two reasons rather than one. Over `cmux ssh` the real CLI
-is already in the container, authenticated per workspace, with nothing listening
-on the host. And on the `up.sh` path the OSC hook above needs no daemon at all.
-What the bridge adds over OSC is structured title/subtitle/body and the ability
-to name a workspace by ID when the hook has no tty to write to — real, but
-narrow.
-
-Two things worth knowing before reaching for it anyway. `--token` is empty by
-default, so anything in the sandbox that can reach the host gateway can drive
-`cmux notify`; and nothing here would need opening for that, because
-`init-firewall.sh` already accepts the host network in both directions. The exec
-itself is safe by construction — `internal/notifier/cmux.go` hardcodes the
-`notify` subcommand and passes values as argv rather than a shell string, and
-the server uses a constant-time token compare and a body limit. It is one
-release, one author and no stars, so build it from source; it has no third-party
-dependencies, which makes that easy. Its example overlay assumes the cmux
-devcontainer's router/sandbox compose split, which this container does not have.
-
-What was worth taking from it outright is in `up.sh`:
-`devcontainer exec --remote-env CMUX_WORKSPACE_ID=... CMUX_SURFACE_ID=...`.
-Without it a hook inside the container has no idea which pane it belongs to.
-
-[ccmanager](https://github.com/kbwo/ccmanager) is the other shape: it runs the
-agent session inside the devcontainer as a first-class feature, with the manager
-on the host. The trade is a session manager instead of a terminal — no browser
-pane, no splits, no socket API, and none of the above.
+[ccmanager](https://github.com/kbwo/ccmanager) runs the agent session inside the
+devcontainer as a first-class feature, with the manager on the host. The trade is
+a session manager instead of a terminal — no browser pane, no splits, no socket
+API.
 
 ### A different runtime under all of this
 
 Docker is not the only way to get a Linux container on a Mac, and the one that
-would suit this best is Apple's own — every container gets an address reachable
-from the host, which deletes the published port and the `docker port` step from
-`cmux-attach.sh` rather than adding to them. `NET_ADMIN` is supported, so the
-firewall survives the move. What does not work yet is `build.dockerfile`, which
-is what this repository uses. [APPLE.md](./APPLE.md) has the evidence, the
-config to swap in, and the one upstream issue to watch. OrbStack is the
-meanwhile option: it makes Docker faster without making it different, so nothing
-here changes.
+suits this best is Apple's own — every container gets an address reachable from
+the host, which deletes the published port and the port-discovery step from the
+ssh path rather than adding to them. `NET_ADMIN` is supported, so the firewall
+survives the move. What does not work yet is `build.dockerfile`, which is what
+this repository uses. [APPLE.md](./APPLE.md) has the evidence, the config to swap
+in, and the one upstream issue to watch. OrbStack is the meanwhile option: it
+makes Docker faster without making it different, so nothing here changes.
 
 ### The workspace mount lies about who owns it
 
@@ -703,8 +588,8 @@ sessions — which is recoverable, but only if you notice.
 **2. Replace the config.**
 
 ```bash
-rm -rf .devcontainer .cmux
-cp -R ../thisproject/.devcontainer ../thisproject/.cmux .
+rm -rf .devcontainer
+cp -R ../thisproject/.devcontainer .
 ```
 
 The `rm -rf` is not tidiness, it is the whole trap. `cp -R src dest` copies
@@ -717,11 +602,11 @@ there. `cp -R ../thisproject/.devcontainer/. .devcontainer/` is the alternative,
 and for a project under git the delete is safe anyway: `git checkout
 .devcontainer` brings the originals back.
 
-Nothing in either directory names a project, so there is nothing to edit. Check
+Nothing in that directory names a project, so there is nothing to edit. Check
 rather than trust:
 
 ```bash
-grep -rn thisproject .devcontainer .cmux    # expect nothing
+grep -rn thisproject .devcontainer          # expect nothing
 ```
 
 **3. Build, once per machine rather than once per project.**
@@ -757,7 +642,6 @@ because the volume is only marked done when the answer was knowable.
 ```bash
 gh auth login
 claude                       # paste the URL with ⌘V; selecting it truncates it
-/workspace/.devcontainer/install-cmux-hooks.sh
 ```
 
 **6. Confirm the history actually arrived**, rather than assuming:
@@ -776,9 +660,9 @@ at, and that is `/workspace` in every container.
 
 **7. Commit it**, or a stray `git checkout` takes the whole setup with it.
 
-Afterwards, `⌘⇧P` → "Open sandbox (cmux ssh)" from a cmux tab, and the old
-Docker volumes can be deleted once you trust the copy — not before, since until
-adopt has run they are the only one.
+Afterwards, run `./.devcontainer/orca-target.sh` and add the target it prints.
+The old Docker volumes can be deleted once you trust the copy — not before, since
+until adopt has run they are the only one.
 
 ## Bringing a project's earlier state with it
 
@@ -811,8 +695,7 @@ not:
 |---|---|---|
 | the environment itself | yes | `Dockerfile` and `devcontainer.json`, in git |
 | the workspace | yes | a bind mount, so wherever you cloned |
-| the cmux commands | yes | `.cmux/cmux.json`, in git |
-| the ssh key and host key | yes | `cmux-attach.sh` and `start-sshd.sh` make them if absent |
+| the ssh key and host key | yes | `ssh-target.sh` and `start-sshd.sh` make them if absent |
 | **the three named volumes** | **no** | `state.sh` |
 
 The volumes are the gap, and one of them matters: `/home/node/.claude` holds
@@ -824,14 +707,14 @@ on the far side. Volume names are keyed on the directory basename, so the
 checkout has to be named the same over there — the same constraint
 `devcontainer.json` already documents.
 
-**The macOS-only parts are the frontend, not the environment.** cmux does not
-run on Linux and neither does Apple `container` — but neither of them is the
+**The macOS-only parts are the frontend, not the environment.** Neither the
+desktop app nor Apple `container` runs on Linux — but neither of them is the
 environment. The image is OCI, so Docker, podman, containerd and Apple
 `container` all take it and none of them cares which one built it; the runtime
 underneath is interchangeable and picking a Mac-native one costs nothing here.
-What is runtime-specific is the two attach scripts, and that is why there are
-two: `cmux-attach.sh` is the nice thing on a Mac, `up.sh` is the one that still
-works on a Linux box, and neither is the source of truth.
+What is runtime-specific is the two ways in, and that is why there are two:
+`orca-target.sh` is the nice thing on a Mac, `up.sh` is the one that still works
+on a Linux box, and neither is the source of truth.
 
 **`publish.sh` is the step that makes migration a pull instead of a build.** It
 cross-builds `linux/amd64` and `linux/arm64` with buildx and pushes both to

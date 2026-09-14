@@ -11,10 +11,10 @@ they move.
 
 **Verdict: the runtime is ready, the devcontainer layer is one feature short.**
 
-The appeal is real and it is not just tidiness. Under Docker this container is
-reached through a published loopback port that Docker picks at random, which is
-why `cmux-attach.sh` has a `docker port` step and a
-`-p 127.0.0.1::2222` in `runArgs`. Apple's networking doc removes all of that:
+The appeal is real and it is not just tidiness. Reaching this container over ssh
+under Docker means a published loopback port that Docker picks at random, so
+something has to discover it and hand it on. Apple's networking doc removes all
+of that:
 
 > Every container gets an IP address on its network, always reachable by that IP
 > from the host and from other containers on the same network (find it with
@@ -22,10 +22,10 @@ why `cmux-attach.sh` has a `docker port` step and a
 
 And with `domain = "test"` under `[dns]` in `~/.config/container/config.toml`,
 every container registers as `<name>.test` and macOS can be pointed at the same
-resolver. So the attach is `cmux ssh node@proteolyzer.test` — no published port,
-no port discovery, no loopback binding, and `cmux-attach.sh` gets shorter rather
-than longer. That is a better answer than OrbStack, which makes Docker faster
-without making it different.
+resolver. So the target is `node@proteolyzer.test` on port 2222 — no published
+port, no port discovery, no loopback binding, and `ssh-target.sh` gets shorter
+rather than longer. That is a better answer than OrbStack, which makes Docker
+faster without making it different.
 
 ## What already works
 
@@ -151,15 +151,15 @@ no build in it.
 }
 ```
 
-The attach loses its whole middle section — no `docker port`, no published port,
+Reaching it loses its whole middle section — no `docker port`, no published port,
 no loopback:
 
 ```bash
-cmux ssh "node@proteolyzer.test" \
-    --identity ~/.ssh/cmux-devcontainer \
-    --name proteolyzer \
-    --no-forward-agent \
-    --command "cd /workspace"
+ssh -p 2222 \
+    -i ~/.ssh/devcontainer \
+    -o IdentitiesOnly=yes \
+    -o ForwardAgent=no \
+    "node@proteolyzer.test"
 ```
 
 ## How much to trust it

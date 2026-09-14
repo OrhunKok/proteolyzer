@@ -98,7 +98,7 @@
 
   // containerEnv is gone, deliberately. A container's environment reaches
   // processes the runtime starts and not sshd, which builds a login environment
-  // from files -- so under `cmux ssh` none of it was set and `claude` was not on
+  // from files -- so over ssh none of it was set and `claude` was not on
   // PATH. The Dockerfile now sets these as ENV *and* writes them to
   // /etc/profile.d, which covers both entry points from one place.
 

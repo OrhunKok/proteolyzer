@@ -2,25 +2,22 @@
 # Make this repository's devcontainer ready for Orca, and print what to type into
 # Settings -> SSH -> Add Target.
 #
-# Orca (stablyai/orca) is the other frontend this container can serve. It has no
-# devcontainer support and does not need any either: an SSH target with a custom
-# port and identity file is a first-class thing in its UI, and a container
-# running sshd is a remote host like any other -- the same bargain `cmux ssh`
-# makes, through a different app.
+# Orca (stablyai/orca) is the frontend this container is served for. It has no
+# devcontainer support and does not need any: an SSH target with a custom port
+# and identity file is a first-class thing in its UI, and a container running
+# sshd is a remote host like any other.
 #
-# What it buys over cmux, which is why this file exists:
+# What that buys, and why this file exists:
 #
 #   - a file tree, a fuzzy finder, an editor and a diff view over the same ssh
 #     connection, operating on the container's filesystem
 #   - remote PTYs leased by a relay *on the container*, so they survive Orca
-#     quitting and come back attached with their scrollback. cmux cannot do this
-#     for a container: it gates automatic resume to `.local` surfaces, which a
-#     `cmux ssh` workspace is not. See README.md, "What still does not work".
+#     quitting and come back attached with their scrollback. See README.md.
 #
-# Unlike cmux there is no CLI to hand a target to -- targets are added in the
-# app. So this does the parts a script can do (start the container, put the key
-# in, start sshd, prove the login, prove Orca's relay will build) and then prints
-# the four fields, rather than pretending to automate a GUI form.
+# There is no CLI to hand a target to -- targets are added in the app. So this
+# does the parts a script can do (start the container, put the key in, start
+# sshd, prove the login, prove Orca's relay will build) and then prints the four
+# fields, rather than pretending to automate a GUI form.
 #
 #   ./.devcontainer/orca-target.sh             prepare and print
 #   REBUILD=1 ./.devcontainer/orca-target.sh   rebuild first
@@ -127,10 +124,9 @@ orca-target: An Orca target is a saved host entry and the address changes on
 orca-target: every rebuild, so the target will go stale and need editing. Set the
 orca-target: DNS domain up and it stops mattering:
 orca-target:   container system dns create ${CONTAINER_DNS_DOMAIN:-adevcontainers.local}
-orca-target: cmux-attach.sh does not care, because it resolves this per attach.
 
 EOF
 fi
 
-echo "orca-target: nothing here replaces cmux -- both read the same sshd, so an"
-echo "orca-target: Orca target and \`cmux-attach.sh\` can coexist while you decide."
+echo "orca-target: the sshd this reaches is not Orca-specific -- anything that"
+echo "orca-target: takes a host, a port and an identity file can read the same one."

@@ -2,8 +2,8 @@
 # Bring this repository's devcontainer up and open a shell in it -- the job the
 # VS Code Dev Containers extension used to do, minus the editor.
 #
-# This runs on the host, not inside the container. Call it by hand, or from a
-# cmux custom command or resume command; see README.md.
+# This runs on the host, not inside the container. Call it by hand, or from
+# whatever your terminal app uses to pin a command to a pane; see README.md.
 #
 #   ./.devcontainer/up.sh             a zsh inside the container
 #   ./.devcontainer/up.sh claude      straight into Claude Code
@@ -14,14 +14,14 @@
 # it; `build.sh` makes the image and has to have been run at least once.
 set -euo pipefail
 
-# These drive macOS-side tooling -- cmux, `container`, `adevcontainer`, Docker
-# on the Mac -- so running one *inside* the container is a mistake worth naming.
-# Left uncaught the symptom is "cmux is not on PATH" plus an invitation to
+# These drive macOS-side tooling -- `container`, `adevcontainer`, Docker on the
+# Mac -- so running one *inside* the container is a mistake worth naming. Left
+# uncaught the symptom is a tool "not on PATH" plus an invitation to
 # `brew install` it, on Linux, which sends you somewhere with no exit.
 if [ "$(uname -s)" = Linux ]; then
     printf '%s\n' \
         "${0##*/}: this runs on the Mac, not inside the container." \
-        "${0##*/}: \`exit\` back to the host first, or use another cmux tab." >&2
+        "${0##*/}: \`exit\` back to the host first, or open a terminal there." >&2
     exit 1
 fi
 
@@ -96,7 +96,7 @@ if [ "$cli" = adevcontainer ]; then
             exit 1
         fi
     fi
-    # --name for the same reason cmux-attach.sh uses it: with two managed
+    # --name for the same reason ssh-target.sh uses it: with two managed
     # containers running, `exec` without it opens an interactive picker and acts
     # on whichever row is highlighted. Taken from the tool's own `containerId:`.
     container="$(sed -n 's/.*containerId:[[:space:]]*\([A-Za-z0-9_.-][A-Za-z0-9_.-]*\).*/\1/p' "$log" | tail -1)"
@@ -124,23 +124,16 @@ fi
 # shellcheck disable=SC2086
 devcontainer up --workspace-folder "$repo" ${REBUILD:+--remove-existing-container}
 
-# cmux sets the CMUX_ ones in its own terminals, and they are how anything inside
-# the container says which pane it is talking about -- a notification from a hook
-# is otherwise untargeted. COLORTERM rides along for the reason below. Only
-# forwarded when set, so running this outside cmux does not plant empty
-# variables. The idea is lifted from zackey-heuristics/cmux-devcontainer-bridge,
-# which needs the same thing.
+# COLORTERM rides along for the reason below, and only when the host terminal
+# sets it, so running this somewhere that does not plants no empty variable.
 remote_env=()
-for var in CMUX_WORKSPACE_ID CMUX_SURFACE_ID CMUX_TAB_ID COLORTERM; do
-    value="${!var:-}"
-    if [ -n "$value" ]; then
-        remote_env+=(--remote-env "$var=$value")
-    fi
-done
+if [ -n "${COLORTERM:-}" ]; then
+    remote_env+=(--remote-env "COLORTERM=$COLORTERM")
+fi
 
 # `docker exec -t` defaults TERM to plain `xterm`, which terminfo says is eight
 # colours, and Claude Code's TUI drops to sixteen and says nothing about it. The
-# ssh path never had this -- ssh carries TERM itself and sshd-cmux.conf lists
+# ssh path never had this -- ssh carries TERM itself and sshd-remote.conf lists
 # COLORTERM in AcceptEnv -- so it is the exec path alone that arrives washed out.
 #
 # Pinned, not forwarded from the host: the container's terminfo is Debian's, and
