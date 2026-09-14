@@ -236,7 +236,12 @@ case "$repo" in
         # was no way to tell whether the call had failed, found no cmux, or
         # simply never run. A line of output is cheaper than that.
         pin='if command -v cmux >/dev/null 2>&1; then
-    if cmux surface resume set --shell "$CMUX_ATTACH_RESUME" >/dev/null 2>&1; then
+    # --cwd explicitly. It defaults to $PWD, and $PWD in here is /workspace --
+    # a path that does not exist on the Mac, where the restore actually runs, so
+    # the binding would be stored pointing at nothing. No apostrophes in this
+    # comment: the whole block is a single-quoted string and one ends it.
+    if cmux surface resume set --cwd "$CMUX_ATTACH_CWD" --name "$CMUX_ATTACH_NAME" \
+            --shell "$CMUX_ATTACH_RESUME" >/dev/null 2>&1; then
         echo "cmux-attach: resume command pinned -- approve it under Settings > Terminal > Resume Commands"
     else
         echo "cmux-attach: cmux surface resume set failed; relaunch will not recover on its own" >&2
@@ -247,7 +252,7 @@ else
 fi'
         remote_command="$pin
 $remote_command"
-        remote_command="CMUX_ATTACH_RESUME='$resume'; $remote_command"
+        remote_command="CMUX_ATTACH_RESUME='$resume'; CMUX_ATTACH_CWD='$repo'; CMUX_ATTACH_NAME='$container'; $remote_command"
         ;;
 esac
 
