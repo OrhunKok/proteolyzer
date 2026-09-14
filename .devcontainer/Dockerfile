@@ -261,4 +261,22 @@ RUN usermod --shell /bin/zsh node && \
 # workspace and their own state volume, so there is no second owner to be
 # confused with -- which is the trade being made, not an oversight.
 RUN git config --system --add safe.directory '*'
+
+# A default git identity for every project built from this image, so setting one
+# stops being a step in each of them. build.sh reads whatever this Mac commits
+# with and passes it through; a build cannot see the host's config by itself,
+# which is why it arrives as an argument. Empty means the Mac had none, nothing
+# is written, and fix-volume-perms.sh asks per project as before.
+#
+# The *system* layer deliberately, which is the lowest of git's three: a project
+# that wants a different identity still sets `git config --global` and wins, and
+# that write lands on its own state volume. This is a default, not a decision.
+#
+# publish.sh passes no build arguments at all, so a pushed image carries none of
+# this -- which is the intent, not an oversight. An identity baked into an image
+# in a registry is a person's address published with it.
+ARG GIT_USER_NAME=
+ARG GIT_USER_EMAIL=
+RUN if [ -n "$GIT_USER_NAME" ]; then git config --system user.name "$GIT_USER_NAME"; fi && \
+  if [ -n "$GIT_USER_EMAIL" ]; then git config --system user.email "$GIT_USER_EMAIL"; fi
 USER node

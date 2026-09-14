@@ -37,11 +37,16 @@ if [ -d "$state" ]; then
 
     chown -R node:node "$state/claude" "$state/gh" "$state/git"
 
-    # Said until it is done, because the symptom otherwise arrives much later as
-    # `Author identity unknown` on a commit, in a container that was working.
-    if ! grep -q '^\[user\]' "$state/git/config" 2>/dev/null; then
-        echo "fix-volume-perms: no git identity on this volume yet. Once per"
-        echo "fix-volume-perms: project, from inside the container:"
+    # Said until an identity exists somewhere, because the symptom otherwise
+    # arrives much later as `Author identity unknown` on a commit, in a container
+    # that was working. Two places count and either is enough: the image's system
+    # default, which build.sh bakes in from the Mac, and this volume's own
+    # override. Silent in the normal case, which is the image having one.
+    if ! git config --system --get user.email >/dev/null 2>&1 \
+            && ! grep -q '^\[user\]' "$state/git/config" 2>/dev/null; then
+        echo "fix-volume-perms: no git identity -- none in the image, none on this"
+        echo "fix-volume-perms: volume. Either rebuild on a Mac that has one, or set"
+        echo "fix-volume-perms: it here, from inside the container:"
         echo "fix-volume-perms:   git config --global user.name  '<name>'"
         echo "fix-volume-perms:   git config --global user.email '<email>'"
     fi

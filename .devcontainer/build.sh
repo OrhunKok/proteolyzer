@@ -73,12 +73,28 @@ if [ "$size" -gt 14336 ]; then
     echo "build: request limit is around 16 KiB and failures there are opaque." >&2
 fi
 
+# The identity this Mac commits with, baked into the image as the default for
+# every project built from it -- otherwise `git config --global user.email` is a
+# step in each one, and the symptom of forgetting arrives much later as
+# `Author identity unknown` on a commit. Read from the full chain rather than
+# `--global`, so a repository-local identity counts: the question is what you
+# actually commit as, not where you wrote it down.
+git_name="$(git -C "$repo" config user.name 2>/dev/null || true)"
+git_email="$(git -C "$repo" config user.email 2>/dev/null || true)"
+if [ -z "$git_email" ]; then
+    echo "build: this Mac has no git identity, so the image will carry no" >&2
+    echo "build: default one. Set \`git config --global user.email\` and rebuild," >&2
+    echo "build: or set it inside each container." >&2
+fi
+
 echo "build: container build -t $tag"
 container build \
     --build-arg TZ="${TZ:-America/New_York}" \
     --build-arg CLAUDE_CODE_VERSION=latest \
     --build-arg GIT_DELTA_VERSION=0.18.2 \
     --build-arg ZSH_IN_DOCKER_VERSION=1.2.0 \
+    --build-arg GIT_USER_NAME="$git_name" \
+    --build-arg GIT_USER_EMAIL="$git_email" \
     -t "$tag" \
     "$repo/.devcontainer"
 

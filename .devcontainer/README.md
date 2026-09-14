@@ -316,18 +316,25 @@ VS Code to a container and then go back to the terminal, its helper is left
 behind pointing at a pipe that is gone. `git config --global --unset-all
 credential.helper` clears it, or rebuild.
 
-**The git identity is on the volume too, and had to be moved there.**
+**The git identity comes from the image, and the volume can override it.**
 `/home/node` is not mounted, so an identity set with `git config --global` was
 gone on the next rebuild — and the symptom arrives much later, as
 `Author identity unknown` on a commit, in a container that had been working.
-`GIT_CONFIG_GLOBAL=/home/node/.state/git/config` moves the global file onto the
-volume, so it survives and `git config --global` writes somewhere durable. Once
-per volume, beside `gh auth login`:
+That is answered in two places, and neither is a per-project step:
 
-```bash
-git config --global user.name  '<name>'
-git config --global user.email '<email>'
-```
+- `build.sh` reads what this Mac commits with and passes it to the build, which
+  writes it to `/etc/gitconfig` — git's *system* layer, the lowest of the three.
+  Every project built from the shared image inherits it, so there is nothing to
+  do per project. `publish.sh` passes no build arguments, so a pushed image
+  carries none of it: an identity baked into an image in a registry is a
+  person's address published with it.
+- `GIT_CONFIG_GLOBAL=/home/node/.state/git/config` moves the *global* layer onto
+  the state volume. A project that wants a different identity sets
+  `git config --global user.email …` as usual, which beats the image default and
+  now survives a rebuild.
+
+`fix-volume-perms.sh` asks for one on start only when neither exists — so it is
+silent in the normal case and loud on a Mac that has no identity to hand over.
 
 That file is seeded with an `[include]` of `~/.gitconfig` rather than left empty,
 and the include is load-bearing: adevcontainer writes its credential helper to
@@ -677,10 +684,12 @@ because the volume is only marked done when the answer was knowable.
 
 ```bash
 gh auth login
-git config --global user.name  '<name>'    # lands on the volume, not ~/.gitconfig
-git config --global user.email '<email>'
 claude                       # paste the URL with ⌘V; selecting it truncates it
 ```
+
+The git identity is not in that list: it comes from the image, which `build.sh`
+fills in from this Mac. Only a project that wants a *different* one has to say
+so, with `git config --global`.
 
 **6. Confirm the history actually arrived**, rather than assuming:
 
