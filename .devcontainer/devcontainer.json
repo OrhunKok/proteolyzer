@@ -25,8 +25,6 @@
   // Dockerfile beside it with `container build`, which reads a Dockerfile the
   // same way any OCI builder does -- the file name is the format, not a runtime.
   //
-  // `build.sh` derives the same tag from the same folder name, so the two agree
-  // without either being told what project this is.
   // A fixed tag, not one derived from the folder, and that is the second
   // attempt. Deriving it looked tidy until a folder with a capital in it --
   // streamlit-DO-MS -- produced an image reference no runtime accepts, because
