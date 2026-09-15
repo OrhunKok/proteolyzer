@@ -1,63 +1,21 @@
+// The whole of a project's sandbox configuration. Everything else -- the image,
+// the firewall, sshd, the host-side scripts -- lives in the claude-devcontainer
+// repository, which is installed once on this Mac rather than copied in here.
+//
+// Written by `sandbox init`. Edit freely: this file is the project's, and the
+// three keys below are where a project is *supposed* to diverge.
 {
-  // The project, not the purpose. adevcontainer turns `name` into the container's
-  // create name and its DNS hostname, so "Claude Code Sandbox" gave every
-  // project a container called claude-code-sandbox -- indistinguishable from the
-  // next one in Orchard or `container list`, and useless as a hostname.
-  //
-  // The folder name, substituted, so this file is the same in every project and
-  // copying it needs no edit. This said "a literal rather than a substitution,
-  // because adevcontainer hard-errors on substitutions it does not implement",
-  // which is true of the mechanism and wrong about this token. `resolve` in
-  // VariableSubstitutor.swift knows localWorkspaceFolder,
-  // localWorkspaceFolderBasename, containerWorkspaceFolder, devcontainerId and
-  // localEnv:VAR, and throws `unsupportedSubstitution` only for tokens outside
-  // that set. `substituteAny` walks the whole document before any key is read,
-  // so it reaches `name` and `image` exactly as it already reaches `mounts`
-  // below -- which has depended on this same token all along.
-  //
-  // Keep the folder name lowercase and DNS-safe. It already had to be: it
-  // becomes the hostname, and now the image tag too.
+  // The project, which becomes the container name and its DNS hostname. Keep
+  // the folder name lowercase and DNS-safe.
   "name": "${localWorkspaceFolderBasename}",
 
-  // Image rather than `build`, which is what makes this work on Apple
-  // `container`: adevcontainer hard-rejects `build.dockerfile` as an
-  // unrepresentable configuration source. `build.sh` produces this tag from the
-  // Dockerfile beside it with `container build`, which reads a Dockerfile the
-  // same way any OCI builder does -- the file name is the format, not a runtime.
-  //
-  // A fixed tag, not one derived from the folder, and that is the second
-  // attempt. Deriving it looked tidy until a folder with a capital in it --
-  // streamlit-DO-MS -- produced an image reference no runtime accepts, because
-  // references must be lowercase and directory names need not be. The fix was a
-  // per-project edit to this line, and a per-project edit is destroyed the next
-  // time someone copies this directory in, which is exactly what happened.
-  //
-  // Nothing in the Dockerfile is project-specific -- it is node, the tools, gh,
-  // Claude Code, the firewall and sshd -- so one image genuinely serves every
-  // project, builds once instead of N times, and cannot be spelled wrongly. A
-  // project that needs its own diverges with IMAGE= and says so out loud.
+  // Built by `sandbox build`, once per machine -- every project runs the same
+  // image, and nothing in it is project-specific.
   "image": "claude-devcontainer:local",
 
-  // Was runArgs. `capAdd` is a first-class devcontainer property both CLIs
-  // honour, where `runArgs` entries like `-p` are rejected outright by
-  // adevcontainer. NET_RAW is dropped because it is in the default capability
-  // set on both runtimes; NET_ADMIN is what init-firewall.sh actually needs.
-  "capAdd": ["NET_ADMIN"],
-
-  // Apple `container` gives each container its own lightweight VM, and its
-  // defaults are low enough that a dev container can go unresponsive. Raise
-  // these if the machine has room; adevcontainer fails preflight rather than
-  // overcommitting, so asking for more than the Mac has stops `up` cleanly.
-  "hostRequirements": {
-    "cpus": 2,
-    "memory": "4gb"
-  },
-
-  // installTools was true and cost 210 MB of /usr/local/py-utils: autopep8,
-  // bandit, black, flake8, pipenv, pycodestyle, pydocstyle, pylint, and copies
-  // of mypy and pytest. This repository's gate is ruff, mypy and pytest, all
-  // from `pip install -e '.[dev]'`, so every one of those was either unused or
-  // a second copy of something the project pins itself.
+  // DIVERGE HERE. A project's own toolchain belongs in `features`, which is the
+  // devcontainer spec's own mechanism for it and is pinned by
+  // devcontainer-lock.json once resolved.
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14",
@@ -65,52 +23,25 @@
     }
   },
 
-  // `customizations.vscode` is gone. It was kept as a fallback for an editor
-  // that might still be opened, on the assumption it was inert otherwise -- and
-  // it is not: adevcontainer applies it, so every `up` ended with "Applying
-  // vscode extensions / Installing anthropic.claude-code, dbaeumer.vscode-eslint,
-  // eamodio.gitlens, esbenp.prettier-vscode", four downloads into a container
-  // reached over ssh by a terminal. Two of them were eslint and prettier, in a
-  // Python repository. Editing happens on the Mac against the bind mount; see
-  // README.md. `adevcontainer start --vscode` can still be used and will simply
-  // open with the editor's own settings.
+  // init-firewall.sh needs it for iptables and ipset. `capAdd` rather than
+  // `runArgs`, which adevcontainer rejects.
+  "capAdd": ["NET_ADMIN"],
 
   "remoteUser": "node",
+  "workspaceFolder": "/workspace",
+  "hostRequirements": { "cpus": 2, "memory": "4gb" },
 
-  // Key every volume on ${localWorkspaceFolderBasename}, never on
-  // ${devcontainerId}: the stock Claude template ships the latter, and on macOS
-  // it is not resolved consistently across rebuilds, so the volume name changes
-  // and the command history and Claude config in the old one are silently left
-  // behind. Two checkouts with the same directory name would share volumes, so
-  // keep the directory names distinct.
-  // One volume, not three. Everything that must survive a rebuild is under
-  // /home/node/.state -- `claude/`, `gh/`, and the shell history file -- pointed
-  // there by CLAUDE_CONFIG_DIR, GH_CONFIG_DIR and HISTFILE in the Dockerfile.
-  // One name to keep track of per project, which is the whole reason.
-  //
-  // `state.sh` still leaves the credential out of an export by default; it
-  // excludes the gh/ subtree rather than relying on a separate volume for it.
+  // One volume per project, keyed on the folder name, holding everything that
+  // must survive a rebuild: Claude's config and history, the gh login, the git
+  // identity, the shell history.
   "mounts": [
     "source=claude-code-state-${localWorkspaceFolderBasename},target=/home/node/.state,type=volume"
   ],
 
-  // containerEnv is gone, deliberately. A container's environment reaches
-  // processes the runtime starts and not sshd, which builds a login environment
-  // from files -- so over ssh none of it was set and `claude` was not on
-  // PATH. The Dockerfile now sets these as ENV *and* writes them to
-  // /etc/profile.d, which covers both entry points from one place.
-
-  // workspaceMount is gone: adevcontainer does not implement it and both CLIs
-  // bind the workspace folder here by default anyway.
-  "workspaceFolder": "/workspace",
-
-  "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /workspace/.devcontainer/gh-auth.sh' >> ~/.zshrc",
-
-  // Order matters twice. fix-volume-perms.sh first, because Apple `container`
-  // does not seed a named volume from the image path it covers
-  // (apple/container#729) so all three arrive empty and root-owned. Then the
-  // firewall, which flushes the tables — anything holding a connection wants to
-  // start after it rather than through it. Then sshd.
+  // Order matters: fix-volume-perms.sh first, because Apple `container` does not
+  // seed a named volume from the image (apple/container#729); then the firewall,
+  // which flushes the tables, so sshd starts after it.
+  "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /usr/local/share/sandbox/gh-auth.sh' >> ~/.zshrc",
   "postStartCommand": "sudo /usr/local/bin/fix-volume-perms.sh && sudo /usr/local/bin/init-firewall.sh && sudo /usr/local/bin/start-sshd.sh",
   "waitFor": "postStartCommand"
 }

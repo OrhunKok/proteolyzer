@@ -98,3 +98,21 @@ yarn-error.log*
 # bind mount, because the target volume is attached to the running container and
 # cannot be mounted twice. Deleted in the same run; ignored in case one crashes.
 .devcontainer/.adopt.tgz
+
+# --- devcontainer sandbox -------------------------------------------------
+# Appended by `sandbox init`. Three transient things the sandbox writes into a
+# project, none of which belong to it.
+
+# Linked worktrees, made per session by an agent or by the frontend's worktree
+# base path, which points here. Each holds a checkout of this repository.
+/.claude/worktrees/
+
+# `sandbox state adopt` stages a project's earlier state here for the length of
+# one copy. Ignored because a killed run would otherwise leave a credential
+# sitting in `git status`.
+/.devcontainer/.adopt.tgz
+/.state-adopt/
+
+# `sandbox state export` writes here: the named volume, so it can be carried to
+# another machine. With --with-credentials it holds a GitHub token in plaintext.
+/devcontainer-state.tar.gz
