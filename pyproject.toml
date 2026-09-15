@@ -115,6 +115,17 @@ ignore_missing_imports = true
 disable_error_code = ["prop-decorator"]
 
 [tool.pytest.ini_options]
+# The working tree, not whatever is installed. With a src layout and no root
+# conftest.py, `import proteolyzer` otherwise resolves to wherever the editable
+# install points -- which is the main checkout. Tests run inside a linked
+# worktree then exercise the *main* checkout's code and pass, having tested
+# nothing you changed. Measured: a marker added in a worktree was invisible to
+# its own test run until this line existed.
+#
+# `src` is relative to pytest's rootdir, which is the worktree when pytest is run
+# there, so each tree tests itself. No effect on the main checkout or on CI,
+# where the editable install already points at this same path.
+pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 filterwarnings = ["error::DeprecationWarning:proteolyzer.*"]

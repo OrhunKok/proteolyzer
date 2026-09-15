@@ -38,10 +38,21 @@
     "source=claude-code-state-${localWorkspaceFolderBasename},target=/home/node/.state,type=volume"
   ],
 
+  // Once per container, which is exactly when it is needed: the Python
+  // environment lives in the image, not on the state volume, so a rebuild wipes
+  // it -- numpy, ruff and pytest all vanish and `make test` fails on a container
+  // that was working an hour ago. `;` rather than `&&` so pip runs either way,
+  // and its exit code is the command's, so a failure is reported rather than
+  // discovered later.
+  //
+  // This belongs here and not in a frontend's per-worktree setup script: the
+  // environment is per *container*, shared by every worktree in it, and a
+  // per-worktree `pip install -e .` would repoint the editable install at that
+  // worktree and silently change what every other one imports.
+  "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /usr/local/share/sandbox/gh-auth.sh' >> ~/.zshrc; pip install -e '.[dev,unimod]'",
   // Order matters: fix-volume-perms.sh first, because Apple `container` does not
   // seed a named volume from the image (apple/container#729); then the firewall,
   // which flushes the tables, so sshd starts after it.
-  "postCreateCommand": "grep -q gh-auth.sh ~/.zshrc || echo 'source /usr/local/share/sandbox/gh-auth.sh' >> ~/.zshrc",
   "postStartCommand": "sudo /usr/local/bin/fix-volume-perms.sh && sudo /usr/local/bin/init-firewall.sh && sudo /usr/local/bin/start-sshd.sh",
   "waitFor": "postStartCommand"
 }
