@@ -29,7 +29,24 @@
 
   "remoteUser": "node",
   "workspaceFolder": "/workspace",
-  "hostRequirements": { "cpus": 2, "memory": "4gb" },
+
+  // `container create -c` and `-m`, and the two are not the same kind of thing.
+  // Sized for an 18 GB Mac; the long form is in claude-devcontainer's
+  // docs/the-sandbox.md#ceilings.
+  //
+  // `cpus` is a real burst ceiling: it lands as a cgroup quota, so the container
+  // may use up to it and costs the Mac nothing while idle.
+  //
+  // `memory` is not. It sizes the VM as well as the cgroup, and with no
+  // virtio-balloon device on it the guest cannot hand a page back -- Linux keeps
+  // what it touched as page cache, so host memory ratchets up toward this number
+  // and is released when the container stops, not when the work finishes. 14 of
+  // 18 GB is a deliberate choice: one container at a time.
+  //
+  // Both are checked against the Mac's *physical* RAM and core count rather than
+  // what is free, and a shortfall is a hard failure -- `up` refuses with "host
+  // has less memory than required" instead of starting something smaller.
+  "hostRequirements": { "cpus": 10, "memory": "14gb" },
 
   // One volume per project, keyed on the folder name, holding everything that
   // must survive a rebuild: Claude's config and history, the gh login, the git
