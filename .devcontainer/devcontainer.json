@@ -29,7 +29,13 @@
 
   "remoteUser": "node",
   "workspaceFolder": "/workspace",
-  "hostRequirements": { "cpus": 2, "memory": "4gb" },
+
+  // A ceiling, not a reservation: this becomes `container create -m` and the
+  // container is its own VM, so the guest sees 14 GB and takes what it touches.
+  // adevcontainer checks it against the Mac's *physical* RAM rather than its
+  // free RAM, and a shortfall is a hard failure -- `up` refuses with "host has
+  // less memory than required" instead of starting something smaller.
+  "hostRequirements": { "cpus": 2, "memory": "14gb" },
 
   // One volume per project, keyed on the folder name, holding everything that
   // must survive a rebuild: Claude's config and history, the gh login, the git
