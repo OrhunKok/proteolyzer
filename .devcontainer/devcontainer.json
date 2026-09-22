@@ -23,9 +23,16 @@
     }
   },
 
-  // init-firewall.sh needs it for iptables and ipset. `capAdd` rather than
-  // `runArgs`, which adevcontainer rejects.
-  "capAdd": ["NET_ADMIN"],
+  // NET_ADMIN is for init-firewall.sh, which needs iptables and ipset.
+  // `capAdd` rather than `runArgs`, which adevcontainer rejects.
+  //
+  // SYS_RESOURCE is for start-sshd.sh, and it is not optional there: lowering a
+  // process's oom_score_adj below zero requires it, and Apple `container` does
+  // not grant it -- the default bounding set is 0xa80435fb, which has NET_ADMIN
+  // and NET_RAW and not this. Without it the write failed as root and silently,
+  // leaving the sshd listener exactly as killable as the work it protects, which
+  // is what takes ssh down for good when memory runs out.
+  "capAdd": ["NET_ADMIN", "SYS_RESOURCE"],
 
   "remoteUser": "node",
   "workspaceFolder": "/workspace",
