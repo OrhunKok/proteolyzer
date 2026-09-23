@@ -1,7 +1,14 @@
 .PHONY: help install test test-downstream lint types format docs docs-serve clean
 
+# Tools come from .venv once `make install` has built one, and from PATH
+# otherwise -- which is CI, whose workflows install into the runner's Python and
+# call the tools directly. The path is spelled out rather than exported on PATH
+# because the make macOS ships (3.81) looks a simple command up on the PATH it
+# started with, so an exported .venv/bin is never searched.
+BIN := $(if $(wildcard .venv/bin/python),$(CURDIR)/.venv/bin/)
+
 help:
-	@echo "install  editable install with dev tooling"
+	@echo "install  build .venv with uv: editable, with the dev and unimod extras"
 	@echo "test     run the test suite"
 	@echo "test-downstream  run streamlit-DO-MS and decoder's suites against this core"
 	@echo "lint     ruff check + format check (what CI runs)"
@@ -12,10 +19,11 @@ help:
 	@echo "clean    remove caches and build artefacts"
 
 install:
-	pip install -e '.[dev]'
+	uv venv --allow-existing
+	uv pip install -e '.[dev,unimod]'
 
 test:
-	pytest
+	$(BIN)pytest
 
 # A change to the reading path or to reference breaks a test in a consumer's
 # suite before it breaks one here. Neither consumer's suite is pytest,
@@ -28,10 +36,10 @@ test-downstream:
 	if [ -d downstream/streamlit-DO-MS ]; then \
 		printf '\n=== downstream/streamlit-DO-MS ===\n'; \
 		( cd downstream/streamlit-DO-MS \
-		  && pip install -r requirements.txt \
-		  && pip install -e "$(CURDIR)" \
+		  && uv pip install --python "$(BIN)python" -r requirements.txt \
+		  && uv pip install --python "$(BIN)python" -e "$(CURDIR)" \
 		  && for t in test_file_load test_plot_inputs test_plots_render test_cellenone_upload; do \
-		         python "tests/$$t.py" || exit 1; \
+		         "$(BIN)python" "tests/$$t.py" || exit 1; \
 		     done \
 		) || status=1; \
 	else \
@@ -39,28 +47,28 @@ test-downstream:
 	fi; \
 	if [ -d downstream/decoder ]; then \
 		printf '\n=== downstream/decoder ===\n'; \
-		( cd downstream/decoder && pip install -e "$(CURDIR)" && python tests/test_imports.py ) || status=1; \
+		( cd downstream/decoder && uv pip install --python "$(BIN)python" -e "$(CURDIR)" && "$(BIN)python" tests/test_imports.py ) || status=1; \
 	else \
 		echo "No downstream/decoder; skipping."; \
 	fi; \
 	exit $$status
 
 lint:
-	ruff check .
-	ruff format --check src tests scripts
+	$(BIN)ruff check .
+	$(BIN)ruff format --check src tests scripts
 
 types:
-	mypy
+	$(BIN)mypy
 
 format:
-	ruff check --fix src tests scripts
-	ruff format src tests scripts
+	$(BIN)ruff check --fix src tests scripts
+	$(BIN)ruff format src tests scripts
 
 docs:
-	mkdocs build --strict
+	$(BIN)mkdocs build --strict
 
 docs-serve:
-	mkdocs serve
+	$(BIN)mkdocs serve
 
 clean:
 	rm -rf build dist site .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage

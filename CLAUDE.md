@@ -6,20 +6,21 @@ schema; `reference` holds the domain constants; `cellenone`, `plots` and `unimod
 are optional subpackages imported on first use.
 
 ```bash
-make install     # editable, with the dev extra
+make install     # .venv via uv: editable, with the dev and unimod extras
 make test        # pytest
 make lint        # ruff check + ruff format --check
 make types       # mypy
 make docs        # mkdocs build
 ```
 
-`make install` installs `.[dev]`, which is enough for `make lint` and
-`make types`. `make test` also wants the `unimod` extra — without it,
-`sqlalchemy` is missing and the unimod tests silently don't run — so run
-`pip install -e '.[dev,unimod]'` first. `make docs` needs the `docs` extra,
-`pip install -e '.[docs]'`, which `make install` does not pull in; CI's docs
-job installs it separately for that reason, and a contributor running the
-gate doesn't need mkdocs.
+`make install` builds `.venv` in the checkout with uv, and every other target
+runs from it without activating anything. It pulls in `unimod` as well as
+`dev` because without it `sqlalchemy` is missing and the unimod tests silently
+don't run. `make docs` needs the `docs` extra, `uv pip install -e '.[docs]'`,
+which `make install` does not pull in; CI's docs job installs it separately for
+that reason, and a contributor running the gate doesn't need mkdocs. CI builds
+no `.venv`: its workflows install into the runner's Python with pip and call
+the tools directly.
 
 `make test`, `make lint` and `make types` are the gate: all three, green, before
 a pull request. CI runs them on every push, the suite on three platforms, and
