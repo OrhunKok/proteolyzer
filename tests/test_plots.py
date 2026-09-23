@@ -127,6 +127,19 @@ def test_volcano_plot_renders_with_the_default_science_theme(volcano_data, tmp_p
     assert out.exists()
 
 
+def test_the_point_count_label_renders_without_latex(volcano_data, tmp_path):
+    """Regression: the label was `$\\textit{n}$`, which mathtext cannot parse.
+
+    The label is made after the theme context closes, so it is always drawn by
+    mathtext; only this test, and not the LaTeX one above, runs in CI.
+    """
+    plot = VolcanoPlot(volcano_data, x="log2FC", y="pvalue", theme="default")
+    plot.add_data_point_count()
+    out = tmp_path / "volcano_default.png"
+    plot.save(out)
+    assert out.exists()
+
+
 # ------------------------------------------------------- volcano refinements
 
 

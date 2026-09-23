@@ -104,7 +104,7 @@ class RelPlot(PlotBase):
                 "scatter on the axes."
             )
             return
-        text = f"$\\textit{{n}}$  = {len(self.ax.collections[0].get_offsets())}"
+        text = f"$n$  = {len(self.ax.collections[0].get_offsets())}"
         self.ax.text(
             x_pos,
             y_pos,
