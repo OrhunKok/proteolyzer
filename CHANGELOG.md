@@ -8,6 +8,22 @@ with what to do about it, because two repositories depend on this one -- see the
 table in CLAUDE.md -- and the first they knew of the last rename was an
 ImportError.
 
+## v0.17.0
+
+### Changed
+
+- **A parquet's text columns are read as categoricals**, not as every row's
+  string (#150). Measured on a 102-run, 17.7M-row DIA-NN report, 20 columns: the
+  frame kept is 1.30 GB rather than 4.16 GB and the peak 3.64 GB rather than
+  4.32 GB. `.tsv`, `.txt` and `.csv` are unchanged, so the same report now has
+  categorical text from parquet and string text from a delimited file.
+  **A consumer** that compares a text column's dtype, or does `.str` on it
+  straight from `Data(...).load().frame`, should cast with `.astype("string")`
+  first. `is_text` accepts a categorical of strings, and a gap spelling is
+  dropped as a category.
+- `read_csv` is no longer passed `float_precision` on pandas 3.1 and later,
+  where the exact parse is the default and the argument is deprecated.
+
 ## v0.16.0
 
 ### Changed

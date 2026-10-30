@@ -17,6 +17,20 @@ def test_parquet_load_honours_the_column_subset(report_parquet):
     assert "Q.Value" not in loaded.columns
 
 
+def test_parquet_text_columns_are_read_as_categoricals(tmp_path):
+    """Repeated text costs its distinct values once, and its gaps are closed."""
+    path = tmp_path / "t.parquet"
+    pd.DataFrame(
+        {"Run": ["a", "b", "a", "NaN"], "Score": [1.0, 2.0, 3.0, 4.0]}
+    ).to_parquet(path)
+
+    run = Data(source=path).load()["Run"]
+    assert isinstance(run.dtype, pd.CategoricalDtype)
+    assert loader.is_text(run)
+    assert list(run.cat.categories) == ["a", "b"]
+    assert run.isna().tolist() == [False, False, False, True]
+
+
 def test_parquet_load_keeps_every_column_when_none_are_asked_for(
     report_parquet, label_free_report
 ):
@@ -446,6 +460,21 @@ def test_a_diann_parquet_is_not_taken_for_a_spectronaut_one(
     assert Data(source=path).input_type == "DIANN"
 
 
+def _uncategorized(frame: pd.DataFrame) -> pd.DataFrame:
+    """`frame` with each categorical back as the text it spells.
+
+    A parquet reads its text as categoricals and a delimited file as strings:
+    the same values, held differently, which is the point of the former.
+    """
+    return frame.apply(
+        lambda col: (
+            col.astype(col.cat.categories.dtype)
+            if isinstance(col.dtype, pd.CategoricalDtype)
+            else col
+        )
+    )
+
+
 def test_the_two_spectronaut_serializations_read_the_same(tmp_path, spectronaut_report):
     """One report in two containers, not two formats. Whichever a lab exports,
     the frame that comes back is the same one -- names, values and dtypes."""
@@ -455,7 +484,8 @@ def test_the_two_spectronaut_serializations_read_the_same(tmp_path, spectronaut_
     spectronaut_report.to_parquet(parquet, index=False)
 
     pd.testing.assert_frame_equal(
-        Data(source=tsv).load().frame, Data(source=parquet).load().frame
+        Data(source=tsv).load().frame,
+        _uncategorized(Data(source=parquet).load().frame),
     )
 
 
@@ -805,7 +835,7 @@ def test_a_text_typed_parquet_still_reads_as_its_own_tab_separated_export(
     from_parquet = Data(source=parquet).load().frame.drop(columns="FG_XICDBID")
     from_tsv = Data(source=tsv).load().frame.drop(columns="FG_XICDBID")
 
-    pd.testing.assert_frame_equal(from_parquet, from_tsv)
+    pd.testing.assert_frame_equal(_uncategorized(from_parquet), from_tsv)
 
 
 def test_an_all_digit_identifier_is_a_number_from_text_and_a_string_from_parquet(
@@ -1083,7 +1113,7 @@ def test_the_two_serializations_agree_about_a_word(tmp_path):
 
     pd.testing.assert_frame_equal(
         Data(source=tsv, rename=False).load().frame,
-        Data(source=parquet, rename=False).load().frame,
+        _uncategorized(Data(source=parquet, rename=False).load().frame),
     )
 
 

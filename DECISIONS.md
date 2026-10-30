@@ -84,6 +84,12 @@ while identifier columns approach 1.0, save nothing, and can come out *larger*.
 `MIN_CATEGORICAL_SAVING = 0.2` separates the two groups, which measured 49%+ and
 under 2%.
 
+**A parquet's text columns arrive as categoricals.** *(measured)* The reader asks
+Arrow to dictionary-encode every string column, so the full per-row text never
+exists: 1.30 GB kept against 4.16 GB on a 17.7M-row report. Narrowing still
+measures before it keeps one, so an identifier column Arrow encoded is not
+re-decided here.
+
 **A number is never made categorical**, however few values it holds: a
 categorical of numbers no longer supports arithmetic, so a q-value column would
 stop working downstream.
