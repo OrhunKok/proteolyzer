@@ -10,7 +10,7 @@ import os
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import chardet
 import pandas as pd
@@ -71,6 +71,14 @@ GAP_TEXT: list[str] = sorted(UNAMBIGUOUS_GAPS)
 #: path already chosen for fitting in memory rather than for being quick.
 EXACT_FLOATS: Literal["round_trip"] = "round_trip"
 
+#: What to hand ``read_csv`` for that. pandas 3.1 made the exact parse its
+#: default and deprecated the argument, so there it is handed nothing.
+EXACT_FLOAT_KWARGS: dict[str, Any] = (
+    {}
+    if tuple(int(n) for n in pd.__version__.split(".")[:2]) >= (3, 1)
+    else {"float_precision": EXACT_FLOATS}
+)
+
 #: What a flag written as text says. Compared lower-cased.
 TRUE_TEXT = frozenset({"true", "1"})
 FALSE_TEXT = frozenset({"false", "0"})
@@ -80,9 +88,12 @@ def is_text(column: pd.Series) -> bool:
     """Whether a column holds text, rather than something already typed.
 
     Both spellings: pandas reads a text column as its own string dtype, and as
-    object where something in it stopped it doing that.
+    object where something in it stopped it doing that. A categorical whose
+    categories are text is text too, which is what a parquet read returns.
     """
     dtype = column.dtype
+    if isinstance(dtype, pd.CategoricalDtype):
+        return is_text(dtype.categories.to_series())
     return isinstance(dtype, pd.StringDtype) or pd.api.types.is_object_dtype(dtype)
 
 
@@ -301,8 +312,15 @@ class DataLoader(Logged):
                 continue
             written_out = df[col].isin(UNAMBIGUOUS_GAPS)
             if written_out.any():
-                df[col] = df[col].where(~written_out)
                 closed[col] = int(written_out.sum())
+                if isinstance(df[col].dtype, pd.CategoricalDtype):
+                    # Drop the category, not every row that has it.
+                    spelled = df[col].cat.categories.intersection(
+                        list(UNAMBIGUOUS_GAPS)
+                    )
+                    df[col] = df[col].cat.remove_categories(spelled)
+                else:
+                    df[col] = df[col].where(~written_out)
 
         if closed:
             self.logger.info(f"Read text standing for a gap as a gap: {closed}.")
@@ -442,7 +460,7 @@ class DataLoader(Logged):
                 usecols=cols_to_load,
                 na_values=GAP_TEXT,
                 keep_default_na=False,
-                float_precision=EXACT_FLOATS,
+                **EXACT_FLOAT_KWARGS,
             )
 
         try:
@@ -474,7 +492,7 @@ class DataLoader(Logged):
             usecols=cols_to_load,
             na_values=GAP_TEXT,
             keep_default_na=False,
-            float_precision=EXACT_FLOATS,
+            **EXACT_FLOAT_KWARGS,
         )
 
     def _fast_read_fits(self) -> bool:
@@ -542,7 +560,18 @@ class DataLoader(Logged):
             schema = pq.ParquetFile(self.source).schema
             cols_to_load = self._cols_to_load(schema.names)
             self._rewind()
-            return pd.read_parquet(self.source, columns=cols_to_load)
+            # Dictionary-encoded, so a column of repeated text costs its
+            # distinct values once rather than every row's string.
+            arrow = schema.to_arrow_schema()
+            text_cols = [
+                name
+                for name in cols_to_load
+                if pa.types.is_string(arrow.field(name).type)
+                or pa.types.is_large_string(arrow.field(name).type)
+            ]
+            return pq.read_table(
+                self.source, columns=cols_to_load, read_dictionary=text_cols
+            ).to_pandas(self_destruct=True, split_blocks=True)
         except Exception as e:
             self.logger.error(f"Error loading Parquet: {self.source}, {e}")
             raise
